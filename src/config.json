@@ -1,0 +1,15 @@
+{
+	"env": "loc",
+	"serviceUrls": {
+		"clientProfileServiceUrl": "https://localhost:62000"
+	},
+	"LogRequestResponseModels": false,
+	"VDN": "7250",
+	"mock": {
+		"enabled": true,
+		"identifyClient": {
+			"enabled": true,
+			"positiveCase": true
+		}
+	}
+}

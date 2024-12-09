@@ -1,0 +1,28 @@
+{
+	"name": "GlobalOneSSTClientUI",
+	"product": "sstglobalone",
+	"group": "G_CKS_BRANCH_SSTGLOBALONE_DEVELOPER",
+	"version": "0.0.0",
+	"alias": "GlobalOneSST-GOneSSTClientUI-v2",
+	"release": "CLIRel",
+	"contractVersion": "v2",
+	"serviceType": "Hosting",
+	"port": 8080,
+	"secrets": [],
+	"environmentVariables": [
+		"LogLevel",
+		"MetricsLogLevel",
+		"PlatformLogLevel",
+		"FrameworkLogLevel"
+	],
+	"client": {
+		"clientName": "Platform",
+		"clientDescription": null,
+		"isUserInterface": false,
+		"flow": "password",
+		"extraScopes": "",
+		"roles": null
+	},
+	"resourceSize": "large",
+	"redundancySize": "large"
+}
