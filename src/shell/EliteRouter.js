@@ -1,4 +1,4 @@
-class EliteRouter {
+export class EliteRouter {
     constructor(routes) {
         this.routes = routes;
         window.onpopstate = () => this.loadRoute();
@@ -15,5 +15,4 @@ class EliteRouter {
         document.body.children[0].innerHTML = route.render();
     }
 }
-
-export default EliteRouter;
+// export const router = new EliteRouter();

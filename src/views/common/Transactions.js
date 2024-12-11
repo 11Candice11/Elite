@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js'
+import { ViewBase } from './ViewBase.js';
 
-class Transactions extends LitElement {
+class Transactions extends ViewBase {
   static styles = css`
     .container {
       padding: 20px;
@@ -235,16 +237,6 @@ class Transactions extends LitElement {
     `;
   }
 
-  navigateBack() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
   renderTransactions() {
     return html`
       <div>
@@ -270,7 +262,7 @@ class Transactions extends LitElement {
       <div class="container">
         ${this.renderFilters()}
         ${this.renderTransactions()}
-        <button @click="${this.navigateBack}">Back</button>
+        <button @click="${super.navigateBack}">Back</button>
       </div>
     `;
   }

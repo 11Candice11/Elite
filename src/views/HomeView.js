@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { SharedState } from '/src/state/SharedState.js';
-import { store } from '/src/store/Store.js';
-import { router } from '/src/shell/EliteRouter.js'
+import { store } from '/src/store/EliteStore.js';
+import { router } from '/src/shell/Routing.js'
 
 class HomeView extends LitElement {
   static styles = css`
@@ -163,37 +163,6 @@ class HomeView extends LitElement {
 
   searchByID() {
     this.fetchData();
-  }
-
-  navigateToTransactions() {
-    // this.dispatchEvent(
-    //   new CustomEvent('navigate', {
-    //     detail: { view: 'transactions' },
-    //     bubbles: true,
-    //     composed: true,
-    //   })
-    // );
-    router.navigate('/transactions');
-  }
-
-  navigateToPortfolio() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'portfolio' },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
-  navigateToClientInformation() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'client-information' },
-        bubbles: true,
-        composed: true,
-      })
-    );
   }
 
   renderClientInfo() {

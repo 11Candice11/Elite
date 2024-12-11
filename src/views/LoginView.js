@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-
+import { router } from '/src/shell/Routing.js'
 class LoginView extends LitElement {
   static styles = css`
     .login-container {
@@ -98,13 +98,14 @@ class LoginView extends LitElement {
 
   navigateToHome() {
     // Dispatch a custom event to navigate to HomeView
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' }, // Add detail if needed for routing logic
-        bubbles: true,
-        composed: true,
-      })
-    );
+    // this.dispatchEvent(
+    //   new CustomEvent('navigate', {
+    //     detail: { view: 'home' }, // Add detail if needed for routing logic
+    //     bubbles: true,
+    //     composed: true,
+    //   })
+    // );
+    router.navigate('/home');
   }
 
   render() {

@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
-
-class Portfolio extends LitElement {
+import { router } from '/src/shell/Routing.js'
+import { ViewBase } from './ViewBase.js';
+class Portfolio extends ViewBase {
   static styles = css`
     .container {
       padding: 20px;
@@ -56,16 +57,6 @@ class Portfolio extends LitElement {
     };
   }
 
-  navigateBack() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
   renderPortfolio() {
     const {
       portfolioEntryId,
@@ -100,7 +91,7 @@ class Portfolio extends LitElement {
       <div class="container">
         <h2>Portfolio Details</h2>
         ${this.renderPortfolio()}
-        <button @click="${this.navigateBack}">Back</button>
+        <button @click="${super.navigateBack}">Back</button>
       </div>
     `;
   }

@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js'
+import { ViewBase } from './ViewBase.js';
 
-class ClientInformation extends LitElement {
+class ClientInformation extends ViewBase {
   static styles = css`
     .container {
       padding: 20px;
@@ -64,16 +66,6 @@ class ClientInformation extends LitElement {
     };
   }
 
-  navigateBack() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
   renderDetailModel() {
     const {
       instrumentName,
@@ -121,7 +113,7 @@ class ClientInformation extends LitElement {
       <div class="container">
         <h2>Client Information</h2>
         ${this.renderDetailModel()}
-        <button @click="${this.navigateBack}">Back</button>
+        <button @click="${() => this.navigateBack()}">Back</button>
       </div>
     `;
   }
