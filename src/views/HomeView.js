@@ -1,4 +1,8 @@
 import { LitElement, html, css } from 'lit';
+import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import { SharedState } from '/src/state/SharedState.js';
+import { store } from '/src/store/Store.js';
+import { router } from '/src/shell/EliteRouter.js'
 
 class HomeView extends LitElement {
   static styles = css`
@@ -7,6 +11,7 @@ class HomeView extends LitElement {
       grid-template-columns: 1fr;
       gap: 20px;
       padding: 20px;
+      position: relative; /* For canvas overlay */
     }
     .section {
       border: 1px solid #ccc;
@@ -17,28 +22,46 @@ class HomeView extends LitElement {
     .section h3 {
       margin-top: 0;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-    th, td {
+    input {
       padding: 10px;
-      text-align: left;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 100%;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .myCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      pointer-events: none;
     }
   `;
 
   static properties = {
     clientInfo: { type: Object },
     detailModels: { type: Array },
+    searchID: { type: String },
   };
 
   constructor() {
     super();
     this.clientInfo = {};
     this.detailModels = [];
+    this.searchID = '5409225033081';
+    this.clientService = new ClientProfileService();
   }
 
   connectedCallback() {
@@ -46,65 +69,131 @@ class HomeView extends LitElement {
     this.fetchData();
   }
 
+  firstUpdated() {
+    super.firstUpdated();
+    this.initCanvas();
+  }
+
   async fetchData() {
     const request = {
-      idNumber: this.idNumber
-    };
-
-    const returnvalue = this.clientService.getClientProfile(request);
-
-    const response = {
-      EntityModels: [
-        {
-          FirstNames: "Brian",
-          Surname: "Wilmot",
-          RegisteredName: "Wilmot",
-          Title: "Mr",
-          Nickname: "Brian",
-          AdvisorName: "Tancred Melis",
-          Email: "brianwwilmot@gmail.com",
-          CellPhoneNumber: "+27 82 602 6159",
-          DetailModels: [
-            {
-              InstrumentName: "Julius Baer Portfolio",
-              ReferenceNumber: "031588990201",
-              InceptionDate: "2017-11-03T00:00:00",
-              InitialContributionAmount: 375633.0,
-              InitialContributionCurrencyAbbreviation: "USD",
-              RegularContributionAmount: 0.0,
-              PortfolioEntryTreeModels: [
-                { InstrumentName: "Global Equities", Level: 1 },
-                { InstrumentName: "Cash - USD", Level: 1 },
-              ],
-              RootValueDateModels: [
-                {
-                  ValueType: "Market value",
-                  ConvertedValueDate: "2022-08-02",
-                  TotalConvertedAmount: 6754729.37,
-                },
-              ],
-              TransactionModels: [
-                { TransactionType: "Contribution", TransactionDate: "2021-03-02", ConvertedAmount: 1562646.4 },
-              ],
-              ReportNotes: "Value in USD as of 30/04/2024 $469 319.68",
-            },
-          ],
-        },
+      TransactionDateStart: "2021-02-03T00:00:00+02:00",
+      TransactionDateEnd: "2022-08-03T00:00:00+02:00",
+      TargetCurrencyL: 170,
+      ValueDates: [
+        "2021-03-31T00:00:00",
+        "2021-06-01T00:00:00",
+        "2022-08-02T14:51:42.3532002+02:00"
       ],
+      InputEntityModels: [
+        {
+          SouthAfricanIdNumber: this.searchID,
+          PassportNumber: "",
+          RegistrationNumber: ""
+        }
+      ]
     };
+    const response = await this.clientService.getClientProfile(request);
+    const entity = response.entityModels[0];
 
-    const entity = response.EntityModels[0];
     this.clientInfo = {
-      firstName: entity.FirstNames,
-      surname: entity.Surname,
-      registeredName: entity.RegisteredName,
-      title: entity.Title,
-      nickname: entity.Nickname,
-      advisorName: entity.AdvisorName,
-      email: entity.Email,
-      cellPhone: entity.CellPhoneNumber,
+      firstName: entity.firstNames,
+      surname: entity.surname,
+      registeredName: entity.registeredName,
+      title: entity.title,
+      nickname: entity.nickname,
+      advisorName: entity.advisorName,
+      email: entity.email,
+      cellPhone: entity.cellPhoneNumber,
+      idNumber: request.InputEntityModels[0]?.SouthAfricanIdNumber,
     };
-    this.detailModels = entity.DetailModels;
+    this.detailModels = entity.detailModels;
+
+    store.set('clientInfo', { entity });
+
+    // Store transactions in shared state
+    SharedState.transactions = this.detailModels[0]?.transactionModels || [];
+  }
+
+  initCanvas() {
+    const canvas = this.shadowRoot.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const stars = [];
+    const numStars = 100;
+
+    canvas.width = this.shadowRoot.querySelector('.container').clientWidth;
+    canvas.height = window.innerHeight;
+
+    for (let i = 0; i < numStars; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        radius: Math.random() * 2 + 1,
+        dx: Math.random() * 0.5 - 0.25,
+        dy: Math.random() * 0.5 - 0.25,
+      });
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      for (let star of stars) {
+        ctx.fillStyle = 'white';
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fill();
+        star.x += star.dx;
+        star.y += star.dy;
+
+        if (star.x < 0 || star.x > canvas.width) star.dx = -star.dx;
+        if (star.y < 0 || star.y > canvas.height) star.dy = -star.dy;
+      }
+    }
+
+    function animate() {
+      drawStars();
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+
+  handleSearchIDChange(event) {
+    this.searchID = event.target.value;
+  }
+
+  searchByID() {
+    this.fetchData();
+  }
+
+  navigateToTransactions() {
+    // this.dispatchEvent(
+    //   new CustomEvent('navigate', {
+    //     detail: { view: 'transactions' },
+    //     bubbles: true,
+    //     composed: true,
+    //   })
+    // );
+    router.navigate('/transactions');
+  }
+
+  navigateToPortfolio() {
+    this.dispatchEvent(
+      new CustomEvent('navigate', {
+        detail: { view: 'portfolio' },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  navigateToClientInformation() {
+    this.dispatchEvent(
+      new CustomEvent('navigate', {
+        detail: { view: 'client-information' },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   renderClientInfo() {
@@ -124,94 +213,21 @@ class HomeView extends LitElement {
     `;
   }
 
-  renderPortfolioEntries(entries) {
-    return html`
-      <div>
-        <h4>Portfolio Entries</h4>
-        <ul>
-          ${entries.map(
-            (entry) => html`
-              <li>${entry.InstrumentName || 'N/A'} (Level: ${entry.Level})</li>
-            `
-          )}
-        </ul>
-      </div>
-    `;
-  }
-
-  renderRootValueDates(rootValues) {
-    return html`
-      <div>
-        <h4>Root Value Dates</h4>
-        <ul>
-          ${rootValues.map(
-            (value) => html`
-              <li>
-                <strong>Type:</strong> ${value.ValueType || 'N/A'}<br />
-                <strong>Date:</strong> ${value.ConvertedValueDate || 'N/A'}<br />
-                <strong>Total Amount:</strong>
-                ${value.TotalConvertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </li>
-            `
-          )}
-        </ul>
-      </div>
-    `;
-  }
-
-  renderTransactions(transactions) {
-    return html`
-      <div>
-        <h4>Transactions</h4>
-        <ul>
-          ${transactions.map(
-            (txn) => html`
-              <li>
-                <strong>Type:</strong> ${txn.TransactionType || 'N/A'}<br />
-                <strong>Date:</strong> ${txn.TransactionDate || 'N/A'}<br />
-                <strong>Amount:</strong>
-                ${txn.ConvertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </li>
-            `
-          )}
-        </ul>
-      </div>
-    `;
-  }
-
-  renderDetailModels() {
-    return html`
-      <div class="section">
-        <h3>Detail Information</h3>
-        ${this.detailModels.map(
-          (detail) => html`
-            <div>
-              <h4>${detail.InstrumentName || 'N/A'}</h4>
-              <p><strong>Reference Number:</strong> ${detail.ReferenceNumber || 'N/A'}</p>
-              <p><strong>Inception Date:</strong> ${detail.InceptionDate || 'N/A'}</p>
-              <p>
-                <strong>Initial Contribution:</strong>
-                ${detail.InitialContributionAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                (${detail.InitialContributionCurrencyAbbreviation || 'N/A'})
-              </p>
-              <p><strong>Report Notes:</strong> ${detail.ReportNotes || 'N/A'}</p>
-              ${this.renderPortfolioEntries(detail.PortfolioEntryTreeModels || [])}
-              ${this.renderRootValueDates(detail.RootValueDateModels || [])}
-              ${this.renderTransactions(detail.TransactionModels || [])}
-            </div>
-            <hr />
-          `
-        )}
-      </div>
-    `;
-  }
-
   render() {
     return html`
+      <canvas class="myCanvas" id="canvas"></canvas>
       <div class="container">
+        <input
+          type="text"
+          placeholder="Search by South African ID"
+          @input="${this.handleSearchIDChange}"
+        />
+        <button @click="${this.searchByID}">Search</button>
         ${this.renderClientInfo()}
-        ${this.renderDetailModels()}
-      </div>
+        <button @click="${this.navigateToTransactions}">Transactions</button>
+        <button @click="${this.navigateToPortfolio}">Portfolio</button>
+        <button @click="${this.navigateToClientInformation}">Client Information</button>
+        </div>
     `;
   }
 }

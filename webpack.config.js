@@ -14,9 +14,18 @@ export default {
     },
     mode: 'development',
     devServer: {
+        proxy: {
+            '/api': {
+              target: 'http://localhost:6200',
+              changeOrigin: true,
+            },
+          },
         static: path.resolve(__dirname, 'dist'),
         port: 3000,
         open: true,
+        headers: {
+            'Content-Security-Policy': "connect-src 'self' https://localhost:6200/*",
+          },
     },
     module: {
         rules: [
