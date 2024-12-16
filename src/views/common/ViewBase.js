@@ -6,6 +6,9 @@ export class ViewBase extends LitElement {
         super(); // Ensure this is called
     }
     
+    isNullOrEmpty(fieldValue) {
+      return fieldValue === `` || fieldValue === null || fieldValue === undefined;
+    }
 
   navigateBack() {
     router.navigate('/home');
@@ -19,7 +22,7 @@ export class ViewBase extends LitElement {
     router.navigate('/portfolio');
   }
 
-  navigateToClientInformation() {
-    router.navigate('/client-information');
+  navigateToProducts() {
+    router.navigate('/products');
   }
 }

@@ -1,202 +1,260 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
-import { SharedState } from '/src/state/SharedState.js';
 import { store } from '/src/store/EliteStore.js';
-import { router } from '/src/shell/Routing.js'
+import background from '/src/images/home.png';
+import { ViewBase } from './common/ViewBase.js';
 
-class HomeView extends LitElement {
+
+class HomeView extends ViewBase {
   static styles = css`
-    .container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    .client-card {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       padding: 20px;
-      position: relative; /* For canvas overlay */
+      margin-top: 20px;
+      max-width: 400px;
     }
-    .section {
-      border: 1px solid #ccc;
-      padding: 15px;
-      border-radius: 5px;
-      background: #f9f9f9;
-    }
-    .section h3 {
-      margin-top: 0;
-    }
-    input {
-      padding: 10px;
+    .client-card h3 {
       margin-bottom: 15px;
+    }
+    .client-card p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background-color: #333;
+      color: #fff;
+    }
+    .tabs {
+      display: flex;
+      gap: 15px;
+    }
+    .tabs button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tabs button:hover {
+      text-decoration: underline;
+    }
+    .hero {
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #fff;
+      padding: 20px;
+    }
+    .search-section {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .search-section input {
+      padding: 10px;
       border: 1px solid #ccc;
       border-radius: 5px;
-      width: 100%;
+      width: 300px;
     }
-    button {
-      margin-top: 10px;
+    .search-section button {
       padding: 10px;
-      border: none;
       background-color: #007bff;
       color: white;
+      border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    button:hover {
+    .search-section button:hover {
       background-color: #0056b3;
     }
-    .myCanvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: -1;
-      pointer-events: none;
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .hidden-info {
+      display: none;
+      padding: 20px;
+    }
+    .hidden-info.active {
+      display: block;
     }
   `;
 
   static properties = {
-    clientInfo: { type: Object },
-    detailModels: { type: Array },
     searchID: { type: String },
+    transactionDateStart: { type: String },
+    transactionDateEnd: { type: String },
+    isSearched: { type: Boolean },
+    clientInfo: { type: Object },
   };
 
   constructor() {
     super();
-    this.clientInfo = {};
-    this.detailModels = [];
-    this.searchID = '5409225033081';
+    this.searchID = store.get('searchID') || '';
+    this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
+    this.transactionDateEnd = this.formatDateToISO(new Date());
+    this.clientInfo = store.get('clientInfo') ||  {};
     this.clientService = new ClientProfileService();
+    this.initClientInfo();
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.fetchData();
+  initClientInfo() {
+    const entity = store.get('clientInfo');
+    if (!entity) {
+      return;
+    }
+this.clientInfo = {
+  firstNames: entity.firstNames || 'N/A',
+  surname: entity.surname || 'N/A',
+  registeredName: entity.registeredName || 'N/A',
+  title: entity.title || 'N/A',
+  nickname: entity.nickname || 'N/A',
+  advisorName: entity.advisorName || 'N/A',
+  email: entity.email || 'N/A',
+  cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+};
   }
 
-  firstUpdated() {
-    super.firstUpdated();
-    this.initCanvas();
+  formatDateToISO(date) {
+    return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
+  }
+
+  applyPreSelectedDateRange(months) {
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setMonth(today.getMonth() - months);
+    this.transactionDateStart = this.formatDateToISO(startDate);
+    this.transactionDateEnd = this.formatDateToISO(today);
   }
 
   async fetchData() {
+    const searched = store.get('searchID') === this.searchID;
+    if (searched) {
+      return;
+    }
+
     const request = {
-      TransactionDateStart: "2021-02-03T00:00:00+02:00",
-      TransactionDateEnd: "2022-08-03T00:00:00+02:00",
+      TransactionDateStart: this.transactionDateStart,
+      TransactionDateEnd: this.transactionDateEnd,
       TargetCurrencyL: 170,
-      ValueDates: [
-        "2021-03-31T00:00:00",
-        "2021-06-01T00:00:00",
-        "2022-08-02T14:51:42.3532002+02:00"
-      ],
+      ValueDates: [],
       InputEntityModels: [
         {
           SouthAfricanIdNumber: this.searchID,
-          PassportNumber: "",
-          RegistrationNumber: ""
-        }
-      ]
+        },
+      ],
     };
-    const response = await this.clientService.getClientProfile(request);
-    const entity = response.entityModels[0];
 
-    this.clientInfo = {
-      firstName: entity.firstNames,
-      surname: entity.surname,
-      registeredName: entity.registeredName,
-      title: entity.title,
-      nickname: entity.nickname,
-      advisorName: entity.advisorName,
-      email: entity.email,
-      cellPhone: entity.cellPhoneNumber,
-      idNumber: request.InputEntityModels[0]?.SouthAfricanIdNumber,
-    };
-    this.detailModels = entity.detailModels;
+    store.set('searchID', this.searchID);
 
-    store.set('clientInfo', { entity });
+    try {
+      const response = await this.clientService.getClientProfile(request);
 
-    // Store transactions in shared state
-    SharedState.transactions = this.detailModels[0]?.transactionModels || [];
-  }
-
-  initCanvas() {
-    const canvas = this.shadowRoot.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-
-    const stars = [];
-    const numStars = 100;
-
-    canvas.width = this.shadowRoot.querySelector('.container').clientWidth;
-    canvas.height = window.innerHeight;
-
-    for (let i = 0; i < numStars; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 2 + 1,
-        dx: Math.random() * 0.5 - 0.25,
-        dy: Math.random() * 0.5 - 0.25,
-      });
-    }
-
-    function drawStars() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
-      for (let star of stars) {
-        ctx.fillStyle = 'white';
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fill();
-        star.x += star.dx;
-        star.y += star.dy;
-
-        if (star.x < 0 || star.x > canvas.width) star.dx = -star.dx;
-        if (star.y < 0 || star.y > canvas.height) star.dy = -star.dy;
+      if(!response?.entityModels[0]){
+        return null;
       }
+
+      const entity = response.entityModels[0];
+      console.log('Fetched Data:', response); // For debugging
+      this.clientInfo = {
+        firstNames: entity.firstNames || 'N/A',
+        surname: entity.surname || 'N/A',
+        registeredName: entity.registeredName || 'N/A',
+        title: entity.title || 'N/A',
+        nickname: entity.nickname || 'N/A',
+        advisorName: entity.advisorName || 'N/A',
+        email: entity.email || 'N/A',
+        cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+      };
+      store.set('clientInfo', entity);
+      } catch (error) {
+      console.error('Error fetching data:', error);
     }
-
-    function animate() {
-      drawStars();
-      requestAnimationFrame(animate);
-    }
-
-    animate();
   }
 
-  handleSearchIDChange(event) {
-    this.searchID = event.target.value;
+  handleTabNavigation(tabName) {
+    router.navigate(`/${tabName}`);
   }
 
-  searchByID() {
-    this.fetchData();
-  }
-
-  renderClientInfo() {
-    const { firstName, surname, registeredName, title, nickname, advisorName, email, cellPhone } = this.clientInfo;
-    return html`
-      <div class="section">
-        <h3>Client Information</h3>
-        <p><strong>First Name:</strong> ${firstName || 'N/A'}</p>
-        <p><strong>Surname:</strong> ${surname || 'N/A'}</p>
-        <p><strong>Registered Name:</strong> ${registeredName || 'N/A'}</p>
-        <p><strong>Title:</strong> ${title || 'N/A'}</p>
-        <p><strong>Nickname:</strong> ${nickname || 'N/A'}</p>
-        <p><strong>Advisor Name:</strong> ${advisorName || 'N/A'}</p>
-        <p><strong>Email:</strong> ${email || 'N/A'}</p>
-        <p><strong>Cell Phone:</strong> ${cellPhone || 'N/A'}</p>
-      </div>
-    `;
+  generateReport() {
+    window.alert("Generating report...");
   }
 
   render() {
     return html`
-      <canvas class="myCanvas" id="canvas"></canvas>
-      <div class="container">
-        <input
-          type="text"
-          placeholder="Search by South African ID"
-          @input="${this.handleSearchIDChange}"
-        />
-        <button @click="${this.searchByID}">Search</button>
-        ${this.renderClientInfo()}
-        <button @click="${this.navigateToTransactions}">Transactions</button>
-        <button @click="${this.navigateToPortfolio}">Portfolio</button>
-        <button @click="${this.navigateToClientInformation}">Client Information</button>
+      <div>
+        <header class="header">
+          <h1>Elite</h1>
+          <div class="tabs">
+            <!-- <button @click="${() => this.handleTabNavigation('portfolio')}">Portfolio</button> -->
+            <button @click="${() => this.handleTabNavigation('transactions')}">Transactions</button>
+            <button @click="${() => this.handleTabNavigation('products')}">Product Info</button>
+          </div>
+        </header>
+        <div class="hero"
+        style="background-image: url(${background}); background-size: cover; background-position: center; height: 400px;">
+          <h2>Find your client</h2>
+          <div class="search-section">
+            <input
+              type="text"
+              placeholder="Search by ID"
+              .value="${this.searchID}"
+              @input="${(e) => (this.searchID = e.target.value)}"
+            />
+            <input
+              type="date"
+              .value="${this.transactionDateStart.split('T')[0]}"
+              @change="${(e) => (this.transactionDateStart = this.formatDateToISO(new Date(e.target.value)))}"
+            />
+            <input
+              type="date"
+              .value="${this.transactionDateEnd.split('T')[0]}"
+              @change="${(e) => (this.transactionDateEnd = this.formatDateToISO(new Date(e.target.value)))}"
+            />
+            <button @click="${this.fetchData}">Search</button>
+          </div>
+          <div class="filter-buttons">
+            <button @click="${() => this.applyPreSelectedDateRange(3)}">3 Months</button>
+            <button @click="${() => this.applyPreSelectedDateRange(6)}">6 Months</button>
+            <button @click="${() => this.applyPreSelectedDateRange(9)}">9 Months</button>
+            <button @click="${() => this.applyPreSelectedDateRange(12)}">12 Months</button>
+          </div>
         </div>
+          <h3>Client Information</h3>
+          ${!this.isNullOrEmpty(this.clientInfo?.firstNames)
+            ? html`
+              <button @click="${() => this.generateReport()}">Generate report</button>
+              <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+              <p><strong>First Name:</strong> ${this.clientInfo.firstNames}</p>
+              <p><strong>Surname:</strong> ${this.clientInfo.surname}</p>
+              <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+              <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+              <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+              <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+              <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+              `
+            : html`<p>No client information found.</p>`}
+      </div>
     `;
   }
 }

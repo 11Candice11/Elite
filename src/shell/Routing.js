@@ -1,9 +1,10 @@
 import { html, render } from 'lit';
-import '/src/views/LoginView.js';  // Import Login component
-import '/src/views/HomeView.js';   // Import Home component
-import '/src/views/common/ClientInformation.js';  // Import client details component
-import '/src/views/common/Portfolio.js';  // Import client list component
-import '/src/views/common/Transactions.js';  // Import pipedrive dashboard component
+import '/src/views/LoginView.js';  
+import '/src/views/HomeView.js';   
+import '/src/views/common/Products.js';  
+import '/src/views/common/Portfolio.js';  
+import '/src/views/common/Transactions.js';  
+import '/src/views/common/PortfolioDetails.js'; 
 
 export class Routing {
   constructor() {
@@ -12,8 +13,9 @@ export class Routing {
       '/login': () => html`<login-view></login-view>`,
       '/home': () => html`<home-view></home-view>`,
       '/transactions': () => html`<transactions-view></transactions-view>`,
-      '/client-information': () => html`<client-information></client-information>`,
+      '/products': () => html`<product-view></product-view>`,
       '/portfolio': () => html`<portfolio-view></portfolio-view>`,
+      '/portfolio-details': () => html`<portfolio-details></portfolio-details>`
     };
 
     window.addEventListener('popstate', () => {
@@ -23,17 +25,6 @@ export class Routing {
     // Initialize the app with the current route
     this.navigate(window.location.pathname);
   }
-
-  // renderSidebar(route) {
-  //   const sidebarContainer = document.getElementById('sidebar');
-
-  //   // Conditionally render the sidebar for non-login routes
-  //   if (route !== '/login') {
-  //     render(html`<my-sidebar></my-sidebar>`, sidebarContainer); // Safely render the sidebar
-  //   } else {
-  //     render(html``, sidebarContainer); // Clear the sidebar on the login page
-  //   }
-  // }
 
   navigate(route) {
     const appContainer = document.getElementById('app');

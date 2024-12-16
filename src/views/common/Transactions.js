@@ -1,63 +1,47 @@
 import { LitElement, html, css } from 'lit';
-import { router } from '/src/shell/Routing.js'
 import { ViewBase } from './ViewBase.js';
+import { store } from '/src/store/EliteStore.js';
 
 class Transactions extends ViewBase {
   static styles = css`
     .container {
       padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
       background-color: #f9f9f9;
     }
-    .transaction-item {
-      margin-bottom: 10px;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
-    }
-    .filter-container {
+    .instrument-section {
       margin-bottom: 20px;
-      display: flex;
-      flex-direction: column;
     }
-    .filters {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    input,
-    select {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    .chips {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
-      margin-bottom: 15px;
-    }
-    .chip {
-      display: flex;
-      align-items: center;
-      background: #007bff;
-      color: white;
-      padding: 5px 10px;
-      border-radius: 15px;
-      cursor: pointer;
-    }
-    .chip span {
-      margin-right: 5px;
-    }
-    .chip:hover {
-      background-color: #0056b3;
-    }
-    button {
-      padding: 10px;
-      margin-top: 15px;
+    .instrument-header {
       background-color: #007bff;
       color: white;
+      padding: 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .transaction-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      background-color: white;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+    .transaction-card-content {
+      padding: 15px;
+    }
+    .transaction-card-content p {
+      margin: 5px 0;
+    }
+    button {
+      margin-bottom: 20px;
+      padding: 10px;
       border: none;
+      background-color: #007bff;
+      color: white;
       border-radius: 5px;
       cursor: pointer;
     }
@@ -67,202 +51,60 @@ class Transactions extends ViewBase {
   `;
 
   static properties = {
-    transactions: { type: Array },
-    filteredTransactions: { type: Array },
-    filters: { type: Object },
+    groupedTransactions: { type: Object },
   };
 
   constructor() {
     super();
-    this.transactions = [];
-    this.filteredTransactions = [];
-    this.filters = {
-      transactionDateStart: '',
-      transactionDateEnd: '',
-      currencyRange: [0, 0], // Start at 0
-      exchangeRate: '',
-      transactionType: '',
-    };
-  }
+    this.groupedTransactions = {};
+    const clientInfo = store.get('clientInfo') || {};
 
-  connectedCallback() {
-    super.connectedCallback();
-
-    // Example transactions
-    this.transactions = [
-      {
-        portfolioEntryId: '123e4567-e89b-12d3-a456-426614174000',
-        transactionType: 'Contribution',
-        transactionDate: '2023-01-01',
-        currencyAbbreviation: 'USD',
-        exchangeRate: 1.2,
-        convertedAmount: 1200.0,
-      },
-      {
-        portfolioEntryId: '123e4567-e89b-12d3-a456-426614174001',
-        transactionType: 'Withdrawal',
-        transactionDate: '2023-02-15',
-        currencyAbbreviation: 'USD',
-        exchangeRate: 1.1,
-        convertedAmount: 1100.0,
-      },
-    ];
-    this.filteredTransactions = [...this.transactions];
-  }
-
-  updateFilter(key, value) {
-    this.filters[key] = value;
-    this.applyFilters();
-  }
-
-  applyFilters() {
-    this.filteredTransactions = this.transactions.filter((txn) => {
-      const { transactionDateStart, transactionDateEnd, currencyRange, exchangeRate, transactionType } = this.filters;
-
-      // Filter by transactionDate
-      if (
-        transactionDateStart &&
-        new Date(txn.transactionDate) < new Date(transactionDateStart)
-      ) {
-        return false;
-      }
-      if (
-        transactionDateEnd &&
-        new Date(txn.transactionDate) > new Date(transactionDateEnd)
-      ) {
-        return false;
-      }
-
-      // Filter by currency range
-      if (
-        txn.convertedAmount < currencyRange[0] ||
-        txn.convertedAmount > currencyRange[1]
-      ) {
-        return false;
-      }
-
-      // Filter by exchange rate
-      if (exchangeRate && txn.exchangeRate !== parseFloat(exchangeRate)) {
-        return false;
-      }
-
-      // Filter by transactionType
-      if (
-        transactionType &&
-        !txn.transactionType
-          .toLowerCase()
-          .includes(transactionType.toLowerCase())
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }
-
-  removeFilter(key) {
-    const inputField = this.shadowRoot.querySelector(`#${key}`);
-    if (inputField) {
-      inputField.value = '';
+    if (clientInfo && Array.isArray(clientInfo.detailModels)) {
+      // Group transactions by instrumentName
+      clientInfo.detailModels.forEach((detail) => {
+        const instrumentName = detail.instrumentName || 'Unknown Instrument';
+        if (!this.groupedTransactions[instrumentName]) {
+          this.groupedTransactions[instrumentName] = [];
+        }
+        if (detail.transactionModels && Array.isArray(detail.transactionModels)) {
+          this.groupedTransactions[instrumentName].push(...detail.transactionModels);
+        }
+      });
     }
-
-    if (key === 'currencyRange') {
-      this.filters[key] = [0, 0]; // Reset to 0
-    } else {
-      this.filters[key] = '';
-    }
-    this.applyFilters();
   }
 
-  renderFilters() {
+  renderGroupedTransactions() {
     return html`
-      <div class="filter-container">
-        <h4>Filters</h4>
-        <div class="chips">
-          ${Object.entries(this.filters)
-            .filter(([key, value]) =>
-              key === 'currencyRange'
-                ? value[1] > 0 // Only show chip if currencyRange has a non-zero upper limit
-                : value && value.length > 0
-            )
-            .map(
-              ([key, value]) => html`
-                <div class="chip" @click="${() => this.removeFilter(key)}">
-                  <span>${key}: ${Array.isArray(value) ? value.join(' - ') : value}</span>
-                  &times;
+      ${Object.entries(this.groupedTransactions).map(
+        ([instrumentName, transactions]) => html`
+          <div class="instrument-section">
+            <div class="instrument-header">${instrumentName}</div>
+            ${transactions.map(
+              (txn) => html`
+                <div class="transaction-card">
+                  <div class="transaction-card-content">
+                    <p><strong>Portfolio Entry ID:</strong> ${txn.portfolioEntryId || 'N/A'}</p>
+                    <p><strong>Transaction Date:</strong> ${txn.transactionDate || 'N/A'}</p>
+                    <p><strong>Transaction Type:</strong> ${txn.transactionType || 'N/A'}</p>
+                    <p><strong>Currency:</strong> ${txn.currencyAbbreviation || 'N/A'}</p>
+                    <p><strong>Exchange Rate:</strong> ${txn.exchangeRate?.toFixed(2) || 'N/A'}</p>
+                    <p><strong>Converted Amount:</strong> ${txn.convertedAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</p>
+                  </div>
                 </div>
               `
             )}
-        </div>
-        <div class="filters">
-          <input
-            id="transactionDateStart"
-            type="date"
-            @change="${(e) => this.updateFilter('transactionDateStart', e.target.value)}"
-            placeholder="Start Date"
-          />
-          <input
-            id="transactionDateEnd"
-            type="date"
-            @change="${(e) => this.updateFilter('transactionDateEnd', e.target.value)}"
-            placeholder="End Date"
-          />
-          <div>
-            <label for="currencyRange">Currency Range:</label>
-            <input
-              id="currencyRange"
-              type="range"
-              min="0"
-              max="10000"
-              value="${this.filters.currencyRange[1]}"
-              @input="${(e) =>
-                this.updateFilter('currencyRange', [0, parseInt(e.target.value, 10)])}"
-            />
-            <span>${this.filters.currencyRange[1]}</span>
           </div>
-          <input
-            id="exchangeRate"
-            type="text"
-            @input="${(e) => this.updateFilter('exchangeRate', e.target.value)}"
-            placeholder="Exchange Rate"
-          />
-          <input
-            id="transactionType"
-            type="text"
-            @input="${(e) => this.updateFilter('transactionType', e.target.value)}"
-            placeholder="Transaction Type"
-          />
-        </div>
-      </div>
-    `;
-  }
-
-  renderTransactions() {
-    return html`
-      <div>
-        <h4>Transaction Details</h4>
-        ${this.filteredTransactions.map(
-          (txn) => html`
-            <div class="transaction-item">
-              <p><strong>Portfolio Entry ID:</strong> ${txn.portfolioEntryId || 'N/A'}</p>
-              <p><strong>Transaction Type:</strong> ${txn.transactionType || 'N/A'}</p>
-              <p><strong>Transaction Date:</strong> ${txn.transactionDate || 'N/A'}</p>
-              <p><strong>Currency Abbreviation:</strong> ${txn.currencyAbbreviation || 'N/A'}</p>
-              <p><strong>Exchange Rate:</strong> ${txn.exchangeRate?.toFixed(2) || 'N/A'}</p>
-              <p><strong>Converted Amount:</strong> ${txn.convertedAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</p>
-            </div>
-          `
-        )}
-      </div>
+        `
+      )}
     `;
   }
 
   render() {
     return html`
       <div class="container">
-        ${this.renderFilters()}
-        ${this.renderTransactions()}
         <button @click="${super.navigateBack}">Back</button>
+        <h2>Transactions</h2>
+        ${this.renderGroupedTransactions()}
       </div>
     `;
   }

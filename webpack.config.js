@@ -10,6 +10,7 @@ export default {
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: 'bundle.js',
+        assetModuleFilename: 'images/[name][hash][ext][query]', // Output folder for images
         clean: true,
     },
     mode: 'development',
@@ -41,10 +42,10 @@ export default {
                 use: ['style-loader', 'css-loader'],
             },
             {
-                test: /\.(png|jpe?g|gif|svg)$/i, // Rule for image files
+                test: /\.(png|jpe?g|gif|svg|webp)$/i, // Rule for image files
                 type: 'asset/resource', // Webpack 5+ handles assets with "asset/resource"
                 generator: {
-                  filename: 'images/[name][hash][ext]', // Output path for images
+                  filename: 'images/[name][hash][ext][query]', // Output path for images
                 },
             },
         ],
