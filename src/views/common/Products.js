@@ -55,10 +55,19 @@ class Products extends ViewBase {
       border-top: 1px solid #ccc;
       margin: 10px 0;
     }
+    input[type='text'] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
   `;
 
   static properties = {
     detailModels: { type: Array }, // Array to store multiple detail models
+    searchQuery: { type: String }, // Add searchQuery property
   };
 
   constructor() {
@@ -68,8 +77,9 @@ class Products extends ViewBase {
 
   connectedCallback() {
     super.connectedCallback();
-    const clientInfo = store.get('clientInfo') || {};
+    this.searchQuery = ''; // Initialize searchQuery
 
+    const clientInfo = store.get('clientInfo') || {};
     if (clientInfo && Array.isArray(clientInfo.detailModels)) {
       this.detailModels = clientInfo.detailModels;
     }
@@ -78,6 +88,19 @@ class Products extends ViewBase {
   navigateToMoreInfo(portfolioEntryTreeModels) {
     store.set('portfolioEntryTreeModels', portfolioEntryTreeModels); // Save data to store
     router.navigate('/portfolio-details'); // Navigate to the detailed view
+  }
+
+  handleSearchInput(event) {
+    this.searchQuery = event.target.value.toLowerCase(); // Update search query
+  }
+
+  getFilteredDetails() {
+    if (!this.searchQuery) return this.detailModels;
+
+    // Filter by instrumentName
+    return this.detailModels.filter((detail) =>
+      detail.instrumentName?.toLowerCase().includes(this.searchQuery)
+    );
   }
 
   renderDetailModel(detail) {
@@ -138,13 +161,21 @@ class Products extends ViewBase {
   }
 
   render() {
+    const filteredDetails = this.getFilteredDetails(); // Get filtered models
+
     return html`
-        <h1>Products</h1>
+      <h1>Products</h1>
       <div class="back-button">
         <button @click="${() => this.navigateBack()}">Back</button>
       </div>
+      <input
+        type="text"
+        placeholder="Search by Instrument Name..."
+        @input="${this.handleSearchInput}"
+        .value="${this.searchQuery}"
+      />
       <div class="container">
-        ${this.detailModels.map((detail) => this.renderDetailModel(detail))}
+        ${filteredDetails.map((detail) => this.renderDetailModel(detail))}
       </div>
     `;
   }
