@@ -162,6 +162,60 @@ class HomeView extends ViewBase {
     h4{
       color: black;
     }
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .dialog-content {
+      background: white;
+      border-radius: 10px;
+      width: 400px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .dialog-content h3 {
+      margin-top: 0;
+    }
+
+    .dialog-content label {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .dialog-content input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .dialog-content .actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .dialog-content button {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .dialog-content button:hover {
+      background-color: #0056b3;
+    }
+
   `;
 
   static properties = {
@@ -171,6 +225,8 @@ class HomeView extends ViewBase {
     isSearched: { type: Boolean },
     clientInfo: { type: Object },
     appointmentFrequency: { type: Number }, // Store selected frequency
+    reportOptions: { type: Object },
+    showDialog: { type: Boolean },
   };
 
   constructor() {
@@ -180,6 +236,21 @@ class HomeView extends ViewBase {
     this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
     this.transactionDateEnd = this.formatDateToISO(new Date());
     this.clientInfo = store.get('clientInfo') ||  {};
+    this.showDialog = false;
+    this.reportOptions = {
+      contributions: true,
+      withdrawals: true,
+      regularWithdrawals: true,
+      includePercentage: false,
+      netWithdrawal: false,
+      netWithdrawalValue: 0,
+      switches: true,
+      performanceChart: true,
+      excludeGrowth: false,
+      irr: 7.0,
+      vested: true,
+      groupFunds: true,
+    };
     this.clientService = new ClientProfileService();
     this.initClientInfo();
   }
@@ -277,8 +348,54 @@ this.clientInfo = {
     router.navigate(`/${tabName}`);
   }
 
+  toggleDialog() {
+    this.showDialog = !this.showDialog;
+  }
+
+  updateOption(e, option) {
+    const { type, checked, value } = e.target;
+    this.reportOptions = {
+      ...this.reportOptions,
+      [option]: type === 'checkbox' ? checked : parseFloat(value),
+    };
+  }
+
   generateReport() {
-    window.alert("Generating report...");
+    console.log('Generating report with options:', this.reportOptions);
+    this.toggleDialog(); // Close dialog after generating
+    alert('Report generated!');
+  }
+
+  renderDialog() {
+    return html`
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>Generate Report</h3>
+          <div>
+            <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
+            <label>
+              <input type="checkbox" .checked="${this.reportOptions.netWithdrawal}" @change="${(e) => this.updateOption(e, 'netWithdrawal')}" /> Net Withdrawal
+              <input type="number" .value="${this.reportOptions.netWithdrawalValue}" ?disabled="${!this.reportOptions.netWithdrawal}" @input="${(e) => this.updateOption(e, 'netWithdrawalValue')}" />
+            </label>
+            <label><input type="checkbox" .checked="${this.reportOptions.switches}" @change="${(e) => this.updateOption(e, 'switches')}" /> Switches</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.performanceChart}" @change="${(e) => this.updateOption(e, 'performanceChart')}" /> Performance Chart</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.excludeGrowth}" @change="${(e) => this.updateOption(e, 'excludeGrowth')}" /> Exclude Growth</label>
+            <label>
+              IRR: <input type="number" .value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
+            </label>
+            <label><input type="checkbox" .checked="${this.reportOptions.vested}" @change="${(e) => this.updateOption(e, 'vested')}" /> Vested</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.groupFunds}" @change="${(e) => this.updateOption(e, 'groupFunds')}" /> Group Funds</label>
+          </div>
+          <div class="actions">
+            <button @click="${this.toggleDialog}">Cancel</button>
+            <button @click="${this.generateReport}">Generate</button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   render() {
@@ -287,6 +404,7 @@ this.clientInfo = {
         <header class="header">
           <h1>Elite</h1>
         </header>
+        ${this.showDialog ? this.renderDialog() : ''}
         <div class="hero"
         style="background-image: url(${background}); background-size: cover; background-position: center; height: 700px;">
           <h2>Find your client</h2>
@@ -377,6 +495,7 @@ this.clientInfo = {
         </div>
         <div class="client-card-actions">
           <button @click="${() => this.handleTabNavigation('transactions')}">Transactions</button>
+          <button @click="${this.toggleDialog}">Generate Report</button>
           <button @click="${() => this.handleTabNavigation('products')}">Portfolios</button>
         </div>
       </div>

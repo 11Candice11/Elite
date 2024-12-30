@@ -1,6 +1,7 @@
 import { html, render } from 'lit';
 import '/src/views/LoginView.js';  
 import '/src/views/HomeView.js';   
+import '/src/views/Dashboard.js';   
 import '/src/views/common/Products.js';  
 import '/src/views/common/Portfolio.js';  
 import '/src/views/common/Transactions.js';  
@@ -15,7 +16,8 @@ export class Routing {
       '/transactions': () => html`<transactions-view></transactions-view>`,
       '/products': () => html`<product-view></product-view>`,
       '/portfolio': () => html`<portfolio-view></portfolio-view>`,
-      '/portfolio-details': () => html`<portfolio-details></portfolio-details>`
+      '/portfolio-details': () => html`<portfolio-details></portfolio-details>`,
+      '/dashboard': () => html`<dashboard-view></dashboard-view>`
     };
 
     window.addEventListener('popstate', () => {

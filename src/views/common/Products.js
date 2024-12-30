@@ -170,7 +170,7 @@ class Products extends ViewBase {
       </div>
       <input
         type="text"
-        placeholder="Search by Instrument Name..."
+        placeholder="Search by Portfolio Name..."
         @input="${this.handleSearchInput}"
         .value="${this.searchQuery}"
       />

@@ -15,18 +15,20 @@ export default {
     },
     mode: 'development',
     devServer: {
-        proxy: {
-            '/api': {
-              target: 'http://localhost:6200',
-              changeOrigin: true,
-            },
-          },
+      proxy: [
+        {
+            context: ['/api'], // Routes to proxy
+            target: 'http://localhost:6200', // Backend server
+            changeOrigin: true, // Adjust the origin of the request
+        },
+    ],
+        historyApiFallback: true, // Handle SPA routing
         static: path.resolve(__dirname, 'dist'),
         port: 3000,
         open: true,
         headers: {
-            'Content-Security-Policy': "connect-src 'self' https://localhost:6200",
-          },
+          'Content-Security-Policy': "connect-src 'self' http://localhost:6200", // Allow backend connections
+        },
     },
     module: {
         rules: [
