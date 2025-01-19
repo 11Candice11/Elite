@@ -1,6 +1,11 @@
-import { AppShell } from './AppShell.js';
-import { Routing } from '/src/shell/Routing.js';
+import { AppShell } from "./AppShell.js";
+import { Routing } from "/src/shell/Routing.js";
 
-const app = new AppShell();
-const router = new Routing();
-app.init();
+try {
+  const router = new Routing();
+  const app = new AppShell(router);
+  app.init();
+} catch (ex) {
+  console.log(ex);
+}
+
