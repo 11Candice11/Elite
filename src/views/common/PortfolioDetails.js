@@ -92,13 +92,15 @@ class PortfolioDetails extends ViewBase {
                 <thead>
                   <tr>
                     <th>Instrument Name</th>
-                    <th>Is Lowest Level</th>
-                    <th>Is Root</th>
+                    <!-- <th>Is Lowest Level</th>
+                    <th>Is Root</th> -->
                     <th>ISIN Number</th>
-                    <th>Level</th>
-                    <th>Parent Portfolio Entry ID</th>
+                    <!-- <th>Level</th> -->
+                    <th>One year returns</th>
+                    <th>Three year returns</th>
+                    <!-- <th>Parent Portfolio Entry ID</th>
                     <th>Portfolio Entry ID</th>
-                    <th>Root Portfolio Entry ID</th>
+                    <th>Root Portfolio Entry ID</th> -->
                   </tr>
                 </thead>
                 <tbody>
@@ -106,13 +108,15 @@ class PortfolioDetails extends ViewBase {
                     (entry) => html`
                       <tr>
                         <td>${entry.instrumentName || 'N/A'}</td>
-                        <td>${entry.isLowestLevel ? 'Yes' : 'No'}</td>
-                        <td>${entry.isRoot ? 'Yes' : 'No'}</td>
+                        <!-- <td>${entry.isLowestLevel ? 'Yes' : 'No'}</td>
+                        <td>${entry.isRoot ? 'Yes' : 'No'}</td> -->
                         <td>${entry.isinNumber || 'N/A'}</td>
-                        <td>${entry.level}</td>
+                        <!-- <td>${entry.level}</td>
                         <td>${entry.parentPortfolioEntryId || 'N/A'}</td>
                         <td>${entry.portfolioEntryId || 'N/A'}</td>
-                        <td>${entry.rootPortfolioEntryId || 'N/A'}</td>
+                        <td>${entry.rootPortfolioEntryId || 'N/A'}</td> -->
+                        <td></td>
+                        <td></td>
                       </tr>
                     `
                   )}

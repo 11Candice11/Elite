@@ -5,7 +5,8 @@ import '/src/views/Dashboard.js';
 import '/src/views/common/Products.js';  
 import '/src/views/common/Portfolio.js';  
 import '/src/views/common/Transactions.js';  
-import '/src/views/common/PortfolioDetails.js'; 
+import '/src/views/common/PortfolioDetails.js';
+import '/src/views/common/PDFViewer.js';
 
 export class Routing {
   constructor() {
@@ -17,7 +18,8 @@ export class Routing {
       '/products': () => html`<product-view></product-view>`,
       '/portfolio': () => html`<portfolio-view></portfolio-view>`,
       '/portfolio-details': () => html`<portfolio-details></portfolio-details>`,
-      '/dashboard': () => html`<dashboard-view></dashboard-view>`
+      '/dashboard': () => html`<dashboard-view></dashboard-view>`,
+      '/pdf': () => html`<pdf-viewer></pdf-viewer>`
     };
 
     window.addEventListener('popstate', () => {

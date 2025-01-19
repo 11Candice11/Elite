@@ -123,15 +123,22 @@ class Products extends ViewBase {
       regularWithdrawalEscalationPercentage,
       reportNotes,
     } = detail;
-
+  
+    // Format the inception date
+    const formattedInceptionDate = inceptionDate
+      ? new Date(inceptionDate).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        })
+      : 'N/A';
+  
     return html`
       <div class="card">
         <div class="card-header">${instrumentName || 'N/A'}</div>
         <div class="card-content">
-          <p><strong>Product Description:</strong> ${productDescription || 'N/A'}</p>
-          <p><strong>Reporting Name:</strong> ${reportingName || 'N/A'}</p>
           <p><strong>Reference Number:</strong> ${referenceNumber || 'N/A'}</p>
-          <p><strong>Inception Date:</strong> ${inceptionDate || 'N/A'}</p>
+          <p><strong>Inception Date:</strong> ${formattedInceptionDate}</p>
           <p><strong>Initial Contribution Amount:</strong> 
             ${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'} 
             (${initialContributionCurrencyAbbreviation || 'N/A'})
@@ -153,13 +160,12 @@ class Products extends ViewBase {
           <p><strong>Escalation %:</strong> ${regularWithdrawalEscalationPercentage || 'N/A'}%</p>
           <p><strong>Report Notes:</strong> ${reportNotes || 'N/A'}</p>
         </div>
-        <p><strong>Report Notes:</strong> ${reportNotes || 'N/A'}</p>
-<div class="divider"></div>
-<button @click="${() => this.navigateToMoreInfo(detail.portfolioEntryTreeModels)}">More Info</button>
+        <div class="divider"></div>
+        <button @click="${() => this.navigateToMoreInfo(detail.portfolioEntryTreeModels)}">More Info</button>
       </div>
     `;
   }
-
+  
   render() {
     const filteredDetails = this.getFilteredDetails(); // Get filtered models
 

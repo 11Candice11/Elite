@@ -167,7 +167,7 @@ class Transactions extends ViewBase {
     const endDate = new Date(this.endDate);
     const searchLower = this.searchQuery.toLowerCase();
   
-    const groupedByMonth = {};
+    const groupedByPortfolioAndDate = {};
   
     Object.entries(this.groupedTransactions).forEach(([portfolioName, transactions]) => {
       if (portfolioName.toLowerCase().includes(searchLower)) {
@@ -179,19 +179,31 @@ class Transactions extends ViewBase {
           .sort((a, b) => new Date(a.transactionDate) - new Date(b.transactionDate));
   
         if (filteredTransactions.length > 0) {
-          groupedByMonth[portfolioName] = filteredTransactions.reduce((acc, txn) => {
-            const txnDate = new Date(txn.transactionDate);
-            const monthYear = txnDate.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+          const aggregatedByDate = filteredTransactions.reduce((acc, txn) => {
+            const txnDate = new Date(txn.transactionDate).toLocaleDateString(); // Group by date
+            if (!acc[txnDate]) {
+              acc[txnDate] = [];
+            }
+            const existingTransaction = acc[txnDate].find(
+              (t) => t.transactionType === txn.transactionType && t.currencyAbbreviation === txn.currencyAbbreviation
+            );
   
-            if (!acc[monthYear]) acc[monthYear] = [];
-            acc[monthYear].push(txn);
+            if (existingTransaction) {
+              existingTransaction.convertedAmount += txn.convertedAmount || 0; // Sum the amounts
+              existingTransaction.transactionCount += 1; // Increment the count
+            } else {
+              acc[txnDate].push({ ...txn, transactionCount: 1 }); // Add new with count
+            }
+  
             return acc;
           }, {});
+  
+          groupedByPortfolioAndDate[portfolioName] = aggregatedByDate;
         }
       }
     });
   
-    return groupedByMonth;
+    return groupedByPortfolioAndDate;
   }
 
   handleSearchInput(event) {
@@ -199,53 +211,55 @@ class Transactions extends ViewBase {
     this.requestUpdate(); // Explicitly request a re-render
   }
 
-  renderGroupedTransactions() {
-    const filteredTransactions = this.getFilteredTransactions();
-  
-    return html`
-      <div class="transactions-container">
-        ${Object.entries(filteredTransactions)
-          .flatMap(([portfolioName, transactionsByMonth]) =>
-            Object.values(transactionsByMonth).flatMap((transactions) =>
-              transactions.map(
-                (txn) => html`
-                  <div class="transaction-card">
-                    <div class="portfolio-header">${portfolioName}</div>
-                    <div class="transaction-row">
-                      <div class="transaction-item">
-                        <div class="header">Date:</div>
-                        <div class="value">${new Date(txn.transactionDate).toLocaleDateString()}</div>
-                      </div>
-                      <div class="transaction-item">
-                        <div class="header">Transaction Type:</div>
-                        <div class="value">${txn.transactionType || 'N/A'}</div>
-                      </div>
-                      <div class="transaction-item">
-                        <div class="header">Exchange Rate:</div>
-                        <div class="value">${txn.exchangeRate?.toFixed(2) || 'N/A'}</div>
-                      </div>
-                      <div class="transaction-item">
-                        <div class="header">Converted Amount:</div>
-                        <div class="value">
-                          ${txn.convertedAmount?.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                          }) || 'N/A'}
-                        </div>
-                      </div>
-                      <div class="transaction-item">
-                        <div class="header">Currency:</div>
-                        <div class="value">${txn.currencyAbbreviation || 'N/A'}</div>
+renderGroupedTransactions() {
+  const filteredTransactions = this.getFilteredTransactions();
+
+  return html`
+    <div class="transactions-container">
+      ${Object.entries(filteredTransactions).map(([portfolioName, transactionsByDate]) => html`
+        <div class="portfolio-group">
+          <div class="portfolio-name">${portfolioName}</div>
+          ${Object.entries(transactionsByDate).map(([date, transactions]) => html`
+            <div class="date-group">
+              <div class="transaction-card-header">Date: ${date}</div>
+              ${transactions.map(txn => html`
+                <div class="transaction-card">
+                  <div class="transaction-row">
+                    <div class="transaction-item">
+                      <div class="header">Transaction Type:</div>
+                      <div class="value">${txn.transactionType || 'N/A'}</div>
+                    </div>
+                    <div class="transaction-item">
+                      <div class="header">Exchange Rate:</div>
+                      <div class="value">${txn.exchangeRate?.toFixed(2) || 'N/A'}</div>
+                    </div>
+                    <div class="transaction-item">
+                      <div class="header">Converted Amount:</div>
+                      <div class="value">
+                        ${txn.convertedAmount?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        }) || 'N/A'}
                       </div>
                     </div>
+                    <div class="transaction-item">
+                      <div class="header">Currency:</div>
+                      <div class="value">${txn.currencyAbbreviation || 'N/A'}</div>
+                    </div>
+                    <div class="transaction-item">
+                      <div class="header">Transaction Count:</div>
+                      <div class="value">${txn.transactionCount}</div>
+                    </div>
                   </div>
-                `
-              )
-            )
-          )}
-      </div>
-    `;
-  }
+                </div>
+              `)}
+            </div>
+          `)}
+        </div>
+      `)}
+    </div>
+  `;
+}
 
   render() {
     return html`

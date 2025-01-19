@@ -19,6 +19,7 @@ export default {
       "/api": {
         target: "http://localhost:6200",
         changeOrigin: true,
+        secure: false, // Set to false if the backend uses self-signed certificates
       },
     },
     historyApiFallback: true,
@@ -26,8 +27,18 @@ export default {
     port: 3000,
     open: true,
     headers: {
-      "Content-Security-Policy":
-        "default-src 'self'; connect-src 'self' http://localhost:6200;",
+      "Access-Control-Allow-Origin": "*", // Allow all origins
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS", // Allow specific HTTP methods
+      "Access-Control-Allow-Headers":
+        "X-Requested-With, content-type, Authorization", // Allow custom headers
+      "Content-Security-Policy": `
+        default-src 'self';
+        connect-src 'self' http://localhost:6200;
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data:;
+        font-src 'self';
+      `,
     },
   },
   module: {
@@ -44,6 +55,11 @@ export default {
         use: ["style-loader", "css-loader"],
       },
       {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: 'javascript/auto',
+      },
+      {
         test: /\.(png|jpe?g|gif|svg|webp)$/i,
         type: "asset/resource",
         generator: {
@@ -51,6 +67,9 @@ export default {
         },
       },
     ],
+  },
+  resolve: {
+    extensions: [".js", ".mjs"], // Add .mjs here
   },
   plugins: [
     new HtmlWebpackPlugin({

@@ -17,7 +17,10 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "fs-extra": "^11.2.0",
-    "lit": "^3.2.1"
+    "lit": "^3.2.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^2.15.349",
+    "react-pdf": "^9.2.1"
   },
   "type": "module",
   "devDependencies": {

@@ -363,7 +363,8 @@ this.clientInfo = {
   generateReport() {
     console.log('Generating report with options:', this.reportOptions);
     this.toggleDialog(); // Close dialog after generating
-    alert('Report generated!');
+    router.navigate('/pdf'); // Navigate to the PDF viewer
+    // alert('Report generated!');
   }
 
   renderDialog() {
