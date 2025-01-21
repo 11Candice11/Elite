@@ -5,10 +5,12 @@ import { store } from '/src/store/EliteStore.js';
 import background from '/src/images/home.png';
 import user from '/src/images/user.png';
 import { ViewBase } from './common/ViewBase.js';
-
+import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
 class HomeView extends ViewBase {
-  static styles = css`
+  static styles = [
+    ViewBase.styles,
+    css`
     body {
       margin: 0;
       padding: 0;
@@ -16,7 +18,7 @@ class HomeView extends ViewBase {
     }
     .client-card {
       background: white;
-      border: 1px solid #ccc;
+      border: 1px solid #222222;
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       max-width: 600px;
@@ -27,7 +29,7 @@ class HomeView extends ViewBase {
     .client-card-header {
       display: flex;
       align-items: center;
-      background-color: #007bff;
+      background-color: #c0e600;
       color: white;
       border-top-left-radius: 8px;
       border-top-right-radius: 8px;
@@ -61,8 +63,9 @@ class HomeView extends ViewBase {
     
     .client-card-actions button {
       padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
+      margin: 10px;
+      background-color: #c0e600;
+      color: #222222;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -70,7 +73,7 @@ class HomeView extends ViewBase {
     }
     
     .client-card-actions button:hover {
-      background-color: #0056b3;
+      background-color: #c0e600;
     }
     .client-card h3 {
       margin-bottom: 15px;
@@ -105,7 +108,7 @@ class HomeView extends ViewBase {
     .tabs button {
       background: none;
       border: none;
-      color: #fff;
+      color: #222222;
       font-size: 16px;
       cursor: pointer;
     }
@@ -138,14 +141,10 @@ class HomeView extends ViewBase {
     }
     .search-section button {
       padding: 10px;
-      background-color: #007bff;
-      color: white;
+      color: #222222;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-    }
-    .search-section button:hover {
-      background-color: #0056b3;
     }
     .filter-buttons {
       display: flex;
@@ -205,18 +204,23 @@ class HomeView extends ViewBase {
 
     .dialog-content button {
       padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
+      background-color: #c0e600;
+      color: #222222;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
 
     .dialog-content button:hover {
-      background-color: #0056b3;
+      background-color: #c0e600;
     }
-
-  `;
+    h2 {
+      color: #222222;
+    }
+    label {
+      color: black;
+    }
+  `];
 
   static properties = {
     searchID: { type: String },
@@ -227,6 +231,8 @@ class HomeView extends ViewBase {
     appointmentFrequency: { type: Number }, // Store selected frequency
     reportOptions: { type: Object },
     showDialog: { type: Boolean },
+    showDetailModelsDialog: { type: Boolean },
+    selectedDetailModel: { type: Object }
   };
 
   constructor() {
@@ -235,8 +241,11 @@ class HomeView extends ViewBase {
     this.appointmentFrequency = 6; // Default to 6 months
     this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
     this.transactionDateEnd = this.formatDateToISO(new Date());
-    this.clientInfo = store.get('clientInfo') ||  {};
+    this.clientInfo = store.get('clientInfo') || {};
     this.showDialog = false;
+    this.showDetailModelsDialog = false;
+    this.selectedDetailModel = null;
+
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -253,6 +262,7 @@ class HomeView extends ViewBase {
     };
     this.clientService = new ClientProfileService();
     this.initClientInfo();
+    Object.assign(HomeView.prototype, PdfMixin);
   }
 
   initClientInfo() {
@@ -260,22 +270,23 @@ class HomeView extends ViewBase {
     if (!entity) {
       return;
     }
-this.clientInfo = {
-  firstNames: entity.firstNames || 'N/A',
-  surname: entity.surname || 'N/A',
-  registeredName: entity.registeredName || 'N/A',
-  title: entity.title || 'N/A',
-  nickname: entity.nickname || 'N/A',
-  advisorName: entity.advisorName || 'N/A',
-  email: entity.email || 'N/A',
-  cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
-};
+    this.clientInfo = {
+      firstNames: entity.firstNames || 'N/A',
+      surname: entity.surname || 'N/A',
+      registeredName: entity.registeredName || 'N/A',
+      title: entity.title || 'N/A',
+      nickname: entity.nickname || 'N/A',
+      advisorName: entity.advisorName || 'N/A',
+      email: entity.email || 'N/A',
+      cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+      detailModels: entity.detailModels || [],
+    };
   }
 
   handleFrequencyChange(event) {
     this.appointmentFrequency = parseInt(event.target.value, 10);
   }
-  
+
   calculateAppointments() {
     const today = new Date();
     const appointments = [];
@@ -322,12 +333,11 @@ this.clientInfo = {
     try {
       const response = await this.clientService.getClientProfile(request);
 
-      if(!response?.entityModels[0]){
+      if (!response?.entityModels[0]) {
         return null;
       }
 
       const entity = response.entityModels[0];
-      console.log('Fetched Data:', response); // For debugging
       this.clientInfo = {
         firstNames: entity.firstNames || 'N/A',
         surname: entity.surname || 'N/A',
@@ -337,9 +347,10 @@ this.clientInfo = {
         advisorName: entity.advisorName || 'N/A',
         email: entity.email || 'N/A',
         cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+        detailModels: entity.detailModels || [],
       };
       store.set('clientInfo', entity);
-      } catch (error) {
+    } catch (error) {
       console.error('Error fetching data:', error);
     }
   }
@@ -360,11 +371,46 @@ this.clientInfo = {
     };
   }
 
-  generateReport() {
-    console.log('Generating report with options:', this.reportOptions);
-    this.toggleDialog(); // Close dialog after generating
+  toggleDetailModelsDialog() {
+    this.showDetailModelsDialog = true;
+    console.log('Showing detail models dialog...');
+    store.set('reportOptions', this.reportOptions);
+    this.showDialog = false;
+    this.requestUpdate();
+  }
+
+  async generateReport() {
+    console.log('Generating report...');
+    var base64 = await this.generatePDF(this.clientInfo, this.selectedDetailModel, this.reportOptions.irr, this.searchID); // Generate the PDF
+    store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
     // alert('Report generated!');
+  }
+
+  handleSelectDetailModel(model) {
+    this.showDetailModelsDialog = false;
+    this.selectedDetailModel = model;
+    // Continue with generating the report
+    this.generateReport();
+  }
+
+  renderDetailModelsDialog() {
+    if (!this.clientInfo || !this.clientInfo.detailModels) return null;
+    return html`
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>Select a Detail Model</h3>
+          ${this.clientInfo.detailModels.map(
+      (model) => html`
+              <div class="client-card" @click="${() => this.handleSelectDetailModel(model)}">
+                <p><strong>${model.instrumentName}</strong></p>
+              </div>
+            `
+    )}
+          <button class="button" @click="${() => this.showDetailModelsDialog = false}">Cancel</button>
+        </div>
+      </div>
+    `;
   }
 
   renderDialog() {
@@ -381,18 +427,18 @@ this.clientInfo = {
               <input type="checkbox" .checked="${this.reportOptions.netWithdrawal}" @change="${(e) => this.updateOption(e, 'netWithdrawal')}" /> Net Withdrawal
               <input type="number" .value="${this.reportOptions.netWithdrawalValue}" ?disabled="${!this.reportOptions.netWithdrawal}" @input="${(e) => this.updateOption(e, 'netWithdrawalValue')}" />
             </label>
-            <label><input type="checkbox" .checked="${this.reportOptions.switches}" @change="${(e) => this.updateOption(e, 'switches')}" /> Switches</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.performanceChart}" @change="${(e) => this.updateOption(e, 'performanceChart')}" /> Performance Chart</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.excludeGrowth}" @change="${(e) => this.updateOption(e, 'excludeGrowth')}" /> Exclude Growth</label>
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.switches}" @change="${(e) => this.updateOption(e, 'switches')}" /> Switches</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.performanceChart}" @change="${(e) => this.updateOption(e, 'performanceChart')}" /> Performance Chart</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.excludeGrowth}" @change="${(e) => this.updateOption(e, 'excludeGrowth')}" /> Exclude Growth</label> -->
             <label>
               IRR: <input type="number" .value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
             </label>
-            <label><input type="checkbox" .checked="${this.reportOptions.vested}" @change="${(e) => this.updateOption(e, 'vested')}" /> Vested</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.groupFunds}" @change="${(e) => this.updateOption(e, 'groupFunds')}" /> Group Funds</label>
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.vested}" @change="${(e) => this.updateOption(e, 'vested')}" /> Vested</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.groupFunds}" @change="${(e) => this.updateOption(e, 'groupFunds')}" /> Group Funds</label> -->
           </div>
           <div class="actions">
-            <button @click="${this.toggleDialog}">Cancel</button>
-            <button @click="${this.generateReport}">Generate</button>
+            <button class="button" @click="${() => this.showDialog = false}">Cancel</button>
+            <button class="button" @click="${this.toggleDetailModelsDialog}">Generate</button>
           </div>
         </div>
       </div>
@@ -405,6 +451,7 @@ this.clientInfo = {
         <header class="header">
           <h1>Elite</h1>
         </header>
+        ${this.showDetailModelsDialog ? this.renderDetailModelsDialog() : ''}
         ${this.showDialog ? this.renderDialog() : ''}
         <div class="hero"
         style="background-image: url(${background}); background-size: cover; background-position: center; height: 700px;">
@@ -416,7 +463,7 @@ this.clientInfo = {
               .value="${this.searchID}"
               @input="${(e) => (this.searchID = e.target.value)}"
             />
-            <button @click="${this.fetchData}">Search</button>
+            <button class="button" @click="${this.fetchData}">Search</button>
           </div>
           <div class="filter-buttons">
   <label>
@@ -458,12 +505,13 @@ this.clientInfo = {
   </label>
 </div>
           ${this.clientInfo && this.clientInfo.firstNames
-          ? html`${this.renderClientCard()}`
-          : html``}
+        ? html`${this.renderClientCard()}`
+        : html``}
           </div>
         </div>
     `;
   }
+
   renderClientCard() {
     const appointments = this.calculateAppointments();
     const formatter = new Intl.DateTimeFormat('en-GB', {
@@ -471,7 +519,7 @@ this.clientInfo = {
       month: 'long',
       year: 'numeric',
     });
-  
+
     return html`
       <div class="client-card">
         <div class="client-card-header">
@@ -489,19 +537,18 @@ this.clientInfo = {
             <h4>Next Appointments:</h4>
             <ul>
               ${appointments.map(
-                (date) => html`<li>${formatter.format(date)}</li>`
-              )}
+      (date) => html`<li>${formatter.format(date)}</li>`
+    )}
             </ul>
           </div>
         </div>
         <div class="client-card-actions">
-          <button @click="${() => this.handleTabNavigation('transactions')}">Transactions</button>
-          <button @click="${this.toggleDialog}">Generate Report</button>
-          <button @click="${() => this.handleTabNavigation('products')}">Portfolios</button>
+          <button class="button" @click="${() => this.handleTabNavigation('transactions')}">Transactions</button>
+          <button class="button" @click="${() => this.showDialog = true}">Generate Report</button>
+          <button class="button" @click="${() => this.handleTabNavigation('products')}">Portfolios</button>
         </div>
       </div>
     `;
   }
 }
-
 customElements.define('home-view', HomeView);

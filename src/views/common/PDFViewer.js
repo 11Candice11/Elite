@@ -3,12 +3,16 @@ import { LitElement, html, css } from 'lit';
 import base64PDF from '/src/constants/Base64.js';
 // import { pdfjsLib } from 'pdfjs-dist/build/pdf.js';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js';
+import { store } from '/src/store/EliteStore.js';
+import { ViewBase } from './ViewBase.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.worker.min.js';
 
-class PDFViewer extends LitElement {
-  static styles = css`
+class PDFViewer extends ViewBase {
+  static styles = [
+    ViewBase.styles,
+    css`
     :host {
       display: block;
       padding: 20px;
@@ -33,7 +37,7 @@ class PDFViewer extends LitElement {
       padding: 5px 15px;
       font-size: 16px;
     }
-  `;
+  `];
 
   static properties = {
     pdfSrc: { type: String },
@@ -44,11 +48,18 @@ class PDFViewer extends LitElement {
 
   constructor() {
     super();
-    this.pdfSrc = `data:application/pdf;base64,${base64PDF}`;
+    this.base64 = ``;
+    this.pdfSrc = ``;
     this.currentPage = 1;
     this.totalPages = 0;
     this.pdfDocument = null;
   }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.base64 = store.get(`base64`);
+    this.pdfSrc = `data:application/pdf;base64,${this.base64}`;
+}
 
   async firstUpdated() {
     this.loadPDF();
@@ -58,6 +69,7 @@ class PDFViewer extends LitElement {
     try {
       const loadingTask = pdfjsLib.getDocument(this.pdfSrc);
       this.pdfDoc = await loadingTask.promise;
+      this.totalPages = this.pdfDoc.numPages;
       this.renderPage(1);
     } catch (error) {
       console.error('Error loading PDF:', error);
@@ -97,19 +109,44 @@ class PDFViewer extends LitElement {
     }
   }
 
+  downloadPDF() {
+    // Extract the name, surname, and current date for the file name
+    const clientName = store.get('clientInfo')?.firstNames || 'Unknown';
+    const clientSurname = store.get('clientInfo')?.surname || 'Unknown';
+    const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-'); // Format as DD-MM-YYYY
+
+    const fileName = `${clientName}_${clientSurname}_${currentDate}_Report.pdf`;
+
+    // Create a Blob from the Base64-encoded PDF and trigger the download
+    const pdfBlob = new Blob([Uint8Array.from(atob(this.base64), (c) => c.charCodeAt(0))], {
+      type: 'application/pdf',
+    });
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(pdfBlob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href); // Clean up the URL
+  }
+
   render() {
     return html`
+          <div class="back-button">
+        <button class="button" @click="${() => this.navigateBack()}">Back</button>
+      </div>
+        <h1>View Document</h1>
       <div id="pdf-container">
         <canvas id="canvas"></canvas>
       </div>
       <div class="controls">
-        <button @click="${this.handlePrevPage}" ?disabled="${this.currentPage <= 1}">
+        <button class="button" @click="${this.handlePrevPage}" ?disabled="${this.currentPage <= 1}">
           Previous
         </button>
         <span>Page ${this.currentPage} of ${this.totalPages}</span>
-        <button @click="${this.handleNextPage}" ?disabled="${this.currentPage >= this.totalPages}">
+        <button class="button" @click="${this.handleNextPage}" ?disabled="${this.currentPage >= this.totalPages}">
           Next
         </button>
+        <button class="button" @click="${this.downloadPDF}">Download</button>
       </div>
     `;
   }

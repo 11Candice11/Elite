@@ -4,66 +4,136 @@ import { ViewBase } from './ViewBase.js';
 import { router } from '/src/shell/Routing.js';
 
 class Products extends ViewBase {
-  static styles = css`
-    .container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
-    .back-button {
-      display: flex;
-      justify-content: flex-start;
-      padding: 10px;
-      margin-bottom: 20px;
-    }
-    .back-button button {
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .back-button button:hover {
-      background-color: #0056b3;
-    }
-    .card {
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      background-color: white;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .card-header {
-      background-color: #007bff;
-      color: white;
-      padding: 10px;
-      font-size: 1.2em;
-      font-weight: bold;
-    }
-    .card-content {
-      padding: 15px;
-    }
-    .card-content p {
-      margin: 5px 0;
-    }
-    .divider {
-      border-top: 1px solid #ccc;
-      margin: 10px 0;
-    }
-    input[type='text'] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 20px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-  `;
+  static styles = [
+    ViewBase.styles,
+    css`
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f7f9fc;
+    margin: 0;
+    padding: 20px;
+  }
+  
+  .quote-card {
+    width: 100%;
+    max-width: 1000px;
+    margin: 20px auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .header {
+    background-color: #dbeafe; /* Soft Blue Background */
+    color: #222222;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0; /* Round the top corners */
+    margin: -20px -20px 20px -20px; /* Extend header across the card */
+  }
+  
+  .header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #222222;
+  }
+  
+  .header p {
+    margin: 0;
+    font-size: 14px;
+    color: #222222;
+  }
+  
+  .date {
+    text-align: right;
+  }
+  
+  .date h4 {
+    margin: 0;
+    font-size: 16px;
+    color: #222222;
+  }
+  
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .stats div {
+    flex: 1;
+    padding: 10px;
+  }
+  
+  .stats div p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #333;
+  }
+  
+  .stats div h4 {
+    margin: 0;
+    font-size: 16px;
+    // color: #D4FF00;
+  }
+  
+  .footer {
+    margin-top: 10px;
+  }
+  
+  footer details {
+    font-size: 14px;
+    color: #D4FF00;
+    cursor: pointer;
+  }
+  
+  footer details summary {
+    font-size: 14px;
+    color: #D4FF00;
+    cursor: pointer;
+    list-style: none;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  
+  thead th {
+    background-color: #dbeafe; /* Soft Blue for Table Header */
+    color: white;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  tbody td {
+    padding: 10px;
+    border: 1px solid #ccc;
+  }
+  
+  tbody tr:nth-child(odd) {
+    background-color: #f9f9f9;
+  }
+  
+  .more-info {
+    margin-top: 10px;
+  }
+  .back-button {
+    margin: 10px;
+  }
+  input{
+    width: 300px;
+    height: 30px;
+    border-radius: 10px;
+  }
+            `];
 
   static properties = {
     detailModels: { type: Array }, // Array to store multiple detail models
@@ -106,8 +176,6 @@ class Products extends ViewBase {
   renderDetailModel(detail) {
     const {
       instrumentName,
-      productDescription,
-      reportingName,
       referenceNumber,
       inceptionDate,
       initialContributionAmount,
@@ -122,57 +190,94 @@ class Products extends ViewBase {
       regularWithdrawalFrequency,
       regularWithdrawalEscalationPercentage,
       reportNotes,
+      portfolioEntryTreeModels = [], // Ensure this defaults to an empty array
     } = detail;
-  
+
     // Format the inception date
     const formattedInceptionDate = inceptionDate
       ? new Date(inceptionDate).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric',
-        })
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      })
       : 'N/A';
-  
+
     return html`
-      <div class="card">
-        <div class="card-header">${instrumentName || 'N/A'}</div>
-        <div class="card-content">
-          <p><strong>Reference Number:</strong> ${referenceNumber || 'N/A'}</p>
-          <p><strong>Inception Date:</strong> ${formattedInceptionDate}</p>
-          <p><strong>Initial Contribution Amount:</strong> 
-            ${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'} 
-            (${initialContributionCurrencyAbbreviation || 'N/A'})
-          </p>
-          <div class="divider"></div>
-          <p><strong>Regular Contribution:</strong> 
-            ${regularContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'} 
-            (${regularContributionCurrencyAbbreviation || 'N/A'})
-          </p>
-          <p><strong>Frequency:</strong> ${regularContributionFrequency || 'N/A'}</p>
-          <p><strong>Escalation %:</strong> ${regularContributionEscalationPercentage || 'N/A'}%</p>
-          <div class="divider"></div>
-          <p><strong>Regular Withdrawal:</strong> 
-            ${regularWithdrawalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'} 
-            (${regularWithdrawalCurrencyAbbreviation || 'N/A'})
-          </p>
-          <p><strong>Percentage:</strong> ${regularWithdrawalPercentage || 'N/A'}%</p>
-          <p><strong>Frequency:</strong> ${regularWithdrawalFrequency || 'N/A'}</p>
-          <p><strong>Escalation %:</strong> ${regularWithdrawalEscalationPercentage || 'N/A'}%</p>
-          <p><strong>Report Notes:</strong> ${reportNotes || 'N/A'}</p>
-        </div>
-        <div class="divider"></div>
-        <button @click="${() => this.navigateToMoreInfo(detail.portfolioEntryTreeModels)}">More Info</button>
+<div class="quote-card">
+  <!-- Header with Blue Background -->
+  <div class="header">
+    <div>
+      <h3>${instrumentName || 'N/A'}</h3>
+      <p>Reference Number: ${referenceNumber || 'N/A'}</p>
+    </div>
+    <div class="date">
+      <h4>Inception Date: ${formattedInceptionDate || 'N/A'}</h4>
+    </div>
+  </div>
+
+  <!-- Stats Section -->
+  <div class="stats">
+    <div>
+      <h4>${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
+      <p>Initial Contribution</p>
+    </div>
+    <div>
+      <h4>${regularContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
+      <p>Regular Contribution</p>
+    </div>
+    <div>
+      <h4>${regularWithdrawalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
+      <p>Regular Withdrawal</p>
+    </div>
+  </div>
+
+  <!-- More Info Dropdown -->
+  <div class="footer">
+    <details>
+      <summary>More Info</summary>
+      <div class="more-info">
+        <table>
+          <thead>
+            <tr>
+              <th>Instrument Name</th>
+              <th>ISIN Number</th>
+              <th>One Year Return</th>
+              <th>Three Year Returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${portfolioEntryTreeModels.length > 0
+              ? portfolioEntryTreeModels.map(
+                  (entry) => html`
+                    <tr>
+                      <td>${entry.instrumentName || 'N/A'}</td>
+                      <td>${entry.isinNumber || 'N/A'}</td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                  `
+                )
+              : html`
+                  <tr>
+                    <td colspan="4">No data available</td>
+                  </tr>
+                `}
+          </tbody>
+        </table>
       </div>
+    </details>
+  </div>
+</div>
     `;
   }
-  
+
   render() {
     const filteredDetails = this.getFilteredDetails(); // Get filtered models
 
     return html`
       <h1>Products</h1>
       <div class="back-button">
-        <button @click="${() => this.navigateBack()}">Back</button>
+        <button class="button" @click="${() => this.navigateBack()}">Back</button>
       </div>
       <input
         type="text"

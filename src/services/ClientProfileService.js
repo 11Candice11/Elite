@@ -5,7 +5,7 @@ export class ClientProfileService extends Service {
     constructor() {
         // super('https://bytemeservice-dkhsbpdbbcacbgcp.southafricanorth-01.azurewebsites.net'); // Base URL pointing to the backend
     
-        super('http://localhost:6200/api/elite/v1')
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1')
     }
 
     async getAllClients() {

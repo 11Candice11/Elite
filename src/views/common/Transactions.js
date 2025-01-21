@@ -3,7 +3,9 @@ import { ViewBase } from './ViewBase.js';
 import { store } from '/src/store/EliteStore.js';
 
 class Transactions extends ViewBase {
-  static styles = css`
+  static styles = [
+    ViewBase.styles,
+    css`
     .container {
       padding: 20px;
       background-color: #f9f9f9;
@@ -26,20 +28,20 @@ class Transactions extends ViewBase {
       margin-bottom: 20px;
       padding: 10px;
       border: none;
-      background-color: #007bff;
+      background-color:  #c0e600;
       color: white;
       border-radius: 5px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #0056b3;
+      background-color:  #c0e600;
     }
     .portfolio-group {
       margin-top: 20px;
     }
     .portfolio-name {
       font-size: 1.5em;
-      color: #007bff;
+      color:  #c0e600;
       margin-bottom: 10px;
     }
     .month-group {
@@ -66,7 +68,7 @@ class Transactions extends ViewBase {
     }
     
         .transaction-card-header {
-      background-color: #007bff;
+      background-color:  #c0e600;
       color: white;
       font-size: 1.2em;
       font-weight: bold;
@@ -99,12 +101,12 @@ class Transactions extends ViewBase {
     }
         
     .transaction-item strong {
-      color: #007bff; /* Highlighted titles */
+      color:  #c0e600; /* Highlighted titles */
       margin-right: 5px;
     }
 
 .transaction-card-content p strong {
-  color: #007bff; /* Highlighted titles */
+  color:  #c0e600; /* Highlighted titles */
 }
     th, td {
       padding: 10px;
@@ -112,7 +114,7 @@ class Transactions extends ViewBase {
       text-align: left;
     }
     th {
-      background-color: #007bff;
+      background-color:  #c0e600;
       color: white;
     }
     tr:nth-child(even) {
@@ -122,7 +124,7 @@ class Transactions extends ViewBase {
       font-size: 0.9em;
       font-weight: bold;
       text-decoration: underline;
-      color: #007bff; /* Blue Header */
+      color:  #c0e600; /* Blue Header */
       margin-bottom: 5px;
     }
     
@@ -131,7 +133,7 @@ class Transactions extends ViewBase {
       color: #000; /* Black Value */
       margin-bottom: 8px;
     }
-  `;
+  `];
 
   static properties = {
     groupedTransactions: { type: Object },
