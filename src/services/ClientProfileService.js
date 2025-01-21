@@ -5,7 +5,7 @@ export class ClientProfileService extends Service {
     constructor() {
         // super('https://bytemeservice-dkhsbpdbbcacbgcp.southafricanorth-01.azurewebsites.net'); // Base URL pointing to the backend
     
-        super('http://localhost:6200/api/elite/v1')
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1')
     }
 
     async getAllClients() {
@@ -28,7 +28,6 @@ export class ClientProfileService extends Service {
             const endpoint = '/get-client-profile';
             const body = request; // Create a JSON object with the entityId
             const clientProfile = await this.post(endpoint, body);
-            console.log(JSON.stringify(clientProfile));
             return clientProfile;
         } catch (error) {
             console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.SouthAfricanIdNumber}`, error);

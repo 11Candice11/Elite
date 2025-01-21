@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-
+import { router } from '/src/shell/Routing.js'
 class LoginView extends LitElement {
   static styles = css`
     .login-container {
@@ -38,7 +38,7 @@ class LoginView extends LitElement {
     }
     .form-group input:focus {
       outline: none;
-      border-color: #007bff;
+      border-color: #D4FF00;
     }
     .form-group .error {
       color: red;
@@ -47,15 +47,15 @@ class LoginView extends LitElement {
     button {
       width: 100%;
       padding: 10px;
-      background-color: #007bff;
+      background-color: #D4FF00;
       border: none;
-      color: white;
+      color: #222222;
       font-weight: bold;
       border-radius: 5px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #0056b3;
+      background-color: #c0e600;
     }
   `;
 
@@ -98,13 +98,14 @@ class LoginView extends LitElement {
 
   navigateToHome() {
     // Dispatch a custom event to navigate to HomeView
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' }, // Add detail if needed for routing logic
-        bubbles: true,
-        composed: true,
-      })
-    );
+    // this.dispatchEvent(
+    //   new CustomEvent('navigate', {
+    //     detail: { view: 'home' }, // Add detail if needed for routing logic
+    //     bubbles: true,
+    //     composed: true,
+    //   })
+    // );
+    router.navigate('/home');
   }
 
   render() {
@@ -150,7 +151,7 @@ class LoginView extends LitElement {
             ${this.errorMessage
               ? html`<div class="form-group error">${this.errorMessage}</div>`
               : ''}
-            <button type="submit">Login</button>
+            <button class="button" type="submit">Login</button>
           </form>
         </div>
       </div>

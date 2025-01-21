@@ -1,235 +1,554 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
-import { SharedState } from '/src/state/SharedState.js';
-import { store } from '/src/store/Store.js';
-import { router } from '/src/shell/EliteRouter.js'
+import { store } from '/src/store/EliteStore.js';
+import background from '/src/images/home.png';
+import user from '/src/images/user.png';
+import { ViewBase } from './common/ViewBase.js';
+import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
-class HomeView extends LitElement {
-  static styles = css`
-    .container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
+class HomeView extends ViewBase {
+  static styles = [
+    ViewBase.styles,
+    css`
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    .client-card {
+      background: white;
+      border: 1px solid #222222;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      margin: 20px auto;
       padding: 20px;
-      position: relative; /* For canvas overlay */
     }
-    .section {
-      border: 1px solid #ccc;
-      padding: 15px;
-      border-radius: 5px;
-      background: #f9f9f9;
-    }
-    .section h3 {
-      margin-top: 0;
-    }
-    input {
-      padding: 10px;
-      margin-bottom: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      width: 100%;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px;
-      border: none;
-      background-color: #007bff;
+    
+    .client-card-header {
+      display: flex;
+      align-items: center;
+      background-color: #c0e600;
       color: white;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      padding: 10px;
+    }
+    
+    .client-card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 15px;
+    }
+    
+    .client-card-content {
+      padding: 20px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    
+    .client-card-content p {
+      margin: 10px 0;
+      color: black;
+    }
+    
+    .client-card-actions {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 20px;
+      border-top: 1px solid #ddd;
+    }
+    
+    .client-card-actions button {
+      padding: 10px 15px;
+      margin: 10px;
+      background-color: #c0e600;
+      color: #222222;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .client-card-actions button:hover {
+      background-color: #c0e600;
+    }
+    .client-card h3 {
+      margin-bottom: 15px;
+    }
+    .client-card p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .client-card ul {
+      list-style: none; /* Remove dots */
+      padding: 0;
+      margin: 0;
+    }
+    
+    .client-card li {
+      margin: 5px 0;
+      font-size: 14px;
+      color: black; /* Make the text black */
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      background-color: #333;
+      color: #fff;
+    }
+    .tabs {
+      display: flex;
+      gap: 15px;
+    }
+    .tabs button {
+      background: none;
+      border: none;
+      color: #222222;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .tabs button:hover {
+      text-decoration: underline;
+    }
+    .hero {
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #fff;
+      padding: 20px;
+    }
+    .search-section {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .search-section input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      width: 300px;
+    }
+    .search-section button {
+      padding: 10px;
+      color: #222222;
+      border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #0056b3;
+    .filter-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
     }
-    .myCanvas {
-      position: absolute;
+    .hidden-info {
+      display: none;
+      padding: 20px;
+    }
+    .hidden-info.active {
+      display: block;
+    }
+    h4{
+      color: black;
+    }
+    .dialog-overlay {
+      position: fixed;
       top: 0;
       left: 0;
-      z-index: -1;
-      pointer-events: none;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
     }
-  `;
+
+    .dialog-content {
+      background: white;
+      border-radius: 10px;
+      width: 400px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .dialog-content h3 {
+      margin-top: 0;
+    }
+
+    .dialog-content label {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .dialog-content input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    .dialog-content .actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .dialog-content button {
+      padding: 10px 15px;
+      background-color: #c0e600;
+      color: #222222;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .dialog-content button:hover {
+      background-color: #c0e600;
+    }
+    h2 {
+      color: #222222;
+    }
+    label {
+      color: black;
+    }
+  `];
 
   static properties = {
-    clientInfo: { type: Object },
-    detailModels: { type: Array },
     searchID: { type: String },
+    transactionDateStart: { type: String },
+    transactionDateEnd: { type: String },
+    isSearched: { type: Boolean },
+    clientInfo: { type: Object },
+    appointmentFrequency: { type: Number }, // Store selected frequency
+    reportOptions: { type: Object },
+    showDialog: { type: Boolean },
+    showDetailModelsDialog: { type: Boolean },
+    selectedDetailModel: { type: Object }
   };
 
   constructor() {
     super();
-    this.clientInfo = {};
-    this.detailModels = [];
-    this.searchID = '5409225033081';
+    this.searchID = store.get('searchID') || '';
+    this.appointmentFrequency = 6; // Default to 6 months
+    this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
+    this.transactionDateEnd = this.formatDateToISO(new Date());
+    this.clientInfo = store.get('clientInfo') || {};
+    this.showDialog = false;
+    this.showDetailModelsDialog = false;
+    this.selectedDetailModel = null;
+
+    this.reportOptions = {
+      contributions: true,
+      withdrawals: true,
+      regularWithdrawals: true,
+      includePercentage: false,
+      netWithdrawal: false,
+      netWithdrawalValue: 0,
+      switches: true,
+      performanceChart: true,
+      excludeGrowth: false,
+      irr: 7.0,
+      vested: true,
+      groupFunds: true,
+    };
     this.clientService = new ClientProfileService();
+    this.initClientInfo();
+    Object.assign(HomeView.prototype, PdfMixin);
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.fetchData();
+  initClientInfo() {
+    const entity = store.get('clientInfo');
+    if (!entity) {
+      return;
+    }
+    this.clientInfo = {
+      firstNames: entity.firstNames || 'N/A',
+      surname: entity.surname || 'N/A',
+      registeredName: entity.registeredName || 'N/A',
+      title: entity.title || 'N/A',
+      nickname: entity.nickname || 'N/A',
+      advisorName: entity.advisorName || 'N/A',
+      email: entity.email || 'N/A',
+      cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+      detailModels: entity.detailModels || [],
+    };
   }
 
-  firstUpdated() {
-    super.firstUpdated();
-    this.initCanvas();
+  handleFrequencyChange(event) {
+    this.appointmentFrequency = parseInt(event.target.value, 10);
+  }
+
+  calculateAppointments() {
+    const today = new Date();
+    const appointments = [];
+    for (let i = 1; i <= 4; i++) {
+      const appointmentDate = new Date(today);
+      appointmentDate.setMonth(today.getMonth() + this.appointmentFrequency * i);
+      appointments.push(appointmentDate);
+    }
+    return appointments;
+  }
+
+  formatDateToISO(date) {
+    return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
+  }
+
+  applyPreSelectedDateRange(months) {
+    const today = new Date();
+    const startDate = new Date();
+    startDate.setMonth(today.getMonth() - months);
+    this.transactionDateStart = this.formatDateToISO(startDate);
+    this.transactionDateEnd = this.formatDateToISO(today);
   }
 
   async fetchData() {
+    const searched = store.get('searchID') === this.searchID;
+    if (searched) {
+      return;
+    }
+
     const request = {
-      TransactionDateStart: "2021-02-03T00:00:00+02:00",
-      TransactionDateEnd: "2022-08-03T00:00:00+02:00",
+      TransactionDateStart: this.transactionDateStart,
+      TransactionDateEnd: this.transactionDateEnd,
       TargetCurrencyL: 170,
-      ValueDates: [
-        "2021-03-31T00:00:00",
-        "2021-06-01T00:00:00",
-        "2022-08-02T14:51:42.3532002+02:00"
-      ],
+      ValueDates: [],
       InputEntityModels: [
         {
           SouthAfricanIdNumber: this.searchID,
-          PassportNumber: "",
-          RegistrationNumber: ""
-        }
-      ]
+        },
+      ],
     };
-    const response = await this.clientService.getClientProfile(request);
-    const entity = response.entityModels[0];
 
-    this.clientInfo = {
-      firstName: entity.firstNames,
-      surname: entity.surname,
-      registeredName: entity.registeredName,
-      title: entity.title,
-      nickname: entity.nickname,
-      advisorName: entity.advisorName,
-      email: entity.email,
-      cellPhone: entity.cellPhoneNumber,
-      idNumber: request.InputEntityModels[0]?.SouthAfricanIdNumber,
-    };
-    this.detailModels = entity.detailModels;
+    store.set('searchID', this.searchID);
 
-    store.set('clientInfo', { entity });
+    try {
+      const response = await this.clientService.getClientProfile(request);
 
-    // Store transactions in shared state
-    SharedState.transactions = this.detailModels[0]?.transactionModels || [];
-  }
-
-  initCanvas() {
-    const canvas = this.shadowRoot.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-
-    const stars = [];
-    const numStars = 100;
-
-    canvas.width = this.shadowRoot.querySelector('.container').clientWidth;
-    canvas.height = window.innerHeight;
-
-    for (let i = 0; i < numStars; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 2 + 1,
-        dx: Math.random() * 0.5 - 0.25,
-        dy: Math.random() * 0.5 - 0.25,
-      });
-    }
-
-    function drawStars() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
-      for (let star of stars) {
-        ctx.fillStyle = 'white';
-        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
-        ctx.fill();
-        star.x += star.dx;
-        star.y += star.dy;
-
-        if (star.x < 0 || star.x > canvas.width) star.dx = -star.dx;
-        if (star.y < 0 || star.y > canvas.height) star.dy = -star.dy;
+      if (!response?.entityModels[0]) {
+        return null;
       }
+
+      const entity = response.entityModels[0];
+      this.clientInfo = {
+        firstNames: entity.firstNames || 'N/A',
+        surname: entity.surname || 'N/A',
+        registeredName: entity.registeredName || 'N/A',
+        title: entity.title || 'N/A',
+        nickname: entity.nickname || 'N/A',
+        advisorName: entity.advisorName || 'N/A',
+        email: entity.email || 'N/A',
+        cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
+        detailModels: entity.detailModels || [],
+      };
+      store.set('clientInfo', entity);
+    } catch (error) {
+      console.error('Error fetching data:', error);
     }
-
-    function animate() {
-      drawStars();
-      requestAnimationFrame(animate);
-    }
-
-    animate();
   }
 
-  handleSearchIDChange(event) {
-    this.searchID = event.target.value;
+  handleTabNavigation(tabName) {
+    router.navigate(`/${tabName}`);
   }
 
-  searchByID() {
-    this.fetchData();
+  toggleDialog() {
+    this.showDialog = !this.showDialog;
   }
 
-  navigateToTransactions() {
-    // this.dispatchEvent(
-    //   new CustomEvent('navigate', {
-    //     detail: { view: 'transactions' },
-    //     bubbles: true,
-    //     composed: true,
-    //   })
-    // );
-    router.navigate('/transactions');
+  updateOption(e, option) {
+    const { type, checked, value } = e.target;
+    this.reportOptions = {
+      ...this.reportOptions,
+      [option]: type === 'checkbox' ? checked : parseFloat(value),
+    };
   }
 
-  navigateToPortfolio() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'portfolio' },
-        bubbles: true,
-        composed: true,
-      })
-    );
+  toggleDetailModelsDialog() {
+    this.showDetailModelsDialog = true;
+    console.log('Showing detail models dialog...');
+    store.set('reportOptions', this.reportOptions);
+    this.showDialog = false;
+    this.requestUpdate();
   }
 
-  navigateToClientInformation() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'client-information' },
-        bubbles: true,
-        composed: true,
-      })
-    );
+  async generateReport() {
+    console.log('Generating report...');
+    var base64 = await this.generatePDF(this.clientInfo, this.selectedDetailModel, this.reportOptions.irr, this.searchID); // Generate the PDF
+    store.set('base64', base64);
+    router.navigate('/pdf'); // Navigate to the PDF viewer
+    // alert('Report generated!');
   }
 
-  renderClientInfo() {
-    const { firstName, surname, registeredName, title, nickname, advisorName, email, cellPhone } = this.clientInfo;
+  handleSelectDetailModel(model) {
+    this.showDetailModelsDialog = false;
+    this.selectedDetailModel = model;
+    // Continue with generating the report
+    this.generateReport();
+  }
+
+  renderDetailModelsDialog() {
+    if (!this.clientInfo || !this.clientInfo.detailModels) return null;
     return html`
-      <div class="section">
-        <h3>Client Information</h3>
-        <p><strong>First Name:</strong> ${firstName || 'N/A'}</p>
-        <p><strong>Surname:</strong> ${surname || 'N/A'}</p>
-        <p><strong>Registered Name:</strong> ${registeredName || 'N/A'}</p>
-        <p><strong>Title:</strong> ${title || 'N/A'}</p>
-        <p><strong>Nickname:</strong> ${nickname || 'N/A'}</p>
-        <p><strong>Advisor Name:</strong> ${advisorName || 'N/A'}</p>
-        <p><strong>Email:</strong> ${email || 'N/A'}</p>
-        <p><strong>Cell Phone:</strong> ${cellPhone || 'N/A'}</p>
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>Select a Detail Model</h3>
+          ${this.clientInfo.detailModels.map(
+      (model) => html`
+              <div class="client-card" @click="${() => this.handleSelectDetailModel(model)}">
+                <p><strong>${model.instrumentName}</strong></p>
+              </div>
+            `
+    )}
+          <button class="button" @click="${() => this.showDetailModelsDialog = false}">Cancel</button>
+        </div>
+      </div>
+    `;
+  }
+
+  renderDialog() {
+    return html`
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>Generate Report</h3>
+          <div>
+            <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
+            <label>
+              <input type="checkbox" .checked="${this.reportOptions.netWithdrawal}" @change="${(e) => this.updateOption(e, 'netWithdrawal')}" /> Net Withdrawal
+              <input type="number" .value="${this.reportOptions.netWithdrawalValue}" ?disabled="${!this.reportOptions.netWithdrawal}" @input="${(e) => this.updateOption(e, 'netWithdrawalValue')}" />
+            </label>
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.switches}" @change="${(e) => this.updateOption(e, 'switches')}" /> Switches</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.performanceChart}" @change="${(e) => this.updateOption(e, 'performanceChart')}" /> Performance Chart</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.excludeGrowth}" @change="${(e) => this.updateOption(e, 'excludeGrowth')}" /> Exclude Growth</label> -->
+            <label>
+              IRR: <input type="number" .value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
+            </label>
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.vested}" @change="${(e) => this.updateOption(e, 'vested')}" /> Vested</label> -->
+            <!-- <label><input type="checkbox" .checked="${this.reportOptions.groupFunds}" @change="${(e) => this.updateOption(e, 'groupFunds')}" /> Group Funds</label> -->
+          </div>
+          <div class="actions">
+            <button class="button" @click="${() => this.showDialog = false}">Cancel</button>
+            <button class="button" @click="${this.toggleDetailModelsDialog}">Generate</button>
+          </div>
+        </div>
       </div>
     `;
   }
 
   render() {
     return html`
-      <canvas class="myCanvas" id="canvas"></canvas>
-      <div class="container">
-        <input
-          type="text"
-          placeholder="Search by South African ID"
-          @input="${this.handleSearchIDChange}"
-        />
-        <button @click="${this.searchByID}">Search</button>
-        ${this.renderClientInfo()}
-        <button @click="${this.navigateToTransactions}">Transactions</button>
-        <button @click="${this.navigateToPortfolio}">Portfolio</button>
-        <button @click="${this.navigateToClientInformation}">Client Information</button>
+      <div>
+        <header class="header">
+          <h1>Elite</h1>
+        </header>
+        ${this.showDetailModelsDialog ? this.renderDetailModelsDialog() : ''}
+        ${this.showDialog ? this.renderDialog() : ''}
+        <div class="hero"
+        style="background-image: url(${background}); background-size: cover; background-position: center; height: 700px;">
+          <h2>Find your client</h2>
+          <div class="search-section">
+            <input
+              type="text"
+              placeholder="Search by ID"
+              .value="${this.searchID}"
+              @input="${(e) => (this.searchID = e.target.value)}"
+            />
+            <button class="button" @click="${this.fetchData}">Search</button>
+          </div>
+          <div class="filter-buttons">
+  <label>
+    <input
+      type="radio"
+      name="appointment-frequency"
+      value="1"
+      @change="${this.handleFrequencyChange}"
+    />
+    1 Month
+  </label>
+  <label>
+    <input
+      type="radio"
+      name="appointment-frequency"
+      value="3"
+      @change="${this.handleFrequencyChange}"
+    />
+    3 Months
+  </label>
+  <label>
+    <input
+      type="radio"
+      name="appointment-frequency"
+      value="6"
+      checked
+      @change="${this.handleFrequencyChange}"
+    />
+    6 Months
+  </label>
+  <label>
+    <input
+      type="radio"
+      name="appointment-frequency"
+      value="12"
+      @change="${this.handleFrequencyChange}"
+    />
+    12 Months
+  </label>
+</div>
+          ${this.clientInfo && this.clientInfo.firstNames
+        ? html`${this.renderClientCard()}`
+        : html``}
+          </div>
         </div>
     `;
   }
-}
 
+  renderClientCard() {
+    const appointments = this.calculateAppointments();
+    const formatter = new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    return html`
+      <div class="client-card">
+        <div class="client-card-header">
+          <img src="${user}" alt="User Icon" class="client-card-icon" />
+          <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+        </div>
+        <div class="client-card-content">
+          <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+          <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+          <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+          <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+          <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+          <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+          <div>
+            <h4>Next Appointments:</h4>
+            <ul>
+              ${appointments.map(
+      (date) => html`<li>${formatter.format(date)}</li>`
+    )}
+            </ul>
+          </div>
+        </div>
+        <div class="client-card-actions">
+          <button class="button" @click="${() => this.handleTabNavigation('transactions')}">Transactions</button>
+          <button class="button" @click="${() => this.showDialog = true}">Generate Report</button>
+          <button class="button" @click="${() => this.handleTabNavigation('products')}">Portfolios</button>
+        </div>
+      </div>
+    `;
+  }
+}
 customElements.define('home-view', HomeView);

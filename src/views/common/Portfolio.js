@@ -1,24 +1,39 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js';
+import { ViewBase } from './ViewBase.js';
 
-class Portfolio extends LitElement {
+class Portfolio extends ViewBase {
   static styles = css`
     .container {
       padding: 20px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
       background-color: #f9f9f9;
     }
-    .portfolio-item {
-      margin-bottom: 10px;
-      padding: 10px;
-      border-bottom: 1px solid #ccc;
+    .portfolio-card {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      background-color: white;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 20px;
     }
-    h4 {
-      margin-bottom: 5px;
+    .portfolio-card-header {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    .portfolio-card-content {
+      padding: 15px;
+    }
+    .portfolio-card-content p {
+      margin: 5px 0;
     }
     button {
-      margin-top: 15px;
       padding: 10px;
+      margin-bottom: 15px;
       background-color: #007bff;
       color: white;
       border: none;
@@ -56,16 +71,6 @@ class Portfolio extends LitElement {
     };
   }
 
-  navigateBack() {
-    this.dispatchEvent(
-      new CustomEvent('navigate', {
-        detail: { view: 'home' },
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
-
   renderPortfolio() {
     const {
       portfolioEntryId,
@@ -80,17 +85,18 @@ class Portfolio extends LitElement {
     } = this.portfolio;
 
     return html`
-      <div class="portfolio-item">
-        <h4>Portfolio Information</h4>
-        <p><strong>Portfolio Entry ID:</strong> ${portfolioEntryId || "N/A"}</p>
-        <p><strong>Parent Portfolio Entry ID:</strong> ${parentPortfolioEntryId || "N/A"}</p>
-        <p><strong>Root Portfolio Entry ID:</strong> ${rootPortfolioEntryId || "N/A"}</p>
-        <p><strong>Level:</strong> ${level || "N/A"}</p>
-        <p><strong>Is Root:</strong> ${isRoot ? "Yes" : "No"}</p>
-        <p><strong>Is Lowest Level:</strong> ${isLowestLevel ? "Yes" : "No"}</p>
-        <p><strong>Instrument Name:</strong> ${instrumentName || "N/A"}</p>
-        <p><strong>ISIN Number:</strong> ${isinNumber || "N/A"}</p>
-        <p><strong>MorningStar ID:</strong> ${morningStarId || "N/A"}</p>
+      <div class="portfolio-card">
+        <div class="portfolio-card-header">${instrumentName || "N/A"}</div>
+        <div class="portfolio-card-content">
+          <p><strong>Portfolio Entry ID:</strong> ${portfolioEntryId || "N/A"}</p>
+          <p><strong>Parent Portfolio Entry ID:</strong> ${parentPortfolioEntryId || "N/A"}</p>
+          <p><strong>Root Portfolio Entry ID:</strong> ${rootPortfolioEntryId || "N/A"}</p>
+          <p><strong>Level:</strong> ${level || "N/A"}</p>
+          <p><strong>Is Root:</strong> ${isRoot ? "Yes" : "No"}</p>
+          <p><strong>Is Lowest Level:</strong> ${isLowestLevel ? "Yes" : "No"}</p>
+          <p><strong>ISIN Number:</strong> ${isinNumber || "N/A"}</p>
+          <p><strong>MorningStar ID:</strong> ${morningStarId || "N/A"}</p>
+        </div>
       </div>
     `;
   }
@@ -99,8 +105,8 @@ class Portfolio extends LitElement {
     return html`
       <div class="container">
         <h2>Portfolio Details</h2>
+        <button @click="${super.navigateBack}">Back</button>
         ${this.renderPortfolio()}
-        <button @click="${this.navigateBack}">Back</button>
       </div>
     `;
   }
