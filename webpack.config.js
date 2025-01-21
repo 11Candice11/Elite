@@ -17,7 +17,7 @@ export default {
   devServer: {
     proxy: {
       "/api": {
-        target: "http://localhost:6200",
+        target: "https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net",
         changeOrigin: true,
         secure: false, // Set to false if the backend uses self-signed certificates
       },
@@ -33,7 +33,7 @@ export default {
         "X-Requested-With, content-type, Authorization", // Allow custom headers
       "Content-Security-Policy": `
         default-src 'self';
-        connect-src 'self' http://localhost:6200;
+        connect-src 'self' https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net;
         script-src 'self';
         style-src 'self' 'unsafe-inline';
         img-src 'self' data:;

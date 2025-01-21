@@ -1,7 +1,7 @@
 {
 	"env": "loc",
 	"serviceUrls": {
-		"clientProfileServiceUrl": "https://localhost:6200"
+		"clientProfileServiceUrl": "https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net"
 	},
 	"LogRequestResponseModels": false,
 	"VDN": "7250",
