@@ -1,6 +1,8 @@
 import { LitElement, html, css } from 'lit';
-import { router } from '/src/shell/Routing.js'
-class LoginView extends LitElement {
+import { router } from '/src/shell/Routing.js';
+import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import { ViewBase } from './common/ViewBase.js';
+class LoginView extends ViewBase {
   static styles = css`
     .login-container {
       display: flex;
@@ -74,9 +76,11 @@ class LoginView extends LitElement {
     this.pipelineToken = '';
     this.showTokenField = false;
     this.errorMessage = '';
+    this.clientProfileService = new ClientProfileService(); // Initialize service
   }
 
-  handleLogin(e) {
+  
+  async handleLogin(e) {
     e.preventDefault();
     this.errorMessage = '';
 
@@ -86,26 +90,19 @@ class LoginView extends LitElement {
       return;
     }
 
-    // Optionally check for a pipeline token
-    if (this.showTokenField && !this.pipelineToken) {
-      this.errorMessage = 'Please enter a valid pipeline token.';
-      return;
-    }
-
     // Trigger navigation to HomeView
-    this.navigateToHome();
-  }
-
-  navigateToHome() {
-    // Dispatch a custom event to navigate to HomeView
-    // this.dispatchEvent(
-    //   new CustomEvent('navigate', {
-    //     detail: { view: 'home' }, // Add detail if needed for routing logic
-    //     bubbles: true,
-    //     composed: true,
-    //   })
-    // );
-    router.navigate('/home');
+    try {
+      // Call login method from ClientProfileService
+      const response = await this.clientProfileService.login(this.username, this.password);
+      if (response.success) {
+        this.navigateBack(); // Redirect on successful login
+      } else {
+        this.errorMessage = response.message || 'Login failed. Please try again.';
+      }
+    } catch (error) {
+      this.errorMessage = 'An error occurred while logging in. Please try again later.';
+      console.error('Login error:', error);
+    }
   }
 
   render() {

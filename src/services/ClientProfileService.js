@@ -8,20 +8,21 @@ export class ClientProfileService extends Service {
         super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1')
     }
 
-    async getAllClients() {
+    async login(username, password) {
         try {
-            const endpoint = '/ClientProfile/GetAllClients';
-            const clientProfile = await this.get(endpoint);
-            return clientProfile;
+            const endpoint = '/login'; // Backend login endpoint
+            const body = { username, password }; // Request payload
+            const response = await this.post(endpoint, body); // POST method inherited from Service
+            return response; // Return the response from the API
         } catch (error) {
-            if (error.message.includes('404')) {
-                console.warn('404 Not Found - The requested resource was not found');
-                return []; // Return an empty array or handle as needed
+            if (error.message.includes('401')) {
+                console.warn('Unauthorized - Invalid username or password');
+                return { success: false, message: 'Invalid username or password.' };
             }
-            console.error('Failed to fetch clients', error);
-            throw error; // Re-throw the error for other handlers to catch
+            console.error('Failed to login:', error);
+            throw error; // Re-throw the error for the caller to handle
         }
-    }
+    }    
 
     async getClientProfile(request) {
         try {
