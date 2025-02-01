@@ -28,8 +28,8 @@ export class ViewBase extends LitElement {
 
   static styles = css`
   button {
-    background-color: #D4FF00; /* Neon green background */
-    color: #000; /* Black text */
+    background-color: rgb(0, 50, 100);
+    color: white; /* Black text */
     border: none; /* Remove borders */
     border-radius: 30px; /* Rounded edges */
     padding: 10px 20px; /* Add padding for size */
@@ -41,12 +41,12 @@ export class ViewBase extends LitElement {
   }
   
   button:hover {
-    background-color: #c0e600; /* Slightly darker neon green on hover */
+    background-color: rgb(50, 100, 150);
     box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2); /* More pronounced shadow on hover */
   }
   
   button:active {
-    background-color: #a8cc00; /* Even darker green when pressed */
+    background-color: rgb(50, 100, 150);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Reduced shadow on click */
   }
   

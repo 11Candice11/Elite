@@ -19,7 +19,7 @@ class Portfolio extends ViewBase {
       margin-bottom: 20px;
     }
     .portfolio-card-header {
-      background-color: #007bff;
+      background-color: #278AB0;
       color: white;
       padding: 10px;
       font-size: 1.2em;
@@ -34,14 +34,14 @@ class Portfolio extends ViewBase {
     button {
       padding: 10px;
       margin-bottom: 15px;
-      background-color: #007bff;
+      background-color: #278AB0;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #0056b3;
+      background-color: #278AB0;
     }
   `;
 
