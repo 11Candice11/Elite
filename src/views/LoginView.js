@@ -93,18 +93,18 @@ class LoginView extends ViewBase {
     this.navigateBack();
     
     // Trigger navigation to HomeView
-    // try {
-    //   // Call login method from ClientProfileService
-    //   const response = await this.clientProfileService.login(this.username, this.password);
-    //   if (response.message === `Login successful!`) {
-    //     this.navigateBack(); // Redirect on successful login
-    //   } else {
-    //     this.errorMessage = response.message || 'Login failed. Please try again.';
-    //   }
-    // } catch (error) {
-    //   this.errorMessage = 'An error occurred while logging in. Please try again later.';
-    //   console.error('Login error:', error);
-    // }
+    try {
+      // Call login method from ClientProfileService
+      //const response = await this.clientProfileService.login(this.username, this.password);
+      //if (response.message === `Login successful!`) {
+        this.navigateBack(); // Redirect on successful login
+     // } else {
+       // this.errorMessage = response.message || 'Login failed. Please try again.';
+     // }
+    } catch (error) {
+      this.errorMessage = 'An error occurred while logging in. Please try again later.';
+      console.error('Login error:', error);
+    }
   }
 
   render() {
