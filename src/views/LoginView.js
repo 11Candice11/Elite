@@ -40,7 +40,7 @@ class LoginView extends ViewBase {
     }
     .form-group input:focus {
       outline: none;
-      border-color: #D4FF00;
+      border-color: #1DC690;
     }
     .form-group .error {
       color: red;
@@ -49,7 +49,7 @@ class LoginView extends ViewBase {
     button {
       width: 100%;
       padding: 10px;
-      background-color: #D4FF00;
+      background-color: rgb(0, 50, 100);
       border: none;
       color: #222222;
       font-weight: bold;
@@ -57,7 +57,7 @@ class LoginView extends ViewBase {
       cursor: pointer;
     }
     button:hover {
-      background-color: #c0e600;
+      background-color: rgb(50, 100, 150);
     }
   `;
 
@@ -90,6 +90,8 @@ class LoginView extends ViewBase {
       return;
     }
 
+    this.navigateBack();
+    
     // Trigger navigation to HomeView
     try {
       // Call login method from ClientProfileService
