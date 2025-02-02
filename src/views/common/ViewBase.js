@@ -11,11 +11,15 @@ export class ViewBase extends LitElement {
     }
 
   navigateBack() {
-    router.navigate('/home');
+    router.navigate('/dashboard');
   }
 
   navigateToTransactions() {
     router.navigate('/transactions');
+  }
+
+  navigateToRootTransactions() {
+    router.navigate('/transaction-history');
   }
 
   navigateToPortfolio() {
@@ -24,6 +28,10 @@ export class ViewBase extends LitElement {
 
   navigateToProducts() {
     router.navigate('/products');
+  }
+
+  formatDateToISO(date) {
+    return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
   }
 
   static styles = css`
