@@ -62,11 +62,9 @@ h2{
 
 /* Hero Section */
 .hero {
-  background: rgb(50, 100, 150); /* Base background color */
   position: relative; /* Needed for absolute positioning of watermark */
   padding: 50px 20px;
   text-align: center;
-  color: white;
   overflow: hidden; /* Hide any overflow from watermark */
   height: 700px;
 }
@@ -540,9 +538,9 @@ li {
     try {
       // ✅ First API call to get client data
       const initialResponse = await this.clientService.getClientProfile(request);
-      if (!initialResponse?.entityModels[0]) return;
+      if (!initialResponse?.entityModels[1] || !initialResponse.entityModels[0]) return;
   
-      const entity = initialResponse.entityModels[0];
+      const entity = initialResponse.entityModels[1] || initialResponse.entityModels[0];
       const detailModels = entity.detailModels || [];
   
       // ✅ Find the earliest inception date
@@ -559,9 +557,10 @@ li {
       };
   
       const finalResponse = await this.clientService.getClientProfile(updatedRequest);
-      if (!finalResponse?.entityModels[0]) return;
+      if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
   
-      const finalEntity = finalResponse.entityModels[0];
+      console.log('Final response:', finalResponse);
+      const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
       this.clientInfo = {
         firstNames: finalEntity.firstNames || 'N/A',
         surname: finalEntity.surname || 'N/A',
@@ -573,7 +572,7 @@ li {
         cellPhoneNumber: finalEntity.cellPhoneNumber || 'N/A',
         detailModels: finalEntity.detailModels || [],
       };
-      store.set('clientInfo', entity);
+      store.set('clientInfo', this.clientInfo);
       this.isVisible = true;
     } catch (error) {
       console.error('Error fetching data:', error);

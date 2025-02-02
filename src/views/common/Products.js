@@ -151,6 +151,7 @@ class Products extends ViewBase {
     const clientInfo = store.get('clientInfo') || {};
     if (clientInfo && Array.isArray(clientInfo.detailModels)) {
       this.detailModels = clientInfo.detailModels;
+      console.log(this.detailModels);
     }
   }
 
@@ -159,8 +160,9 @@ class Products extends ViewBase {
     router.navigate('/portfolio-details'); // Navigate to the detailed view
   }
 
-  navigateToTransactionHistory(rootValueDateModels) {
-    store.set('rootValueDateModels', rootValueDateModels);
+  navigateToTransactionHistory(detail) {
+    console.log(detail);
+    store.set('rootValueDateModels', detail.rootValueDateModels);
     store.set('transactionData', [
       // Include the provided JSON data here or fetch it dynamically
       {
@@ -240,6 +242,10 @@ class Products extends ViewBase {
 
   <!-- Stats Section -->
   <div class="stats">
+  <button @click="${() => this.navigateToTransactionHistory(detail)}">
+  View Transaction History
+</button>
+
     <div>
       <h4>${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
       <p>Initial Contribution</p>
@@ -256,9 +262,6 @@ class Products extends ViewBase {
 
   <!-- More Info Dropdown -->
   <div class="footer">
-  <button @click="${() => this.navigateToTransactionHistory(detail.rootValueDateModels)}">
-  View Transaction History
-</button>
     <details>
       <summary>More Info</summary>
       <div class="more-info">

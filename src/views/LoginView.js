@@ -51,9 +51,9 @@ class LoginView extends ViewBase {
       padding: 10px;
       background-color: rgb(0, 50, 100);
       border: none;
-      color: #222222;
       font-weight: bold;
       border-radius: 5px;
+      color: white;
       cursor: pointer;
     }
     button:hover {
