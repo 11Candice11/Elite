@@ -7,65 +7,73 @@ export class RootTransactionHistory extends ViewBase {
   static styles = [
     ViewBase.styles,
     css`
-      .transaction-card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        margin: 20px;
-        border-left: 5px solid #003264;
-      }
+    :host {
+      display: block;
+      background-color: #EAEAE0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
 
-      .header {
-        background-color: #003264;
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px 8px 0 0;
-        font-weight: bold;
-      }
+    .transaction-card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin: 20px;
+      border-left: 5px solid #1DC690; 
+    }
 
-      .content {
-        padding: 15px;
-      }
+    .header {
+      background-color: #278ABD; 
+      color: white;
+      padding: 15px;
+      border-radius: 8px 8px 0 0;
+    }
 
-      .value-section {
-        display: flex;
-        justify-content: space-between;
-        margin: 10px 0;
-      }
+    .content {
+      padding: 15px;
+    }
 
-      .value-section div {
-        text-align: center;
-      }
+    .value-section {
+      display: flex;
+      justify-content: space-around;
+      background-color: #F9F9F9;
+      padding: 10px;
+      border-radius: 8px;
+    }
 
-      .back-button {
-        margin: 20px;
-        background-color: #003264;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-      }
+    button {
+      background-color: #1DC690; 
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-      table {
-        width: 100%;
-        border-collapse: collapse;
-      }
+    button:hover {
+      background-color: #1C4670; 
+    }
 
-      th, td {
-        padding: 10px;
-        border: 1px solid #ccc;
-      }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
 
-      th {
-        background-color: #003264;
-        color: white;
-      }
+    th {
+      background-color: #278ABD;
+      color: white;
+      padding: 10px;
+    }
 
-      tbody tr:nth-child(odd) {
-        background-color: #f9f9f9;
-      }
+    td {
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+
+    tbody tr:nth-child(odd) {
+      background-color: #F9F9F9;
+    }
     `,
   ];
 
@@ -143,7 +151,7 @@ export class RootTransactionHistory extends ViewBase {
   render() {
     return html`
       <button class="back-button" @click="${this.navigateBack}">⬅ Back to Products</button>
-      <h1>Transaction History</h1>
+      <h1>Interaction History</h1>
       ${this.rootValueDateModels.length > 0
         ? this.rootValueDateModels.map((model) => this.renderTransaction(model))
         : html`<p>No transactions found for this portfolio.</p>`}

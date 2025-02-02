@@ -1,117 +1,203 @@
 import { LitElement, html, css } from 'lit';
-import { ClientProfileService } from '/src/services/ClientProfileService.js'; // Replace with your actual service path
-import { router } from '/src/shell/Routing.js';
-import userIcon from '/src/images/user.png';
+import { router } from '/src/shell/Routing.js'
+import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import logo from '/src/images/page-Logo-full.png';
+import { store } from '/src/store/EliteStore.js';
+import { ViewBase } from './common/ViewBase.js';
 
-class Dashboard extends LitElement {
-    static styles = css`
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+class Dashboard extends ViewBase {
+  static styles = css`
+    :host {
+      display: block;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
       padding: 20px;
-      background-color: #007bff;
-      color: #fff;
+      position: relative;
+      color: #333;
     }
-    .search-section {
-      display: flex;
-      gap: 10px;
-      margin: 20px 0;
+
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.03;
+      z-index: 0;
     }
-    .search-section input {
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      width: 300px;
+
+    .watermark img {
+      max-width: 70%;
+      height: auto;
     }
-    .search-section button {
-      padding: 10px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .client-card {
-      background: white;
-      border: 1px solid #ccc;
+
+    .search-card {
+      background: #ffffff;
+      border: 1px solid #dcdcdc;
       border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 20px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      max-width: 300px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.5s ease-in-out;
+      z-index: 1;
     }
-    .client-card-header {
-      display: flex;
-      align-items: center;
-      background-color: #007bff;
+
+    .search-card.move-up {
+      top: 20px;
+      left: 20px;
+      transform: translate(0, 0);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: #0077b6;
       color: white;
-      border-top-left-radius: 8px;
-      border-top-right-radius: 8px;
-      padding: 10px;
-    }
-    .client-card-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      margin-right: 15px;
-    }
-    .client-card-content {
-      padding: 20px;
-      font-size: 16px;
-      line-height: 1.5;
-    }
-    .client-card-content p {
-      margin: 10px 0;
-      color: black;
-    }
-    .client-card-actions {
-      display: flex;
-      justify-content: space-between;
-      padding: 15px 20px;
-      border-top: 1px solid #ddd;
-    }
-    .client-card-actions button {
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
+      padding: 8px 15px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      font-size: 14px;
+      transition: background 0.3s ease;
     }
-    .client-card-actions button:hover {
-      background-color: #0056b3;
+
+    button:hover {
+      background: #005f8a;
+    }
+
+    .portfolio-container {
+      margin: 120px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .portfolio-card {
+      background: #ffffff;
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .portfolio-card.expanded {
+      background: #f0f8ff;
+      border: 1px solid #0077b6;
+    }
+
+    .portfolio-actions button {
+      margin: 5px;
+      background: #0077b6;
+    }
+
+    .generate-report {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #0096c7;
+    }
+
+    .loading {
+      color: #0077b6;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .portfolio-info {
+      margin-top: 10px;
+      padding: 10px;
+      background: #eaf4fb;
+      border-radius: 5px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .info-item {
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: #fff;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      text-align: left;
+      border: 1px solid #ccc;
+    }
+
+    th {
+      background: #0077b6;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
   `;
 
   static properties = {
-    searchID: { type: String },
-    transactionDateStart: { type: String },
-    transactionDateEnd: { type: String },
+    clientID: { type: String },
     clientInfo: { type: Object },
-    isClientSelected: { type: Boolean },
+    isLoading: { type: Boolean },
+    searchMoved: { type: Boolean },
+    expandedCards: { type: Object },
+    transactionDateStart: { type: String },
+    transactionDateEnd: { type: String }
   };
 
   constructor() {
     super();
-    this.searchID = '';
-    this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
-    this.transactionDateEnd = this.formatDateToISO(new Date());
+    this.clientID = '';
     this.clientInfo = null;
-    this.isClientSelected = false;
+    this.isLoading = false;
+    this.searchMoved = false;
+    this.expandedCards = {};
     this.clientService = new ClientProfileService();
+    this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
+    this.transactionDateEnd = new Date().toISOString();
   }
 
-  formatDateToISO(date) {
-    return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
-  }
-
-  async fetchClientData() {
-    if (!this.searchID) {
-      alert('Please enter a client ID');
-      return;
+  connectedCallback() {
+    super.connectedCallback();
+    const storedClientInfo = store.get('clientInfo');
+    if (storedClientInfo) {
+      this.clientInfo = storedClientInfo;
+      this.searchMoved = true;
     }
+  }
+
+  navigateToRootTransactions(portfolio) {
+    store.set('selectedInstrumentName', portfolio);
+    // TODO Do service call to get root models
+    super.navigateToRootTransactions();
+  }
+
+  navigateToTransactions(portfolio) {
+    store.set('selectedInstrumentName', portfolio);
+    router.navigate('/transactions');
+  }
+
+  async searchClient() {
+    this.isLoading = true;
+    this.clientInfo = null;
 
     const request = {
       TransactionDateStart: this.transactionDateStart,
@@ -120,86 +206,112 @@ class Dashboard extends LitElement {
       ValueDates: [],
       InputEntityModels: [
         {
-          SouthAfricanIdNumber: this.searchID,
+          RegistrationNumber: this.clientID,
         },
       ],
     };
 
+    store.set('searchID', this.clientID);
+
     try {
       const response = await this.clientService.getClientProfile(request);
-
-      if (response?.entityModels?.length) {
-        const entity = response.entityModels[0];
-        this.clientInfo = {
-          firstNames: entity.firstNames || 'N/A',
-          surname: entity.surname || 'N/A',
-          email: entity.email || 'N/A',
-          advisorName: entity.advisorName || 'N/A',
-        };
-        this.isClientSelected = true;
-      } else {
-        this.clientInfo = null;
-        this.isClientSelected = false;
-        alert('Client not found');
-      }
+      this.clientInfo = response.entityModels[1] || response.entityModels[0];
+      store.set('clientInfo', this.clientInfo);  // Store clientInfo for persistence
+      this.searchMoved = true;
     } catch (error) {
-      console.error('Error fetching client data:', error);
-      alert('An error occurred while fetching client data.');
+      console.error('Error fetching client:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  renderClientCard() {
+
+
+  toggleExpand(index) {
+    this.expandedCards = {
+      ...this.expandedCards,
+      [index]: !this.expandedCards[index],
+    };
+  }
+
+  renderPortfolioInfo(portfolio) {
     return html`
-      <div class="client-card">
-        <div class="client-card-header">
-          <img src="${userIcon}" alt="User Icon" class="client-card-icon" />
-          <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+      <div class="portfolio-info">
+        <h4>General Information</h4>
+        <div class="info-grid">
+          <div class="info-item"><strong>Reference Number:</strong> ${portfolio.referenceNumber}</div>
+          <div class="info-item"><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</div>
+          <div class="info-item"><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ${portfolio.initialContributionCurrencyAbbreviation}</div>
+          <div class="info-item"><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ${portfolio.regularContributionCurrencyAbbreviation} (${portfolio.regularContributionFrequency})</div>
+          <div class="info-item"><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</div>
         </div>
-        <div class="client-card-content">
-          <p><strong>Title:</strong> ${this.clientInfo.title}</p>
-          <p><strong>Email:</strong> ${this.clientInfo.email}</p>
-          <p><strong>Advisor:</strong> ${this.clientInfo.advisorName}</p>
-        </div>
-        <div class="client-card-actions">
-          <button @click="${() => this.navigateTo('transactions')}">Transactions</button>
-          <button @click="${() => this.navigateTo('portfolio')}">Portfolios</button>
-        </div>
+
+        <h4>Portfolio Entries</h4>
+        <table>
+          <tr>
+            <th>Instrument Name</th>
+            <th>ISIN Number</th>
+            <th>MorningStar ID</th>
+          </tr>
+          ${portfolio.portfolioEntryTreeModels?.map(
+            (entry) => html`
+              <tr>
+                <td>${entry.instrumentName}</td>
+                <td>${entry.isinNumber || 'N/A'}</td>
+                <td>${entry.morningStarId || 'N/A'}</td>
+              </tr>
+            `
+          )}
+        </table>
       </div>
     `;
   }
 
   render() {
     return html`
-      <div>
-        <header class="header">
-          <h1>Dashboard</h1>
-          <button @click="${this.logout}">Logout</button>
-        </header>
+      <div class="watermark">
+        <img src="${logo}" alt="Morebo Watermark" />
+      </div>
 
-        <div class="search-section">
-          <input
-            type="text"
-            placeholder="Search by ID"
-            .value="${this.searchID}"
-            @input="${(e) => (this.searchID = e.target.value)}"
-          />
-          <button @click="${this.fetchClientData}">Search</button>
-        </div>
+      <div class="search-card ${this.searchMoved ? 'move-up' : ''}">
+        <input
+          type="text"
+          placeholder="Enter Client ID"
+          .value="${this.clientID}"
+          @input="${(e) => (this.clientID = e.target.value)}"
+        />
+        <button @click="${this.searchClient}">Search</button>
+      </div>
 
-        ${this.isClientSelected
-          ? this.renderClientCard()
-          : html`<p>Please search for a client to display details.</p>`}
+      <div class="portfolio-container">
+        ${this.isLoading
+          ? html`<div class="loading">Loading...</div>`
+          : this.clientInfo
+          ? html`
+              <div class="generate-report">
+                <button @click="${() => alert('Generate Report')}">Generate Report</button>
+              </div>
+
+              ${this.clientInfo.detailModels.map(
+                (portfolio, index) => html`
+                  <div class="portfolio-card ${this.expandedCards[index] ? 'expanded' : ''}">
+                    <h3>${portfolio.instrumentName}</h3>
+                    <div class="portfolio-actions">
+                      <button @click="${() => this.navigateToTransactions(portfolio.instrumentName)}">Transaction History</button>
+                      <button @click="${() => this.navigateToRootTransactions(portfolio.instrumentName)}">Interaction History</button>
+                      <button @click="${() => this.toggleExpand(index)}">
+                        ${this.expandedCards[index] ? 'Hide Info' : 'More Info'}
+                      </button>
+                    </div>
+
+                    ${this.expandedCards[index] ? this.renderPortfolioInfo(portfolio) : ''}
+                  </div>
+                `
+              )}
+            `
+          : ''}
       </div>
     `;
-  }
-
-
-  navigateTo(tabName) {
-    router.navigate(`/${tabName}`);
-  }
-
-  logout() {
-    window.location.href = '/logout';
   }
 }
 

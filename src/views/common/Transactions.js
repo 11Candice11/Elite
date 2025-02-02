@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit';
 import { ViewBase } from './ViewBase.js';
+import { html, css } from 'lit';
 import { store } from '/src/store/EliteStore.js';
 
 class Transactions extends ViewBase {
@@ -27,18 +27,6 @@ class Transactions extends ViewBase {
         color: #1DC690;
         text-align: center;
         margin-bottom: 20px;
-      }
-
-      .instrument-group {
-        margin-bottom: 30px;
-      }
-
-      .instrument-header {
-        background-color: #278ABD;
-        color: white;
-        padding: 12px;
-        font-weight: bold;
-        border-radius: 8px 8px 0 0;
       }
 
       .transaction-card {
@@ -106,32 +94,28 @@ class Transactions extends ViewBase {
   ];
 
   static properties = {
-    groupedTransactions: { type: Object }
+    transactions: { type: Array }
   };
 
   constructor() {
     super();
-    this.groupedTransactions = {};
+    this.transactions = [];
     this.loadTransactions();
   }
 
   loadTransactions() {
     const clientInfo = store.get('clientInfo');
-    console.log('Client Info:', clientInfo);
+    const selectedInstrumentName = store.get('selectedInstrumentName');
 
-    if (clientInfo && Array.isArray(clientInfo.detailModels)) {
-      clientInfo.detailModels.forEach((detail) => {
-        const instrumentName = detail.instrumentName;
-        if (!this.groupedTransactions[instrumentName]) {
-          this.groupedTransactions[instrumentName] = [];
-        }
-        if (detail.transactionModels && Array.isArray(detail.transactionModels)) {
-          this.groupedTransactions[instrumentName].push(...detail.transactionModels);
-        }
-      });
+    if (clientInfo && selectedInstrumentName) {
+      const selectedPortfolio = clientInfo.detailModels.find(
+        (detail) => detail.instrumentName === selectedInstrumentName
+      );
+
+      if (selectedPortfolio && selectedPortfolio.transactionModels) {
+        this.transactions = selectedPortfolio.transactionModels;
+      }
     }
-
-    console.log('Grouped Transactions:', this.groupedTransactions);
   }
 
   render() {
@@ -140,48 +124,40 @@ class Transactions extends ViewBase {
         <button @click="${super.navigateBack}">Back</button>
         <h2>Transaction History</h2>
 
-        ${Object.keys(this.groupedTransactions).length === 0
-          ? html`<div class="empty-message">No transactions available.</div>`
-          : Object.entries(this.groupedTransactions).map(([instrumentName, transactions]) => html`
-              <div class="instrument-group">
-                <div class="instrument-header">${instrumentName}</div>
-                ${transactions.map(transaction => html`
-                  <div class="transaction-card">
-                    <div class="transaction-details">
-                      <div class="detail-item">
-                        <span class="label">Date:</span>
-                        <span class="value">${transaction.transactionDate ? new Date(transaction.transactionDate).toLocaleDateString() : 'N/A'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Amount:</span>
-                        <span class="value">
-                          ${transaction.convertedAmount !== undefined
-                            ? transaction.convertedAmount.toLocaleString('en-ZA', {
-                                style: 'currency',
-                                currency: transaction.currencyAbbreviation || 'ZAR'
-                              })
-                            : 'N/A'}
-                          (${transaction.currencyAbbreviation || 'ZAR'})
-                        </span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Currency:</span>
-                        <span class="value">${transaction.currencyAbbreviation || 'ZAR'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Exchange Rate:</span>
-                        <span class="value">${transaction.exchangeRate ? transaction.exchangeRate.toFixed(2) : 'N/A'}</span>
-                      </div>
-                      <div class="detail-item">
-                        <span class="label">Transaction Type:</span>
-                        <span class="value">${transaction.transactionType || 'N/A'}</span>
-                      </div>
-                    </div>
+        ${this.transactions.length === 0
+          ? html`<div class="empty-message">No transactions available for this portfolio.</div>`
+          : this.transactions.map((transaction) => html`
+              <div class="transaction-card">
+                <div class="transaction-details">
+                  <div class="detail-item">
+                    <span class="label">Date:</span>
+                    <span class="value">${new Date(transaction.transactionDate).toLocaleDateString()}</span>
                   </div>
-                `)}
+                  <div class="detail-item">
+                    <span class="label">Amount:</span>
+                    <span class="value">
+                      ${transaction.convertedAmount.toLocaleString('en-ZA', {
+                        style: 'currency',
+                        currency: transaction.currencyAbbreviation || 'ZAR'
+                      })}
+                      (${transaction.currencyAbbreviation || 'ZAR'})
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Currency:</span>
+                    <span class="value">${transaction.currencyAbbreviation || 'ZAR'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Exchange Rate:</span>
+                    <span class="value">${transaction.exchangeRate ? transaction.exchangeRate.toFixed(2) : 'N/A'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Transaction Type:</span>
+                    <span class="value">${transaction.transactionType || 'N/A'}</span>
+                  </div>
+                </div>
               </div>
-            `)
-        }
+            `)}
       </div>
     `;
   }
