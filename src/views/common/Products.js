@@ -151,6 +151,7 @@ class Products extends ViewBase {
     const clientInfo = store.get('clientInfo') || {};
     if (clientInfo && Array.isArray(clientInfo.detailModels)) {
       this.detailModels = clientInfo.detailModels;
+      console.log(this.detailModels);
     }
   }
 
@@ -159,8 +160,9 @@ class Products extends ViewBase {
     router.navigate('/portfolio-details'); // Navigate to the detailed view
   }
 
-  navigateToTransactionHistory(rootValueDateModels) {
-    store.set('rootValueDateModels', rootValueDateModels);
+  navigateToTransactionHistory(detail) {
+    console.log(detail);
+    store.set('rootValueDateModels', detail.rootValueDateModels);
     store.set('transactionData', [
       // Include the provided JSON data here or fetch it dynamically
       {
@@ -256,7 +258,7 @@ class Products extends ViewBase {
 
   <!-- More Info Dropdown -->
   <div class="footer">
-  <button @click="${() => this.navigateToTransactionHistory(detail.rootValueDateModels)}">
+  <button @click="${() => this.navigateToTransactionHistory(detail)}">
   View Transaction History
 </button>
     <details>
