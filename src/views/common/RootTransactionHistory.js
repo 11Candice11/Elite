@@ -105,10 +105,6 @@ export class RootTransactionHistory extends ViewBase {
     console.log("Transaction data:", this.rootValueDateModels);
 }
 
-  navigateBack() {
-    router.navigate('/products');
-  }
-
   renderTransaction(model) {
     return html`
       <div class="transaction-card">
