@@ -62,11 +62,9 @@ h2{
 
 /* Hero Section */
 .hero {
-  background: rgb(50, 100, 150); /* Base background color */
   position: relative; /* Needed for absolute positioning of watermark */
   padding: 50px 20px;
   text-align: center;
-  color: white;
   overflow: hidden; /* Hide any overflow from watermark */
   height: 700px;
 }

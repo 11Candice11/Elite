@@ -242,6 +242,10 @@ class Products extends ViewBase {
 
   <!-- Stats Section -->
   <div class="stats">
+  <button @click="${() => this.navigateToTransactionHistory(detail)}">
+  View Transaction History
+</button>
+
     <div>
       <h4>${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
       <p>Initial Contribution</p>
@@ -258,9 +262,6 @@ class Products extends ViewBase {
 
   <!-- More Info Dropdown -->
   <div class="footer">
-  <button @click="${() => this.navigateToTransactionHistory(detail)}">
-  View Transaction History
-</button>
     <details>
       <summary>More Info</summary>
       <div class="more-info">
