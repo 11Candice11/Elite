@@ -80,7 +80,6 @@ class Products extends ViewBase {
   .stats div h4 {
     margin: 0;
     font-size: 16px;
-    // color: #D4FF00;
   }
   
   .footer {
@@ -89,13 +88,13 @@ class Products extends ViewBase {
   
   footer details {
     font-size: 14px;
-    color: #D4FF00;
+    color: #1DC690;
     cursor: pointer;
   }
   
   footer details summary {
     font-size: 14px;
-    color: #D4FF00;
+    color: #1DC690;
     cursor: pointer;
     list-style: none;
   }

@@ -21,7 +21,7 @@ class PortfolioDetails extends ViewBase {
     text-align: center;
   }
   th {
-    background-color: #007bff;
+    background-color: #1DC690;
     color: white;
     font-weight: bold;
   }

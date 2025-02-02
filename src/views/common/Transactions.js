@@ -24,24 +24,12 @@ class Transactions extends ViewBase {
       border: 1px solid #ccc;
       border-radius: 5px;
     }
-    button {
-      margin-bottom: 20px;
-      padding: 10px;
-      border: none;
-      background-color:  #c0e600;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color:  #c0e600;
-    }
     .portfolio-group {
       margin-top: 20px;
     }
     .portfolio-name {
       font-size: 1.5em;
-      color:  #c0e600;
+      color:  #1DC690;
       margin-bottom: 10px;
     }
     .month-group {
@@ -68,7 +56,7 @@ class Transactions extends ViewBase {
     }
     
         .transaction-card-header {
-      background-color:  #c0e600;
+      background-color:  #1DC690;
       color: white;
       font-size: 1.2em;
       font-weight: bold;
@@ -101,12 +89,12 @@ class Transactions extends ViewBase {
     }
         
     .transaction-item strong {
-      color:  #c0e600; /* Highlighted titles */
+      color:  #1DC690; /* Highlighted titles */
       margin-right: 5px;
     }
 
 .transaction-card-content p strong {
-  color:  #c0e600; /* Highlighted titles */
+  color:  #1DC690; /* Highlighted titles */
 }
     th, td {
       padding: 10px;
@@ -114,7 +102,7 @@ class Transactions extends ViewBase {
       text-align: left;
     }
     th {
-      background-color:  #c0e600;
+      background-color:  #1DC690;
       color: white;
     }
     tr:nth-child(even) {
@@ -124,7 +112,7 @@ class Transactions extends ViewBase {
       font-size: 0.9em;
       font-weight: bold;
       text-decoration: underline;
-      color:  #c0e600; /* Blue Header */
+      color:  #1DC690; /* Blue Header */
       margin-bottom: 5px;
     }
     
@@ -266,7 +254,7 @@ renderGroupedTransactions() {
   render() {
     return html`
       <div class="container">
-        <button @click="${super.navigateBack}">Back</button>
+        <button class="button" @click="${super.navigateBack}">Back</button>
         <h2>Transactions</h2>
         <div>
           <label for="startDate">Start Date:</label>
