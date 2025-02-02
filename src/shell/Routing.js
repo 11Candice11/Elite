@@ -7,6 +7,8 @@ import '/src/views/common/Portfolio.js';
 import '/src/views/common/Transactions.js';  
 import '/src/views/common/PortfolioDetails.js';
 import '/src/views/common/PDFViewer.js';
+import '/src/views/common/RootTransactionHistory.js';
+
 
 export class Routing {
   constructor() {
@@ -19,7 +21,8 @@ export class Routing {
       '/portfolio': () => html`<portfolio-view></portfolio-view>`,
       '/portfolio-details': () => html`<portfolio-details></portfolio-details>`,
       '/dashboard': () => html`<dashboard-view></dashboard-view>`,
-      '/pdf': () => html`<pdf-viewer></pdf-viewer>`
+      '/pdf': () => html`<pdf-viewer></pdf-viewer>`,
+      '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`
     };
 
     window.addEventListener('popstate', () => {

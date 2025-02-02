@@ -5,7 +5,8 @@ export class ClientProfileService extends Service {
     constructor() {
         // super('https://bytemeservice-dkhsbpdbbcacbgcp.southafricanorth-01.azurewebsites.net'); // Base URL pointing to the backend
     
-        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1')
+       //  super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1')
+       super('http://localhost:6200/api/elite/v1')
     }
 
     async login(username, password) {
@@ -31,7 +32,7 @@ export class ClientProfileService extends Service {
             const clientProfile = await this.post(endpoint, body);
             return clientProfile;
         } catch (error) {
-            console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.SouthAfricanIdNumber}`, error);
+            console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.RegistrationNumber}`, error);
             throw error;
         }
     }
