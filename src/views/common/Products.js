@@ -160,6 +160,30 @@ class Products extends ViewBase {
     router.navigate('/portfolio-details'); // Navigate to the detailed view
   }
 
+  navigateToTransactionHistory(rootValueDateModels) {
+    store.set('rootValueDateModels', rootValueDateModels);
+    store.set('transactionData', [
+      // Include the provided JSON data here or fetch it dynamically
+      {
+        "rootPortfolioEntryId": "345de493-72f5-4357-8a7e-006fbf0615e6",
+        "valueType": "Market value",
+        "convertedValueDate": "2025-01-21T14:51:42.3532002+02:00",
+        "currencyAbbreviation": "ZAR",
+        "totalConvertedAmount": 748007.48,
+        "valueModels": [
+          {
+            "portfolioEntryId": "43d1c072-c077-4e18-8bcb-a4ee3d839a35",
+            "valueDate": "2025-01-21T00:00:00",
+            "exchangeRate": 1.0,
+            "convertedAmount": 748007.48,
+            "portfolioSharePercentage": 100.0
+          }
+        ]
+      }
+    ]);
+    router.navigate('/transaction-history');
+  }
+
   handleSearchInput(event) {
     this.searchQuery = event.target.value.toLowerCase(); // Update search query
   }
@@ -233,6 +257,9 @@ class Products extends ViewBase {
 
   <!-- More Info Dropdown -->
   <div class="footer">
+  <button @click="${() => this.navigateToTransactionHistory(detail.rootValueDateModels)}">
+  View Transaction History
+</button>
     <details>
       <summary>More Info</summary>
       <div class="more-info">
