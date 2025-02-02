@@ -4,6 +4,7 @@ import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import logo from '/src/images/page-Logo-full.png';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
+import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
 class Dashboard extends ViewBase {
   static styles = css`
@@ -251,6 +252,7 @@ class Dashboard extends ViewBase {
     this.clientService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
+    Object.assign(Dashboard.prototype, PdfMixin);
   }
 
   connectedCallback() {
@@ -405,6 +407,13 @@ class Dashboard extends ViewBase {
       store.set('rootValueDateModels', detail.rootValueDateModels);
     }
   }
+
+  async generateReport() {
+    console.log('Generating report...');
+    var base64 = await this.generatePDF(this.clientInfo, this.clientInfo.detailModels[0], "7", this.clientID); // Generate the PDF
+    store.set('base64', base64);
+    router.navigate('/pdf'); // Navigate to the PDF viewer
+  }
   
   renderPopup() {
     return html`
@@ -485,7 +494,7 @@ class Dashboard extends ViewBase {
         : this.clientInfo
           ? html`
               <div class="generate-report">
-                <button @click="${() => alert('Generate Report')}">Generate Report</button>
+                <button @click="${() => this.generateReport()}">Generate Report</button>
               </div>
 
 ${this.showPopup ? this.renderPopup() : ''}
