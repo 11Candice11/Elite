@@ -559,7 +559,6 @@ li {
       const finalResponse = await this.clientService.getClientProfile(updatedRequest);
       if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
   
-      console.log('Final response:', finalResponse);
       const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
       this.clientInfo = {
         firstNames: finalEntity.firstNames || 'N/A',
@@ -597,14 +596,12 @@ li {
 
   toggleDetailModelsDialog() {
     this.showDetailModelsDialog = true;
-    console.log('Showing detail models dialog...');
     store.set('reportOptions', this.reportOptions);
     this.showDialog = false;
     this.requestUpdate();
   }
 
   async generateReport() {
-    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.selectedDetailModel, this.reportOptions.irr, this.searchID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer

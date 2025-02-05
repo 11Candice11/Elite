@@ -409,7 +409,6 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport() {
-    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.clientInfo.detailModels[0], "7", this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
@@ -474,10 +473,6 @@ class Dashboard extends ViewBase {
 
   render() {
     return html`
-      <div class="watermark">
-        <img src="${logo}" alt="Morebo Watermark" />
-      </div>
-
       <div class="search-card ${this.searchMoved ? 'move-up' : ''}">
         <input
           type="text"
