@@ -101,9 +101,7 @@ export class RootTransactionHistory extends ViewBase {
     } else {
       this.rootValueDateModels = data; // Direct assignment if already an object
     }
-  
-    console.log("Transaction data:", this.rootValueDateModels);
-}
+  }
 
   renderTransaction(model) {
     return html`

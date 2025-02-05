@@ -106,16 +106,7 @@ class Transactions extends ViewBase {
   loadTransactions() {
     const clientInfo = store.get('clientInfo');
     const selectedInstrumentName = store.get('selectedInstrumentName');
-
-    if (clientInfo && selectedInstrumentName) {
-      const selectedPortfolio = clientInfo.detailModels.find(
-        (detail) => detail.instrumentName === selectedInstrumentName
-      );
-
-      if (selectedPortfolio && selectedPortfolio.transactionModels) {
-        this.transactions = selectedPortfolio.transactionModels;
-      }
-    }
+    this.transactions = selectedInstrumentName.transactionModels;
   }
 
   render() {
@@ -125,8 +116,8 @@ class Transactions extends ViewBase {
         <h2>Transaction History</h2>
 
         ${this.transactions.length === 0
-          ? html`<div class="empty-message">No transactions available for this portfolio.</div>`
-          : this.transactions.map((transaction) => html`
+        ? html`<div class="empty-message">No transactions available for this portfolio.</div>`
+        : this.transactions.map((transaction) => html`
               <div class="transaction-card">
                 <div class="transaction-details">
                   <div class="detail-item">
@@ -137,9 +128,9 @@ class Transactions extends ViewBase {
                     <span class="label">Amount:</span>
                     <span class="value">
                       ${transaction.convertedAmount.toLocaleString('en-ZA', {
-                        style: 'currency',
-                        currency: transaction.currencyAbbreviation || 'ZAR'
-                      })}
+          style: 'currency',
+          currency: transaction.currencyAbbreviation || 'ZAR'
+        })}
                       (${transaction.currencyAbbreviation || 'ZAR'})
                     </span>
                   </div>

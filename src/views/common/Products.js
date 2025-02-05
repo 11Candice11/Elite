@@ -98,7 +98,6 @@ class Products extends ViewBase {
     const clientInfo = store.get('clientInfo') || {};
     if (clientInfo && Array.isArray(clientInfo.detailModels)) {
       this.detailModels = clientInfo.detailModels;
-      console.log(this.detailModels);
     }
   }
 
@@ -108,7 +107,6 @@ class Products extends ViewBase {
   }
 
   navigateToTransactionHistory(detail) {
-    console.log(detail);
     store.set('rootValueDateModels', detail.rootValueDateModels);
     store.set('transactionData', [
       // Include the provided JSON data here or fetch it dynamically
