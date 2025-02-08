@@ -1,224 +1,196 @@
 import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
-import logo from '/src/images/page-Logo-full.png';
+import user from '/src/images/user.png';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
 class Dashboard extends ViewBase {
   static styles = css`
-    :host {
-      display: block;
-      font-family: Arial, sans-serif;
-      background: #f5f7fa;
-      min-height: 100vh;
-      padding: 20px;
-      position: relative;
-      color: #333;
-    }
+  :host {
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    background: #f5f7fa;
+    min-height: 100vh;
+    color: #333;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s ease-in-out;
+  }
 
-    .watermark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      opacity: 0.03;
-      z-index: 0;
-    }
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+  }
 
-    .watermark img {
-      max-width: 70%;
-      height: auto;
-    }
+  .popup {
+    position: fixed;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -25%);
+    width: 50%;
+    max-width: 500px;
+    background: white;
+    border: 2px solid #0077b6;
+    padding: 20px;
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
 
-    .search-card {
-      background: #ffffff;
-      border: 1px solid #dcdcdc;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      max-width: 300px;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      transition: all 0.5s ease-in-out;
-      z-index: 1;
-    }
+  .popup-content {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+    border-radius: 5px;
+    background: #f9f9f9;
+  }
 
-    .search-card.move-up {
-      top: 20px;
-      left: 20px;
-      transform: translate(0, 0);
-    }
+  .popup button {
+    margin-top: 10px;
+    background: #0077b6;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
 
-    input[type="text"] {
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      margin-bottom: 10px;
-    }
+  .popup button:hover {
+    background: #005f8a;
+  }
 
-    button {
-      background: #0077b6;
-      color: white;
-      padding: 8px 15px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-    }
+  /* Search Bar Container */
+  .search-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.5s ease-in-out;
+  }
 
-    button:hover {
-      background: #005f8a;
-    }
+  /* Moves search bar to top left */
+  .search-container.moved {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    transform: none;
+    background: #0077b6;
+    padding: 10px;
+    border-radius: 5px;
+  }
 
-    .portfolio-container {
-      margin: 120px 20px 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
+  .search-container input {
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    width: 300px;
+    text-align: center;
+    font-size: 16px;
+  }
 
-    .portfolio-card {
-      background: #ffffff;
-      border: 1px solid #dcdcdc;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: all 0.3s ease;
-    }
+  .search-container.moved input {
+    background: white;
+    color: black;
+  }
 
-    .portfolio-card.expanded {
-      background: #f0f8ff;
-      border: 1px solid #0077b6;
-    }
+  .search-container button {
+    margin-left: 10px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    background: #005f8a;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
 
-    .portfolio-actions button {
-      margin: 5px;
-      background: #0077b6;
-    }
+  .search-container button:hover {
+    background: #004b70;
+  }
 
-    .generate-report {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #0096c7;
-    }
+  .loading {
+    font-size: 18px;
+    font-weight: bold;
+    color: #0077b6;
+    margin-top: 20px;
+  }
 
-    .loading {
-      color: #0077b6;
-      font-weight: bold;
-      text-align: center;
-    }
+  .content-container {
+    display: none;
+    flex-direction: row;
+    gap: 20px;
+    padding: 20px;
+    margin-top: 80px;
+    width: 90%;
+    transition: all 0.5s ease-in-out;
+  }
 
-    .portfolio-info {
-      margin-top: 10px;
-      padding: 10px;
-      background: #eaf4fb;
-      border-radius: 5px;
-    }
+  .content-container.visible {
+    display: flex;
+  }
 
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
+  .client-card {
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    padding: 15px;
+    width: 280px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-    .info-item {
-      margin-bottom: 10px;
-    }
+  .client-card img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto 10px;
+  }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      background: #fff;
-    }
+  .portfolio-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
 
-    th, td {
-      padding: 8px 12px;
-      text-align: left;
-      border: 1px solid #ccc;
-    }
+  .portfolio-card {
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 
-    th {
-      background: #0077b6;
-      color: white;
-    }
+  .portfolio-card h3 {
+    color: #0077b6;
+  }
 
-    tr:nth-child(even) {
-      background: #f9f9f9;
-    }
-    .popup {
-      position: fixed;
-      top: 25%;
-      left: 25%;
-      width: 50%; /* Wider */
-      max-width: 600px;
-      background: white;
-      border: 2px solid #0077b6;
-      padding: 20px;
-      border-radius: 8px;
-      z-index: 1000;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-    
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 999;
-    }
-        
-    .date-list {
-      max-height: 150px; /* Restrict height */
-      overflow-y: auto;  /* Add vertical scrollbar */
-      border: 1px solid #ccc;
-      padding: 10px;
-      background: #f9f9f9;
-      border-radius: 5px;
-    }
-    
-    .date-list li {
-      padding: 5px 0;
-      border-bottom: 1px solid #ddd;
-    }
-    
-    .date-list li:last-child {
-      border-bottom: none;
-    }    
-    .popup > button {
-      margin: 5px;
-    }
+  button {
+    background: #0077b6;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin: 5px 0;
+  }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    
-    th, td {
-      padding: 8px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    
-    th {
-      background-color: #0077b6;
-      color: white;
-    }
-    
-    input[type="text"] {
-      width: 90%;
-      padding: 4px;
-      box-sizing: border-box;
-    }
-  `;
+  button:hover {
+    background: #005f8a;
+  }
+`;
 
   static properties = {
     clientID: { type: String },
@@ -226,19 +198,20 @@ class Dashboard extends ViewBase {
     showPopup: { type: Boolean },
     selectedDates: { type: Array },
     selectedPortfolio: { type: Object },
-    rootValueDateModels: { type: Array },  
+    rootValueDateModels: { type: Array },
     customDate: { type: String },
+    searchCompleted: { type: Boolean },
     isLoading: { type: Boolean },
     searchMoved: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
-    performanceData: { type: Object } 
+    performanceData: { type: Object }
   };
 
   constructor() {
     super();
-    this.clientID = '';
+    this.clientID = store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.selectedPortfolio = store.get('selectedPortfolio') || null;
     this.rootValueDateModels = [];
@@ -246,6 +219,7 @@ class Dashboard extends ViewBase {
     this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
+    this.searchCompleted = false;
     this.isLoading = false;
     this.searchMoved = false;
     this.expandedCards = {};
@@ -259,8 +233,11 @@ class Dashboard extends ViewBase {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
+      console.log('Client info found in store:', storedClientInfo);
+      this.clientID = store.get('searchID');
       this.clientInfo = storedClientInfo;
       this.searchMoved = true;
+      this.searchCompleted = true;
     }
   }
 
@@ -273,7 +250,7 @@ class Dashboard extends ViewBase {
       }
     };
   }
-  
+
   navigateToRootTransactions(portfolio) {
     store.set('selectedInstrumentName', portfolio);
     // TODO Do service call to get root models
@@ -286,28 +263,29 @@ class Dashboard extends ViewBase {
   }
 
   async searchClient() {
+    if (!this.clientID.trim()) return;
+
     this.isLoading = true;
     this.clientInfo = null;
-
-    const request = {
-      TransactionDateStart: this.transactionDateStart,
-      TransactionDateEnd: this.transactionDateEnd,
-      TargetCurrencyL: 170,
-      ValueDates: [],
-      InputEntityModels: [
-        {
-          RegistrationNumber: this.clientID,
-        },
-      ],
-    };
-
-    store.set('searchID', this.clientID);
+    this.searchCompleted = false;
 
     try {
+      const request = {
+        TransactionDateStart: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString(),
+        TransactionDateEnd: new Date().toISOString(),
+        TargetCurrencyL: 170,
+        ValueDates: [],
+        InputEntityModels: [{ RegistrationNumber: this.clientID }]
+      };
+
       const response = await this.clientService.getClientProfile(request);
-      this.clientInfo = response.entityModels[1] || response.entityModels[0];
-      store.set('clientInfo', this.clientInfo);  // Store clientInfo for persistence
-      this.searchMoved = true;
+      this.clientInfo = response.entityModels?.[1] || response.entityModels?.[0];
+
+      if (this.clientInfo) {
+        store.set('clientInfo', this.clientInfo);
+        store.set('searchID', this.clientID);
+        this.searchCompleted = true;
+      }
     } catch (error) {
       console.error('Error fetching client:', error);
     } finally {
@@ -322,21 +300,22 @@ class Dashboard extends ViewBase {
     };
   }
 
-  togglePopup() {
+  togglePopup(portfolio = null) {
     this.showPopup = !this.showPopup;
+    this.selectedPortfolio = portfolio;
   }
-  
+
   handleDateSelection(option) {
     const inceptionDate = new Date(this.clientInfo.inceptionDate || '2000-01-01');
     const today = new Date();
     const dates = [];
-  
+
     const months = {
       'Jan': [0],
       'Jan|Jun': [0, 5],
       'Jan|Jun|Oct': [0, 5, 9]
     };
-  
+
     for (let year = today.getFullYear(); year >= inceptionDate.getFullYear(); year--) {
       months[option].forEach(month => {
         const date = new Date(year, month, 1);
@@ -345,10 +324,10 @@ class Dashboard extends ViewBase {
         }
       });
     }
-  
+
     this.selectedDates = [...new Set([...this.selectedDates, ...dates])];
   }
-  
+
   addCustomDate() {
     if (this.customDate && !this.selectedDates.includes(this.customDate)) {
       this.selectedDates = [...this.selectedDates, this.customDate];
@@ -358,7 +337,7 @@ class Dashboard extends ViewBase {
 
   async handleNext() {
     this.isLoading = true;
-  
+
     const searchId = store.get('searchID');
 
     const request = {
@@ -374,18 +353,18 @@ class Dashboard extends ViewBase {
         }
       ]
     };
-  
+
     try {
       const response = await this.clientService.getClientProfile(request);
       const clientInfo = response.entityModels[1] || response.entityModels[0];
       const detail = clientInfo.detailModels.find(
         (d) => d.instrumentName === this.selectedPortfolio.instrumentName
       );
-  
+
       store.set('clientInfo', clientInfo);
       store.set('selectedInstrumentName', this.selectedPortfolio);
       store.set('rootValueDateModels', detail?.rootValueDateModels || []);
-  
+
       this.navigateToRootTransactions();
     } catch (error) {
       console.error('Error fetching updated client information:', error);
@@ -397,11 +376,11 @@ class Dashboard extends ViewBase {
   selectPortfolio(portfolio) {
     this.selectedPortfolio = portfolio;
     store.set('selectedPortfolio', portfolio);
-  
+
     const detail = this.clientInfo.detailModels.find(
       (d) => d.instrumentName === portfolio.instrumentName
     );
-  
+
     if (detail && detail.rootValueDateModels) {
       this.rootValueDateModels = detail.rootValueDateModels;
       store.set('rootValueDateModels', detail.rootValueDateModels);
@@ -413,7 +392,7 @@ class Dashboard extends ViewBase {
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
   }
-  
+
   renderPopup() {
     return html`
       <div class="overlay" @click="${this.togglePopup}"></div>
@@ -473,7 +452,9 @@ class Dashboard extends ViewBase {
 
   render() {
     return html`
-      <div class="search-card ${this.searchMoved ? 'move-up' : ''}">
+    ${this.showPopup ? this.renderPopup() : ''}
+      <!-- Search Bar -->
+      <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
         <input
           type="text"
           placeholder="Enter Client ID"
@@ -482,73 +463,71 @@ class Dashboard extends ViewBase {
         />
         <button @click="${this.searchClient}">Search</button>
       </div>
-
-      <div class="portfolio-container">
-        ${this.isLoading
-        ? html`<div class="loading">Loading...</div>`
-        : this.clientInfo
-          ? html`
-              <div class="generate-report">
-                <button @click="${() => this.generateReport()}">Generate Report</button>
-              </div>
-
-${this.showPopup ? this.renderPopup() : ''}
-${this.clientInfo.detailModels?.map((portfolio, index) => html`
-  <div class="portfolio-card" @click="${() => this.selectPortfolio(portfolio)}">
-    <h3>${portfolio.instrumentName}</h3>
-    <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-        <button @click="${() => this.togglePopup()}">Interaction History</button>
-    <button @click="${() => this.toggleExpand(index)}">
-      ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
-    </button>
-
-    ${this.expandedCards[index] ? html`
-      <div class="portfolio-info">
-        <h4>General Information</h4>
-        <p><strong>Reference Number:</strong> ${portfolio.referenceNumber}</p>
-        <p><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</p>
-        <p><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ZAR</p>
-        <p><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ZAR (${portfolio.regularContributionFrequency})</p>
-        <p><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</p>
-
-        <h4>Portfolio Entries</h4>
-        <table>
-          <tr>
-            <th>Instrument Name</th>
-            <th>ISIN Number</th>
-            <th>MorningStar ID</th>
-            <th>One Year</th>
-            <th>Three Years</th>
-          </tr>
-          ${portfolio.portfolioEntryTreeModels?.map(entry => html`
-            <tr>
-              <td>${entry.instrumentName}</td>
-              <td>${entry.isinNumber || 'N/A'}</td>
-              <td>${entry.morningStarId || 'N/A'}</td>
-              <td>
-                <input 
-                  type="text" 
-                  .value="${this.performanceData[entry.portfolioEntryId]?.oneYear || ''}" 
-                  @input="${(e) => this.handleInputChange(entry.portfolioEntryId, 'oneYear', e.target.value)}" 
-                  placeholder="Enter 1Y Return" 
-                />
-              </td>
-              <td>
-                <input 
-                  type="text" 
-                  .value="${this.performanceData[entry.portfolioEntryId]?.threeYears || ''}" 
-                  @input="${(e) => this.handleInputChange(entry.portfolioEntryId, 'threeYears', e.target.value)}" 
-                  placeholder="Enter 3Y Return" 
-                />
-              </td>
-            </tr>
-          `)}
-        </table>
-      </div>
-    ` : ''}
-  </div>
-`)}`          : ''}
-      </div>
+  
+      <!-- Loading Indicator -->
+      ${this.isLoading ? html`<div class="loading">Loading...</div>` : ''}
+  
+      <!-- Client Profile & Portfolio (Hidden Until Search) -->
+      ${this.searchCompleted && this.clientInfo ? html`
+        <div class="content-container visible">
+          
+          <!-- Client Profile Card -->
+          <div class="client-card">
+            <img src="${user}" alt="User Image" />
+            <h3>${this.clientInfo.firstNames || 'Client Name'} ${this.clientInfo.surname || ''}</h3>
+            <p><strong>Title:</strong> ${this.clientInfo.title || 'N/A'}</p>
+            <p><strong>Advisor:</strong> ${this.clientInfo.advisorName || 'N/A'}</p>
+            <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
+            <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
+          </div>
+  
+          <!-- Portfolio List -->
+          <div class="portfolio-container">
+            ${this.clientInfo.detailModels?.length
+          ? this.clientInfo.detailModels.map((portfolio, index) => html`
+                <div class="portfolio-card">
+                  <h3>${portfolio.instrumentName}</h3>
+                  <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
+                  <button @click="${() => this.togglePopup(portfolio)}">Interaction History</button>
+                  <button @click="${() => this.toggleExpand(index)}">
+                    ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
+                  </button>
+  
+                  ${this.expandedCards[index] ? html`
+                    <div class="portfolio-info">
+                      <h4>General Information</h4>
+                      <p><strong>Reference Number:</strong> ${portfolio.referenceNumber}</p>
+                      <p><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</p>
+                      <p><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ZAR</p>
+                      <p><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ZAR (${portfolio.regularContributionFrequency})</p>
+                      <p><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</p>
+  
+                      <h4>Portfolio Entries</h4>
+                      <table>
+                        <tr>
+                          <th>Instrument Name</th>
+                          <th>ISIN Number</th>
+                          <th>MorningStar ID</th>
+                        </tr>
+                        ${portfolio.portfolioEntryTreeModels?.map(
+            (entry) => html`
+                            <tr>
+                              <td>${entry.instrumentName}</td>
+                              <td>${entry.isinNumber || 'N/A'}</td>
+                              <td>${entry.morningStarId || 'N/A'}</td>
+                            </tr>
+                          `
+          )}
+                      </table>
+                    </div>
+                  ` : ''}
+                </div>
+              `)
+          : html`<p>No Portfolios Found</p>`}
+          </div>
+  
+        </div>
+      ` : ''}
     `;
   }
 }
