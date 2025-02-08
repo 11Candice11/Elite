@@ -5,32 +5,12 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"type": "pwa-chrome",
-			"request": "launch",
-			"name": "Run",
-			"url": "http://localhost:8080",
-			"webRoot": "${workspaceFolder}",
-			"preLaunchTask": "run",
-			"sourceMaps": true,
-			"trace": true
-		},
-		{
-			"type": "firefox",
-			"request": "launch",
-			"name": "Run: Firefox",
-			"url": "http://localhost:8080",
-			"webRoot": "${workspaceFolder}/",
-			"preLaunchTask": "run"
-		},
-		{
 			"type": "pwa-msedge",
 			"request": "launch",
 			"name": "Run: Edge",
 			"url": "http://localhost:8080",
 			"webRoot": "${workspaceFolder}",
-			"preLaunchTask": "run",
-			"sourceMaps": true,
-			"trace": true
-		},
+			"preLaunchTask": "npm: build",
+		}
 	]
 }

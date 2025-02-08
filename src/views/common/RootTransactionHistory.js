@@ -131,7 +131,7 @@ export class RootTransactionHistory extends ViewBase {
                     <td>${new Date(value.valueDate).toLocaleDateString()}</td>
                     <td>${value.exchangeRate}</td>
                     <td>${value.convertedAmount.toLocaleString()}</td>
-                    <td>${value.portfolioSharePercentage}%</td>
+                    <td>${value.portfolioSharePercentage.toFixed(2)}%</td>
                   </tr>
                 `
               )}

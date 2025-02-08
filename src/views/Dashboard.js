@@ -388,7 +388,7 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.clientInfo.detailModels[0], "7", this.clientID); // Generate the PDF
+    var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
   }
