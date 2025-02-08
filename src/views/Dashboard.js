@@ -479,7 +479,6 @@ class Dashboard extends ViewBase {
             <p><strong>Advisor:</strong> ${this.clientInfo.advisorName || 'N/A'}</p>
             <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
             <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
-            <button @click="${() => this.generateReport()}">Generate report</button>
           </div>
   
           <!-- Portfolio List -->
