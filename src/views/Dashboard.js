@@ -388,7 +388,7 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.clientInfo.detailModels[0], "7", this.clientID); // Generate the PDF
+    var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
   }
@@ -479,6 +479,7 @@ class Dashboard extends ViewBase {
             <p><strong>Advisor:</strong> ${this.clientInfo.advisorName || 'N/A'}</p>
             <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
             <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
+            <button @click="${() => this.generateReport()}">Generate report</button>
           </div>
   
           <!-- Portfolio List -->
