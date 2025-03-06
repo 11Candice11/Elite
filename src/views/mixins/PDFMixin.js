@@ -2,91 +2,112 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
 export const PdfMixin = {
-
   async generatePDF(selectedDetails) {
-    const doc = new jsPDF({ orientation: "landscape" });
-    
-    const formatAmount = (amount) => {
-      return `${amount.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-  };
+    const doc = new jsPDF({ orientation: "landscape" }); // Landscape format
+    const tableOptions = {
+      styles: { fontSize: 12, cellPadding: 4 },
+      headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
+      bodyStyles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255] }
+    };
+    const formatAmount = (amount) => `R ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
+    // Group rootValueDateModels by date
+    const interactionHistory = {};
+    selectedDetails.detailModels.forEach((portfolio) => {
+      portfolio.rootValueDateModels.forEach((interaction) => {
+        const date = new Date(interaction.convertedValueDate).toLocaleDateString("en-GB", {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+
+        if (!interactionHistory[date]) {
+          interactionHistory[date] = [];
+        }
+        interactionHistory[date].push(interaction);
+      });
+    });
+
+    // Generate Portfolios first
     selectedDetails.detailModels.forEach((portfolio, index) => {
-        if (index !== 0) doc.addPage(); // New page for each portfolio
+      if (index !== 0) doc.addPage(); // New page for each portfolio
 
-        doc.setFontSize(16);
-        doc.text(portfolio.instrumentName, 10, 20);
+      doc.setFontSize(16);
+      doc.text(portfolio.instrumentName, 10, 20);
 
-        // Define shared table styles
-        const tableOptions = {
-            styles: { fontSize: 12, cellPadding: 4 },
-            headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-            bodyStyles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255] }
-        };
+      // Define shared table styles
+      const tableOptions = {
+        styles: { fontSize: 12, cellPadding: 4 },
+        headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
+        bodyStyles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255] }
+      };
 
-        // --- CONTRIBUTIONS ---
-        const contributions = portfolio.transactionModels
-            .filter(t => t.transactionType.toLowerCase().includes("contribution") && t.convertedAmount > 0)
-            .map(t => [t.transactionDate.split("T")[0], t.transactionType, `R ${formatAmount(t.convertedAmount.toFixed(2))}`]);
+      // CONTRIBUTIONS
+      const contributions = portfolio.transactionModels
+        .filter(t => t.transactionType.toLowerCase().includes("contribution") && t.convertedAmount > 0)
+        .map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]);
 
-        if (contributions.length > 0) {
-            // Section Header
-            doc.setFillColor(200, 200, 200);
-            doc.rect(10, 30, 190, 8, "F");
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(12);
-            doc.text("CONTRIBUTIONS", 12, 35);
+      if (contributions.length > 0) {
+        doc.autoTable({
+          head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "GROSS AMOUNT"]],
+          body: contributions,
+          startY: 40,
+          ...tableOptions
+        });
+      }
 
-            // Table Headers (grey background)
-            doc.autoTable({
-                head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "GROSS AMOUNT"]],
-                body: contributions,
-                startY: 40,
-                ...tableOptions
-            });
+      // WITHDRAWALS
+      const withdrawals = portfolio.transactionModels
+        .filter(t => t.transactionType.toLowerCase().includes("withdrawal") || t.convertedAmount < 0)
+        .map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]);
 
-            // Total row
-            doc.autoTable({
-                body: [["", "TOTAL:", `R ${contributions.reduce((sum, t) => sum + parseFloat(t[2].replace("R ", "")), 0).toFixed(2)}`]],
-                startY: doc.lastAutoTable.finalY,
-                styles: { fontStyle: "bold", halign: "center" },
-                ...tableOptions
-            });
-        }
+      if (withdrawals.length > 0) {
+        doc.autoTable({
+          head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
+          body: withdrawals,
+          startY: doc.lastAutoTable.finalY + 10,
+          ...tableOptions
+        });
+      }
+    });
 
-        // --- WITHDRAWALS ---
-        const withdrawals = portfolio.transactionModels
-            .filter(t => t.transactionType.toLowerCase().includes("withdrawal") || t.convertedAmount < 0)
-            .map(t => [t.transactionDate.split("T")[0], t.transactionType, `R ${formatAmount(t.convertedAmount.toFixed(2))}`]);
+    // Generate Interaction History AFTER portfolios
+    doc.addPage();
+    doc.setFontSize(18);
+    doc.text("Interaction History", 10, 20);
 
-        if (withdrawals.length > 0) {
-            const startY = doc.lastAutoTable.finalY + 15;
+    Object.keys(interactionHistory).forEach((date, index) => {
+      if (index !== 0) doc.addPage();
 
-            // Section Header
-            doc.setFillColor(200, 200, 200);
-            doc.rect(10, startY - 10, 190, 8, "F");
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(12);
-            doc.text("WITHDRAWALS", 12, startY - 4);
+      doc.setFontSize(16);
+      doc.text(date, 10, 30);
 
-            // Table Headers (grey background)
-            doc.autoTable({
-                head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
-                body: withdrawals,
-                startY: startY,
-                ...tableOptions
-            });
+      interactionHistory[date].forEach((interaction) => {
+        const interactionData = interaction.valueModels.map(entry => {
+          // Map portfolioEntryId to instrumentName
+          const matchedPortfolio = selectedDetails.detailModels
+            .flatMap(p => p.portfolioEntryTreeModels)
+            .find(e => e.portfolioEntryId === entry.portfolioEntryId);
+          return [
+            matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
+            formatAmount(entry.convertedAmount || 0),
+            entry.exchangeRate ? entry.exchangeRate.toFixed(2) : "0.00",
+          ];
+        });
 
-            // Total row
-            doc.autoTable({
-                body: [["", "TOTAL:", `R ${withdrawals.reduce((sum, t) => sum + parseFloat(t[2].replace("R ", "")), 0).toFixed(2)}`]],
-                startY: doc.lastAutoTable.finalY,
-                styles: { fontStyle: "bold", halign: "center" },
-                ...tableOptions
-            });
-        }
+        doc.autoTable({
+          head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
+          body: interactionData,
+          startY: doc.lastAutoTable.finalY + 10,
+          ...tableOptions
+        });
+      });
     });
 
     const pdfBytes = doc.output("arraybuffer");
-    return btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
+    const uint8Array = new Uint8Array(pdfBytes);
+    const binaryString = new TextDecoder("utf-8").decode(uint8Array);
+    return btoa(unescape(encodeURIComponent(binaryString)));
   }
 };
