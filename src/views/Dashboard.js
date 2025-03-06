@@ -397,6 +397,7 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
   }
 
   async generateReport() {
+    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
