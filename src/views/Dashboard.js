@@ -124,7 +124,7 @@ class Dashboard extends ViewBase {
     font-size: 18px;
     font-weight: bold;
     color: #0077b6;
-    margin-top: 20px;
+    margin-top: 60px;
   }
 
   .content-container {
@@ -252,12 +252,17 @@ class Dashboard extends ViewBase {
   }
 
   navigateToRootTransactions(portfolio) {
-    store.set('selectedInstrumentName', portfolio);
-    // TODO Do service call to get root models
+    this.selectedPortfolio = portfolio;
+    const detail = this.clientInfo.detailModels.find(
+      (d) => d.instrumentName === this.selectedPortfolio.instrumentName
+    );
+    store.set('rootValueDateModels', detail?.rootValueDateModels || []);
+    store.set('selectedInstrumentName', this.selectedPortfolio);
     super.navigateToRootTransactions();
   }
 
   navigateToTransactions(portfolio) {
+    this.selectedPortfolio = portfolio;
     store.set('selectedInstrumentName', portfolio);
     router.navigate('/transactions');
   }
@@ -285,6 +290,7 @@ class Dashboard extends ViewBase {
         store.set('clientInfo', this.clientInfo);
         store.set('searchID', this.clientID);
         this.searchCompleted = true;
+        this.showPopup = true;
       }
     } catch (error) {
       console.error('Error fetching client:', error);
@@ -301,12 +307,20 @@ class Dashboard extends ViewBase {
   }
 
   togglePopup(portfolio = null) {
+    // store.set('rootValueDateModels', detail?.rootValueDateModels || []);
+
     this.showPopup = !this.showPopup;
     this.selectedPortfolio = portfolio;
   }
 
   handleDateSelection(option) {
-    const inceptionDate = new Date(this.clientInfo.inceptionDate || '2000-01-01');
+    const earliestInceptionDate = this.clientInfo?.detailModels
+  ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+  .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+
+console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYYY-MM-DD
+
+    const inceptionDate = new Date(earliestInceptionDate);
     const today = new Date();
     const dates = [];
 
@@ -357,15 +371,10 @@ class Dashboard extends ViewBase {
     try {
       const response = await this.clientService.getClientProfile(request);
       const clientInfo = response.entityModels[1] || response.entityModels[0];
-      const detail = clientInfo.detailModels.find(
-        (d) => d.instrumentName === this.selectedPortfolio.instrumentName
-      );
 
       store.set('clientInfo', clientInfo);
-      store.set('selectedInstrumentName', this.selectedPortfolio);
-      store.set('rootValueDateModels', detail?.rootValueDateModels || []);
-
-      this.navigateToRootTransactions();
+      this.clientInfo = clientInfo;
+      this.showPopup = false;
     } catch (error) {
       console.error('Error fetching updated client information:', error);
     } finally {
@@ -457,7 +466,7 @@ class Dashboard extends ViewBase {
       <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
         <input
           type="text"
-          placeholder="Enter Client ID"
+          placeholder="Enter Clients ID"
           .value="${this.clientID}"
           @input="${(e) => (this.clientID = e.target.value)}"
         />
@@ -489,7 +498,7 @@ class Dashboard extends ViewBase {
                 <div class="portfolio-card">
                   <h3>${portfolio.instrumentName}</h3>
                   <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-                  <button @click="${() => this.togglePopup(portfolio)}">Interaction History</button>
+                  <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
                   <button @click="${() => this.toggleExpand(index)}">
                     ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
                   </button>

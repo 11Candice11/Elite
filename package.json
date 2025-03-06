@@ -22,7 +22,7 @@
     "jspdf-autotable": "^3.8.4",
     "lit": "^3.2.1",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^2.15.349",
+    "pdfjs-dist": "2.15.349",
     "react-pdf": "^9.2.1"
   },
   "type": "module",
