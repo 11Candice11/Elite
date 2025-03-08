@@ -51,6 +51,7 @@ class LoginView extends ViewBase {
       padding: 10px;
       background-color: rgb(0, 50, 100);
       border: none;
+      color: white;
       font-weight: bold;
       border-radius: 5px;
       color: white;
@@ -64,8 +65,6 @@ class LoginView extends ViewBase {
   static properties = {
     username: { type: String },
     password: { type: String },
-    pipelineToken: { type: String },
-    showTokenField: { type: Boolean },
     errorMessage: { type: String },
   };
 
@@ -73,8 +72,6 @@ class LoginView extends ViewBase {
     super();
     this.username = '';
     this.password = '';
-    this.pipelineToken = '';
-    this.showTokenField = false;
     this.errorMessage = '';
     this.clientProfileService = new ClientProfileService(); // Initialize service
   }
@@ -89,18 +86,17 @@ class LoginView extends ViewBase {
       this.errorMessage = 'Please enter a valid username and password.';
       return;
     }
-
-    this.navigateBack();
     
     // Trigger navigation to HomeView
     try {
+      this.isLoading = true;
       // Call login method from ClientProfileService
-      //const response = await this.clientProfileService.login(this.username, this.password);
-      //if (response.message === `Login successful!`) {
-        this.navigateBack(); // Redirect on successful login
-     // } else {
-       // this.errorMessage = response.message || 'Login failed. Please try again.';
-     // }
+      // const response = await this.clientProfileService.login(this.username, this.password, "admin@gmail.com");
+      // if (response.message === `Login successful!`) {
+        this.navigateHome(); // Redirect on successful login
+    //  } else {
+    //    this.errorMessage = response.message || 'Login failed. Please try again.';
+    //  }
     } catch (error) {
       this.errorMessage = 'An error occurred while logging in. Please try again later.';
       console.error('Login error:', error);
@@ -133,20 +129,8 @@ class LoginView extends ViewBase {
                 placeholder="Enter your password"
               />
             </div>
-            ${this.showTokenField
-              ? html`
-                  <div class="form-group">
-                    <label for="pipelineToken">Pipeline Token</label>
-                    <input
-                      type="text"
-                      id="pipelineToken"
-                      .value=${this.pipelineToken}
-                      @input=${(e) => (this.pipelineToken = e.target.value)}
-                      placeholder="Enter your pipeline token"
-                    />
-                  </div>
-                `
-              : ''}
+                  <!-- Loading Indicator -->
+      ${this.isLoading ? html`<div class="loading">Loading...</div>` : ''}
             ${this.errorMessage
               ? html`<div class="form-group error">${this.errorMessage}</div>`
               : ''}

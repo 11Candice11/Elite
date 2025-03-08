@@ -106,7 +106,27 @@ class Transactions extends ViewBase {
   loadTransactions() {
     const clientInfo = store.get('clientInfo');
     const selectedInstrumentName = store.get('selectedInstrumentName');
-    this.transactions = selectedInstrumentName.transactionModels;
+    const rawTransactions = selectedInstrumentName.transactionModels;
+
+    // Group transactions by date and sum amounts
+    const groupedTransactions = rawTransactions.reduce((acc, transaction) => {
+      const dateKey = new Date(transaction.transactionDate).toLocaleDateString();
+      
+      if (!acc[dateKey]) {
+        acc[dateKey] = {
+          transactionDate: transaction.transactionDate,
+          convertedAmount: 0,
+          currencyAbbreviation: transaction.currencyAbbreviation || 'ZAR',
+          exchangeRate: transaction.exchangeRate || 'N/A',
+          transactionType: transaction.transactionType || 'N/A'
+        };
+      }
+
+      acc[dateKey].convertedAmount += transaction.convertedAmount;
+      return acc;
+    }, {});
+
+    this.transactions = Object.values(groupedTransactions);
   }
 
   render() {
@@ -128,23 +148,23 @@ class Transactions extends ViewBase {
                     <span class="label">Amount:</span>
                     <span class="value">
                       ${transaction.convertedAmount.toLocaleString('en-ZA', {
-          style: 'currency',
-          currency: transaction.currencyAbbreviation || 'ZAR'
-        })}
-                      (${transaction.currencyAbbreviation || 'ZAR'})
+                        style: 'currency',
+                        currency: transaction.currencyAbbreviation
+                      })}
+                      (${transaction.currencyAbbreviation})
                     </span>
                   </div>
                   <div class="detail-item">
                     <span class="label">Currency:</span>
-                    <span class="value">${transaction.currencyAbbreviation || 'ZAR'}</span>
+                    <span class="value">${transaction.currencyAbbreviation}</span>
                   </div>
                   <div class="detail-item">
                     <span class="label">Exchange Rate:</span>
-                    <span class="value">${transaction.exchangeRate ? transaction.exchangeRate.toFixed(2) : 'N/A'}</span>
+                    <span class="value">${transaction.exchangeRate !== 'N/A' ? transaction.exchangeRate.toFixed(2) : 'N/A'}</span>
                   </div>
                   <div class="detail-item">
                     <span class="label">Transaction Type:</span>
-                    <span class="value">${transaction.transactionType || 'N/A'}</span>
+                    <span class="value">${transaction.transactionType}</span>
                   </div>
                 </div>
               </div>

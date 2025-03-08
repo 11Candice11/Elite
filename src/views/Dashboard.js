@@ -141,23 +141,6 @@ class Dashboard extends ViewBase {
     display: flex;
   }
 
-  .client-card {
-    background: #ffffff;
-    border: 1px solid #dcdcdc;
-    border-radius: 8px;
-    padding: 15px;
-    width: 280px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .client-card img {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    display: block;
-    margin: 0 auto 10px;
-  }
-
   .portfolio-container {
     flex: 1;
     display: flex;
@@ -190,6 +173,106 @@ class Dashboard extends ViewBase {
   button:hover {
     background: #005f8a;
   }
+
+  .logout-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #ff4d4d;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  .logout-button:hover {
+    background: #cc0000;
+  }
+  .service-unavailable {
+    font-size: 20px;
+    font-weight: bold;
+    color: red;
+    margin-top: 20px;
+  }
+    /* Client Card Animation */
+  .client-card {
+    background: rgb(215, 180, 120);
+    border-radius: 8px;
+    max-width: 420px;
+    margin: 20px auto;
+    padding: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: all 0.6s ease;
+  }
+
+  .client-card.visible {
+    transform: translateY(0);
+    opacity: 1;
+    height: 325px;
+  }
+
+/* Client Card Header */
+.client-card-header {
+  background: rgb(0, 50, 100);
+  color: white;
+  padding: 15px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.client-card-header img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+/* Client Card Content */
+.client-card-content {
+  padding: 15px;
+  color: black;
+  background-color: rgb(200, 200, 200);
+  border-radius: 0 0 8px 8px;
+}
+
+.client-card-content p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: black;
+  line-height: 1.5;
+}
+
+/* Client Card Buttons */
+.client-card-actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 15px;
+  background-color: rgb(140, 120, 80);
+  border-radius: 0 0 8px 8px;
+}
+
+.client-card-actions button {
+  background-color: rgb(215, 180, 120);
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  height: 50px;
+  font-size: 13px;
+  width: 120px;
+}
+
+.client-card-actions button:hover {
+  background-color: rgb(140, 120, 80);
+}
 `;
 
   static properties = {
@@ -202,27 +285,25 @@ class Dashboard extends ViewBase {
     customDate: { type: String },
     searchCompleted: { type: Boolean },
     isLoading: { type: Boolean },
-    searchMoved: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
+    serviceUnavailable: { type: Boolean },
     performanceData: { type: Object }
   };
 
   constructor() {
     super();
-    this.clientID = store.get('searchID') || '';
+    this.clientID = '';
     this.clientInfo = store.get('clientInfo') || {};
     this.selectedPortfolio = store.get('selectedPortfolio') || null;
-    this.rootValueDateModels = [];
-    this.performanceData = {};
-    this.showPopup = false;
+    this.showPopup = true;
     this.selectedDates = [];
     this.customDate = '';
     this.searchCompleted = false;
     this.isLoading = false;
-    this.searchMoved = false;
     this.expandedCards = {};
+    this.serviceUnavailable = false;
     this.clientService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
@@ -233,22 +314,11 @@ class Dashboard extends ViewBase {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
-      console.log('Client info found in store:', storedClientInfo);
       this.clientID = store.get('searchID');
+      this.clientIDvalue = this.clientID;
       this.clientInfo = storedClientInfo;
-      this.searchMoved = true;
       this.searchCompleted = true;
     }
-  }
-
-  handleInputChange(portfolioId, field, value) {
-    this.performanceData = {
-      ...this.performanceData,
-      [portfolioId]: {
-        ...this.performanceData[portfolioId],
-        [field]: value
-      }
-    };
   }
 
   navigateToRootTransactions(portfolio) {
@@ -269,6 +339,8 @@ class Dashboard extends ViewBase {
 
   async searchClient() {
     if (!this.clientID.trim()) return;
+
+    this.selectedDates = [];
 
     this.isLoading = true;
     this.clientInfo = null;
@@ -291,9 +363,16 @@ class Dashboard extends ViewBase {
         store.set('searchID', this.clientID);
         this.searchCompleted = true;
         this.showPopup = true;
+        this.selectedDates = this._getDates();
+      } else {
+        console.error("Service returned no data.");
+        this.serviceUnavailable = true;
+        router.navigate('/service-unavailable');
       }
     } catch (error) {
-      console.error('Error fetching client:', error);
+      console.error("Error fetching client:", error);
+      this.serviceUnavailable = true;
+      router.navigate('/service-unavailable');
     } finally {
       this.isLoading = false;
     }
@@ -306,19 +385,23 @@ class Dashboard extends ViewBase {
     };
   }
 
-  togglePopup(portfolio = null) {
-    // store.set('rootValueDateModels', detail?.rootValueDateModels || []);
-
+  togglePopup() {
     this.showPopup = !this.showPopup;
-    this.selectedPortfolio = portfolio;
+  }
+
+  _getDates() {
+    const dates = [
+      "2024-05-14",
+      "2024-09-23",
+      "2024-01-08"
+    ];
+    return dates;
   }
 
   handleDateSelection(option) {
     const earliestInceptionDate = this.clientInfo?.detailModels
-  ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-  .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
-
-console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYYY-MM-DD
+      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
     const inceptionDate = new Date(earliestInceptionDate);
     const today = new Date();
@@ -352,12 +435,21 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
   async handleNext() {
     this.isLoading = true;
 
+    if (this.clientID === !this.clientIDvalue) {
+      this.showPopup = true;
+      return;
+    }
     const searchId = store.get('searchID');
 
+    const earliestInceptionDate = this.clientInfo?.detailModels
+      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+
     const request = {
-      TransactionDateStart: "2020-01-12T00:00:00+02:00",
+      TransactionDateStart: earliestInceptionDate.toISOString(),
       TransactionDateEnd: new Date().toISOString(),
       TargetCurrencyL: 170,
+      ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
       ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
       InputEntityModels: [
         {
@@ -370,10 +462,10 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
 
     try {
       const response = await this.clientService.getClientProfile(request);
-      const clientInfo = response.entityModels[1] || response.entityModels[0];
+      const clientInformation = response.entityModels[1] || response.entityModels[0];
 
-      store.set('clientInfo', clientInfo);
-      this.clientInfo = clientInfo;
+      store.set('clientInfo', clientInformation);
+      this.clientInfo = clientInformation;
       this.showPopup = false;
     } catch (error) {
       console.error('Error fetching updated client information:', error);
@@ -382,22 +474,16 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
     }
   }
 
-  selectPortfolio(portfolio) {
-    this.selectedPortfolio = portfolio;
-    store.set('selectedPortfolio', portfolio);
-
-    const detail = this.clientInfo.detailModels.find(
-      (d) => d.instrumentName === portfolio.instrumentName
-    );
-
-    if (detail && detail.rootValueDateModels) {
-      this.rootValueDateModels = detail.rootValueDateModels;
-      store.set('rootValueDateModels', detail.rootValueDateModels);
-    }
+  logout() {
+    store.set('clientInfo', null);
+    store.set('searchID', '');
+    this.clientID = '';
+    this.clientInfo = null;
+    this.searchCompleted = false;
+    router.navigate('/login');
   }
 
   async generateReport() {
-    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
@@ -419,7 +505,7 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
         <ul class="date-list"> 
           ${this.selectedDates.map(date => html`<li>${date}</li>`)}
         </ul>
-        <button @click="${this.togglePopup}">Close</button>
+        <button @click="${() => this.selectedDates = []}">Clear</button>
         <button @click="${this.handleNext}" ?disabled="${this.isLoading}">
           ${this.isLoading ? 'Processing...' : 'Next'}
         </button>
@@ -456,20 +542,62 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
             `
     )}
         </table>
+
+        <h4>Portfolio Entries</h4>
+        <table>
+          <tr>
+            <th>Instrument Name</th>
+            <th>ISIN Number</th>
+            <th>MorningStar ID</th>
+          </tr>
+          ${portfolio.portfolioEntryTreeModels?.map(
+      (entry) => html`
+              <tr>
+                <td>${entry.instrumentName}</td>
+                <td>${entry.isinNumber || 'N/A'}</td>
+                <td>${entry.morningStarId || 'N/A'}</td>
+              </tr>
+            `
+    )}
+        </table>
       </div>
+    `;
+  }
+
+
+  renderClientCard() {
+    return html`
+    <div class="client-card visible">
+      <div class="client-card-header">
+        <img src="${user}" alt="User Icon" class="client-card-icon" />
+        <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+      </div>
+      <div class="client-card-content">
+        <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+        <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+        <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+        <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+        <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+        <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+      </div>
+    </div>
     `;
   }
 
   render() {
     return html`
     ${this.showPopup ? this.renderPopup() : ''}
+          <!-- Logout Button (Only Visible When Logged In) -->
+          ${this.clientInfo ? html`
+        <button class="logout-button" @click="${this.logout}">Logout</button>
+      ` : ''}
       <!-- Search Bar -->
       <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
         <input
           type="text"
           placeholder="Enter Clients ID"
-          .value="${this.clientID}"
-          @input="${(e) => (this.clientID = e.target.value)}"
+          .value="${this.clientIDvalue}"
+          @input="${(e) => (this.clientIDvalue = e.target.value)}"
         />
         <button @click="${this.searchClient}">Search</button>
       </div>
@@ -481,7 +609,8 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
       ${this.searchCompleted && this.clientInfo ? html`
         <div class="content-container visible">
           
-          <!-- Client Profile Card -->
+          ${this.clientInfo ? this.renderClientCard() : ''}
+          <!-- Client Profile Card
           <div class="client-card">
             <img src="${user}" alt="User Image" />
             <h3>${this.clientInfo.firstNames || 'Client Name'} ${this.clientInfo.surname || ''}</h3>
@@ -490,7 +619,7 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
             <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
             <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
             <button @click="${this.generateReport}">Generate Report</button>
-          </div>
+          </div> -->
   
           <!-- Portfolio List -->
           <div class="portfolio-container">
@@ -499,7 +628,8 @@ console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYY
                 <div class="portfolio-card">
                   <h3>${portfolio.instrumentName}</h3>
                   <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-                  <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
+                  <!-- <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button> -->
+                  <button @click="${this.generateReport}">Generate Report</button>
                   <button @click="${() => this.toggleExpand(index)}">
                     ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
                   </button>
