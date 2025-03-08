@@ -412,7 +412,8 @@ li {
     reportOptions: { type: Object },
     showDialog: { type: Boolean },
     showDetailModelsDialog: { type: Boolean },
-    selectedDetailModel: { type: Object }
+    selectedDetailModel: { type: Object },
+    isLoading: { type: Boolean }
   };
 
   constructor() {
@@ -420,6 +421,7 @@ li {
     this.searchID = store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.profileMoved = false;
+    this.isLoading = false;
     this.appointmentFrequency = 6; // Default to 6 months
     this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
     this.transactionDateEnd = this.formatDateToISO(new Date());
@@ -507,6 +509,7 @@ li {
 
   async fetchData() {
     this.isVisible = false;
+    this.isLoading = true;
 
     const searched = store.get('searchID') === this.searchID;
     if (searched) return;
@@ -528,46 +531,15 @@ li {
     try {
       // ✅ First API call to get client data
       const response = await this.clientService.getClientProfile(request);
-      if (!response?.entityModels[1] || !response.entityModels[0]) return;
+      if (!response?.entityModels[1] && !response.entityModels[0]) return;
   
       this.clientInfo = response.entityModels[1] || response.entityModels[0]
       store.set('clientInfo', this.clientInfo);
-
-    //   const entity = initialResponse.entityModels[1] || initialResponse.entityModels[0];
-    //   const detailModels = entity.detailModels || [];
-  
-    //   // ✅ Find the earliest inception date
-    //   const earliestInceptionDate = this.getEarliestInceptionDate(detailModels);
-    //   const frequency = this.appointmentFrequency || 6; // Default to 6 months
-  
-    //   // ✅ Calculate ValueDates based on the earliest inception date
-    //   const valueDates = this.calculateValueDates(earliestInceptionDate, frequency);
-  
-    //   // ✅ Second API call with ValueDates
-    //   const updatedRequest = {
-    //     ...request,
-    //     ValueDates: valueDates,
-    //   };
-  
-    //   const finalResponse = await this.clientService.getClientProfile(updatedRequest);
-    //   if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
-  
-    //   const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
-    //   this.clientInfo = {
-    //     firstNames: finalEntity.firstNames || 'N/A',
-    //     surname: finalEntity.surname || 'N/A',
-    //     registeredName: finalEntity.registeredName || 'N/A',
-    //     title: finalEntity.title || 'N/A',
-    //     nickname: finalEntity.nickname || 'N/A',
-    //     advisorName: finalEntity.advisorName || 'N/A',
-    //     email: finalEntity.email || 'N/A',
-    //     cellPhoneNumber: finalEntity.cellPhoneNumber || 'N/A',
-    //     detailModels: finalEntity.detailModels || [],
-    //   };
-    //   store.set('clientInfo', this.clientInfo);
-      this.isVisible = true;
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      this.isVisible = true;
+      this.isLoading = false;
     }
   }
 
@@ -588,13 +560,6 @@ li {
     store.set('base64', base64);
     router.navigate('/pdf');
   }
-
-  // handleSelectDetailModel(model) {
-  //   // this.showDetailModelsDialog = false;
-  //   this.selectedDetailModel = model;
-  //   // Continue with generating the report
-  //   this.generateReport();
-  // }
 
   moveProfileCard() {
     this.profileMoved = true;
@@ -669,7 +634,8 @@ li {
               .value="${this.searchID}"
               @input="${(e) => (this.searchID = e.target.value)}"
             />
-            <button class="button" @click="${this.fetchData}">Search</button>
+            <button class="button" @click="${this.fetchData}">${this.isLoading ? 'Processing...' : 'Search'}
+            </button>
           </div>
           <div class="filter-buttons">
   <label>
