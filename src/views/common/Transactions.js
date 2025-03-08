@@ -1,284 +1,154 @@
-import { LitElement, html, css } from 'lit';
 import { ViewBase } from './ViewBase.js';
+import { html, css } from 'lit';
 import { store } from '/src/store/EliteStore.js';
 
 class Transactions extends ViewBase {
   static styles = [
     ViewBase.styles,
     css`
-    .container {
-      padding: 20px;
-      background-color: #f9f9f9;
-    }
-    h2 {
-      font-size: 1.8em;
-      margin-bottom: 20px;
-      color: #333;
-    }
-    input[type='date'],
-    input[type='text'] {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
-      font-size: 1em;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    .portfolio-group {
-      margin-top: 20px;
-    }
-    .portfolio-name {
-      font-size: 1.5em;
-      color:  #1DC690;
-      margin-bottom: 10px;
-    }
-    .month-group {
-      margin-top: 15px;
-    }
-    .transactions-container {
-      display: flex;
-      flex-direction: column;
-      gap: 15px; /* Space between cards */
-      padding: 10px;
-    }    
-    .transaction-card {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      padding: 15px;
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;
-      transition: transform 0.2s ease-in-out;
-    }
-    .transaction-card:hover {
-      transform: translateY(-3px); /* Adds a lift effect on hover */
-    }
-    
-        .transaction-card-header {
-      background-color:  #1DC690;
-      color: white;
-      font-size: 1.2em;
-      font-weight: bold;
-      padding: 10px;
-    }
-    .transaction-card-content {
-      padding: 15px;
-    }
-    .transaction-card-content p {
-      margin: 5px 0;
-      font-size: 0.95em;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-    }
-    .transaction-row {
-      display: flex;
-      justify-content: space-between;
-      width: 100%;
-      gap: 20px; /* Space between transaction items */
-    }
-    
-    .transaction-item {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      flex: 1;
-    }
-        
-    .transaction-item strong {
-      color:  #1DC690; /* Highlighted titles */
-      margin-right: 5px;
-    }
+      :host {
+        display: block;
+        background-color: #EAEAE0;
+        color: #1C4670;
+        padding: 20px;
+        font-family: 'Arial', sans-serif;
+      }
 
-.transaction-card-content p strong {
-  color:  #1DC690; /* Highlighted titles */
-}
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: left;
-    }
-    th {
-      background-color:  #1DC690;
-      color: white;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    .header {
-      font-size: 0.9em;
-      font-weight: bold;
-      text-decoration: underline;
-      color:  #1DC690; /* Blue Header */
-      margin-bottom: 5px;
-    }
-    
-    .value {
-      font-size: 0.95em;
-      color: #000; /* Black Value */
-      margin-bottom: 8px;
-    }
-  `];
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      h2 {
+        color: #1DC690;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .transaction-card {
+        background-color: #FFFFFF;
+        border: 2px solid #278ABD;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        transition: box-shadow 0.3s ease;
+      }
+
+      .transaction-card:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .transaction-details {
+        padding: 15px;
+        background-color: #F9F9F9;
+        border-radius: 0 0 6px 6px;
+      }
+
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .detail-item:last-child {
+        border-bottom: none;
+      }
+
+      .label {
+        font-weight: bold;
+        color: #1C4670;
+      }
+
+      .value {
+        color: #333;
+      }
+
+      button {
+        background-color: #278ABD;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin: 10px 0;
+      }
+
+      button:hover {
+        background-color: #1C4670;
+      }
+
+      .empty-message {
+        text-align: center;
+        color: #888;
+        padding: 20px;
+        background-color: #f4f4f4;
+        border-radius: 8px;
+      }
+    `
+  ];
 
   static properties = {
-    groupedTransactions: { type: Object },
-    searchQuery: { type: String },
-    startDate: { type: String },
-    endDate: { type: String }
+    transactions: { type: Array }
   };
 
   constructor() {
     super();
-    this.groupedTransactions = {};
-    this.searchQuery = '';
-    this.startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
-    this.endDate = new Date().toISOString().split('T')[0];
-
-    const clientInfo = store.get('clientInfo') || {};
-
-    if (clientInfo && Array.isArray(clientInfo.detailModels)) {
-      clientInfo.detailModels.forEach((detail) => {
-        const instrumentName = detail.instrumentName;
-        if (!this.groupedTransactions[instrumentName]) {
-          this.groupedTransactions[instrumentName] = [];
-        }
-        if (detail.transactionModels && Array.isArray(detail.transactionModels)) {
-          this.groupedTransactions[instrumentName].push(...detail.transactionModels);
-        }
-      });
-    }
+    this.transactions = [];
+    this.loadTransactions();
   }
 
-  getFilteredTransactions() {
-    const startDate = new Date(this.startDate);
-    const endDate = new Date(this.endDate);
-    const searchLower = this.searchQuery.toLowerCase();
-  
-    const groupedByPortfolioAndDate = {};
-  
-    Object.entries(this.groupedTransactions).forEach(([portfolioName, transactions]) => {
-      if (portfolioName.toLowerCase().includes(searchLower)) {
-        const filteredTransactions = transactions
-          .filter((txn) => {
-            const txnDate = new Date(txn.transactionDate);
-            return txnDate >= startDate && txnDate <= endDate;
-          })
-          .sort((a, b) => new Date(a.transactionDate) - new Date(b.transactionDate));
-  
-        if (filteredTransactions.length > 0) {
-          const aggregatedByDate = filteredTransactions.reduce((acc, txn) => {
-            const txnDate = new Date(txn.transactionDate).toLocaleDateString(); // Group by date
-            if (!acc[txnDate]) {
-              acc[txnDate] = [];
-            }
-            const existingTransaction = acc[txnDate].find(
-              (t) => t.transactionType === txn.transactionType && t.currencyAbbreviation === txn.currencyAbbreviation
-            );
-  
-            if (existingTransaction) {
-              existingTransaction.convertedAmount += txn.convertedAmount || 0; // Sum the amounts
-              existingTransaction.transactionCount += 1; // Increment the count
-            } else {
-              acc[txnDate].push({ ...txn, transactionCount: 1 }); // Add new with count
-            }
-  
-            return acc;
-          }, {});
-  
-          groupedByPortfolioAndDate[portfolioName] = aggregatedByDate;
-        }
-      }
-    });
-  
-    return groupedByPortfolioAndDate;
+  loadTransactions() {
+    const clientInfo = store.get('clientInfo');
+    const selectedInstrumentName = store.get('selectedInstrumentName');
+    this.transactions = selectedInstrumentName.transactionModels;
   }
-
-  handleSearchInput(event) {
-    this.searchQuery = event.target.value;
-    this.requestUpdate(); // Explicitly request a re-render
-  }
-
-renderGroupedTransactions() {
-  const filteredTransactions = this.getFilteredTransactions();
-
-  return html`
-    <div class="transactions-container">
-      ${Object.entries(filteredTransactions).map(([portfolioName, transactionsByDate]) => html`
-        <div class="portfolio-group">
-          <div class="portfolio-name">${portfolioName}</div>
-          ${Object.entries(transactionsByDate).map(([date, transactions]) => html`
-            <div class="date-group">
-              <div class="transaction-card-header">Date: ${date}</div>
-              ${transactions.map(txn => html`
-                <div class="transaction-card">
-                  <div class="transaction-row">
-                    <div class="transaction-item">
-                      <div class="header">Transaction Type:</div>
-                      <div class="value">${txn.transactionType || 'N/A'}</div>
-                    </div>
-                    <div class="transaction-item">
-                      <div class="header">Exchange Rate:</div>
-                      <div class="value">${txn.exchangeRate?.toFixed(2) || 'N/A'}</div>
-                    </div>
-                    <div class="transaction-item">
-                      <div class="header">Converted Amount:</div>
-                      <div class="value">
-                        ${txn.convertedAmount?.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        }) || 'N/A'}
-                      </div>
-                    </div>
-                    <div class="transaction-item">
-                      <div class="header">Currency:</div>
-                      <div class="value">${txn.currencyAbbreviation || 'N/A'}</div>
-                    </div>
-                    <div class="transaction-item">
-                      <div class="header">Transaction Count:</div>
-                      <div class="value">${txn.transactionCount}</div>
-                    </div>
-                  </div>
-                </div>
-              `)}
-            </div>
-          `)}
-        </div>
-      `)}
-    </div>
-  `;
-}
 
   render() {
     return html`
       <div class="container">
-        <button class="button" @click="${super.navigateBack}">Back</button>
-        <h2>Transactions</h2>
-        <div>
-          <label for="startDate">Start Date:</label>
-          <input
-            type="date"
-            id="startDate"
-            .value="${this.startDate}"
-            @change="${(e) => (this.startDate = e.target.value)}"
-          />
-          <label for="endDate">End Date:</label>
-          <input
-            type="date"
-            id="endDate"
-            .value="${this.endDate}"
-            @change="${(e) => (this.endDate = e.target.value)}"
-          />
-        </div>
-        <input
-          type="text"
-          placeholder="Search by Portfolio Name..."
-          @input="${this.handleSearchInput}"
-          .value="${this.searchQuery}"
-        />
-        ${this.renderGroupedTransactions()}
+        <button @click="${super.navigateBack}">Back</button>
+        <h2>Transaction History</h2>
+
+        ${this.transactions.length === 0
+        ? html`<div class="empty-message">No transactions available for this portfolio.</div>`
+        : this.transactions.map((transaction) => html`
+              <div class="transaction-card">
+                <div class="transaction-details">
+                  <div class="detail-item">
+                    <span class="label">Date:</span>
+                    <span class="value">${new Date(transaction.transactionDate).toLocaleDateString()}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Amount:</span>
+                    <span class="value">
+                      ${transaction.convertedAmount.toLocaleString('en-ZA', {
+          style: 'currency',
+          currency: transaction.currencyAbbreviation || 'ZAR'
+        })}
+                      (${transaction.currencyAbbreviation || 'ZAR'})
+                    </span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Currency:</span>
+                    <span class="value">${transaction.currencyAbbreviation || 'ZAR'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Exchange Rate:</span>
+                    <span class="value">${transaction.exchangeRate ? transaction.exchangeRate.toFixed(2) : 'N/A'}</span>
+                  </div>
+                  <div class="detail-item">
+                    <span class="label">Transaction Type:</span>
+                    <span class="value">${transaction.transactionType || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            `)}
       </div>
     `;
   }

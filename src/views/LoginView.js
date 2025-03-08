@@ -54,6 +54,7 @@ class LoginView extends ViewBase {
       color: white;
       font-weight: bold;
       border-radius: 5px;
+      color: white;
       cursor: pointer;
     }
     button:hover {

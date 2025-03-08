@@ -5,6 +5,12 @@ import user from '/src/images/user.png';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
+import { router } from '/src/shell/Routing.js'
+import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import user from '/src/images/user.png';
+import { store } from '/src/store/EliteStore.js';
+import { ViewBase } from './common/ViewBase.js';
+import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
 class Dashboard extends ViewBase {
   static styles = css`
@@ -229,6 +235,7 @@ class Dashboard extends ViewBase {
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean }
+    performanceData: { type: Object }
   };
 
   constructor() {
@@ -384,8 +391,14 @@ class Dashboard extends ViewBase {
       TransactionDateEnd: new Date().toISOString(),
       TargetCurrencyL: 170,
       ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
+      ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
       InputEntityModels: [
         {
+          SouthAfricanIdNumber: "",
+          PassportNumber: null,
+          RegistrationNumber: searchId
+        }
+      ]
           SouthAfricanIdNumber: "",
           PassportNumber: null,
           RegistrationNumber: searchId
@@ -395,6 +408,11 @@ class Dashboard extends ViewBase {
 
     try {
       const response = await this.clientService.getClientProfile(request);
+      const clientInfo = response.entityModels[1] || response.entityModels[0];
+
+      store.set('clientInfo', clientInfo);
+      this.clientInfo = clientInfo;
+      this.showPopup = false;
       const clientInfo = response.entityModels[1] || response.entityModels[0];
 
       store.set('clientInfo', clientInfo);
@@ -433,6 +451,15 @@ class Dashboard extends ViewBase {
           <button @click="${() => this.handleDateSelection('Jan')}">Jan</button>
           <button @click="${() => this.handleDateSelection('Jan|Jun')}">Jan | Jun</button>
           <button @click="${() => this.handleDateSelection('Jan|Jun|Oct')}">Jan | Jun | Oct</button>
+      <div class="overlay" @click="${this.togglePopup}"></div>
+      <div class="popup" @click="${(e) => e.stopPropagation()}">
+        <h3>Select Dates</h3>
+        <input type="date" .value="${this.customDate}" @input="${(e) => this.customDate = e.target.value}" />
+        <button @click="${this.addCustomDate}">Add Date</button>
+        <div>
+          <button @click="${() => this.handleDateSelection('Jan')}">Jan</button>
+          <button @click="${() => this.handleDateSelection('Jan|Jun')}">Jan | Jun</button>
+          <button @click="${() => this.handleDateSelection('Jan|Jun|Oct')}">Jan | Jun | Oct</button>
         </div>
         <h4>Selected Dates:</h4>
         <ul class="date-list"> 
@@ -457,6 +484,24 @@ class Dashboard extends ViewBase {
           <div class="info-item"><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ${portfolio.regularContributionCurrencyAbbreviation} (${portfolio.regularContributionFrequency})</div>
           <div class="info-item"><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</div>
         </div>
+
+        <h4>Portfolio Entries</h4>
+        <table>
+          <tr>
+            <th>Instrument Name</th>
+            <th>ISIN Number</th>
+            <th>MorningStar ID</th>
+          </tr>
+          ${portfolio.portfolioEntryTreeModels?.map(
+      (entry) => html`
+              <tr>
+                <td>${entry.instrumentName}</td>
+                <td>${entry.isinNumber || 'N/A'}</td>
+                <td>${entry.morningStarId || 'N/A'}</td>
+              </tr>
+            `
+    )}
+        </table>
 
         <h4>Portfolio Entries</h4>
         <table>

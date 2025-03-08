@@ -62,11 +62,9 @@ h2{
 
 /* Hero Section */
 .hero {
-  background: rgb(50, 100, 150); /* Base background color */
   position: relative; /* Needed for absolute positioning of watermark */
   padding: 50px 20px;
   text-align: center;
-  color: white;
   overflow: hidden; /* Hide any overflow from watermark */
   height: 700px;
 }
@@ -492,14 +490,37 @@ li {
     this.transactionDateEnd = this.formatDateToISO(today);
   }
 
+  calculateValueDates(inceptionDate, frequencyInMonths) {
+    const valueDates = [];
+    const currentDate = new Date();
+    let date = new Date(inceptionDate);
+  
+    while (date <= currentDate) {
+      valueDates.push(this.formatDateToISO(date)); // Format to ISO
+      date.setMonth(date.getMonth() + frequencyInMonths);
+    }
+  
+    return valueDates;
+  }
+
+  formatDateToISO(date) {
+    return date.toISOString().split('.')[0] + '+02:00'; // Format as: 2023-01-19T00:00:00+02:00
+  }
+
+  getEarliestInceptionDate(detailModels) {
+    if (!detailModels.length) return null;
+  
+    return detailModels
+      .map(model => new Date(model.inceptionDate))
+      .reduce((earliest, current) => (current < earliest ? current : earliest));
+  }
+
   async fetchData() {
     this.isVisible = false;
 
     const searched = store.get('searchID') === this.searchID;
-    if (searched) {
-      return;
-    }
-
+    if (searched) return;
+  
     const request = {
       TransactionDateStart: this.transactionDateStart,
       TransactionDateEnd: this.transactionDateEnd,
@@ -507,33 +528,50 @@ li {
       ValueDates: [],
       InputEntityModels: [
         {
-          SouthAfricanIdNumber: this.searchID,
+          RegistrationNumber: this.searchID,
         },
       ],
     };
-
+  
     store.set('searchID', this.searchID);
-
+  
     try {
-      const response = await this.clientService.getClientProfile(request);
-
-      if (!response?.entityModels[0]) {
-        return null;
-      }
-
-      const entity = response.entityModels[0];
-      this.clientInfo = {
-        firstNames: entity.firstNames || 'N/A',
-        surname: entity.surname || 'N/A',
-        registeredName: entity.registeredName || 'N/A',
-        title: entity.title || 'N/A',
-        nickname: entity.nickname || 'N/A',
-        advisorName: entity.advisorName || 'N/A',
-        email: entity.email || 'N/A',
-        cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
-        detailModels: entity.detailModels || [],
+      // ✅ First API call to get client data
+      const initialResponse = await this.clientService.getClientProfile(request);
+      if (!initialResponse?.entityModels[1] || !initialResponse.entityModels[0]) return;
+  
+      const entity = initialResponse.entityModels[1] || initialResponse.entityModels[0];
+      const detailModels = entity.detailModels || [];
+  
+      // ✅ Find the earliest inception date
+      const earliestInceptionDate = this.getEarliestInceptionDate(detailModels);
+      const frequency = this.appointmentFrequency || 6; // Default to 6 months
+  
+      // ✅ Calculate ValueDates based on the earliest inception date
+      const valueDates = this.calculateValueDates(earliestInceptionDate, frequency);
+  
+      // ✅ Second API call with ValueDates
+      const updatedRequest = {
+        ...request,
+        ValueDates: valueDates,
       };
-      store.set('clientInfo', entity);
+  
+      const finalResponse = await this.clientService.getClientProfile(updatedRequest);
+      if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
+  
+      const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
+      this.clientInfo = {
+        firstNames: finalEntity.firstNames || 'N/A',
+        surname: finalEntity.surname || 'N/A',
+        registeredName: finalEntity.registeredName || 'N/A',
+        title: finalEntity.title || 'N/A',
+        nickname: finalEntity.nickname || 'N/A',
+        advisorName: finalEntity.advisorName || 'N/A',
+        email: finalEntity.email || 'N/A',
+        cellPhoneNumber: finalEntity.cellPhoneNumber || 'N/A',
+        detailModels: finalEntity.detailModels || [],
+      };
+      store.set('clientInfo', this.clientInfo);
       this.isVisible = true;
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -558,14 +596,12 @@ li {
 
   toggleDetailModelsDialog() {
     this.showDetailModelsDialog = true;
-    console.log('Showing detail models dialog...');
     store.set('reportOptions', this.reportOptions);
     this.showDialog = false;
     this.requestUpdate();
   }
 
   async generateReport() {
-    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.selectedDetailModel, this.reportOptions.irr, this.searchID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer

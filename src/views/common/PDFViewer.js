@@ -77,21 +77,27 @@ class PDFViewer extends ViewBase {
     }
   }
 
-
   async renderPage(pageNum) {
     const page = await this.pdfDoc.getPage(pageNum);
+  
+    // Get the original viewport
     const viewport = page.getViewport({ scale: 1.5 });
+  
     const canvas = this.renderRoot.querySelector('canvas');
     const context = canvas.getContext('2d');
+  
+    canvas.width = viewport.width;   // Keep the width as-is for landscape
+    canvas.height = viewport.height; // Keep the height as-is for landscape 
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-
+    // Clear canvas before rendering
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  
+    // Render the page with the adjusted context
     const renderContext = {
       canvasContext: context,
-      viewport: viewport,
+      viewport: viewport // Using the original viewport (portrait) after rotation
     };
-
+  
     await page.render(renderContext).promise;
   }
 

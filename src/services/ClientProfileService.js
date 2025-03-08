@@ -95,6 +95,7 @@ export class ClientProfileService extends Service {
             return await this.delete(endpoint);
         } catch (error) {
             console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.RegistrationNumber}`, error);
+            console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.RegistrationNumber}`, error);
             throw error;
         }
     }

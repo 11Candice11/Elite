@@ -7,131 +7,78 @@ class Products extends ViewBase {
   static styles = [
     ViewBase.styles,
     css`
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #f7f9fc;
-    margin: 0;
-    padding: 20px;
-  }
-  
-  .quote-card {
-    width: 100%;
-    max-width: 1000px;
-    margin: 20px auto;
-    background: #fff;
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #EAEAE0; /* Ivory Background */
+      margin: 0;
+      padding: 20px;
+    }
+
+    .quote-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin: 20px auto;
+      max-width: 1000px;
+      border-left: 5px solid rgb(215 180 120) /* Neon Green Accent */
+    }
+
+    .header {
+      background-color: #278ABD; /* Blue Grotto */
+      color: white;
+      padding: 15px;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .header h3, .header p {
+      margin: 0;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      background-color: #F9F9F9;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .stats div {
+      text-align: center;
+      color: #1C4670; /* Blue Text */
+    }
+
+    button {
+      width: 120px;
+      height: 40px;
+      font-size: 9px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    thead th {
+      background-color: #278ABD; 
+      color: white;
+      padding: 10px;
+    }
+
+    tbody tr:nth-child(odd) {
+      background-color: #F9F9F9;
+    }
+
+    .back-button {
+      margin: 10px 0;
+    }
+
+    input{
+      width: 260px;
+    height: 40px;
     border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .header {
-    background-color: #dbeafe; /* Soft Blue Background */
-    color: #222222;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 8px 8px 0 0; /* Round the top corners */
-    margin: -20px -20px 20px -20px; /* Extend header across the card */
-  }
-  
-  .header h3 {
-    margin: 0;
-    font-size: 18px;
-    color: #222222;
-  }
-  
-  .header p {
-    margin: 0;
-    font-size: 14px;
-    color: #222222;
-  }
-  
-  .date {
-    text-align: right;
-  }
-  
-  .date h4 {
-    margin: 0;
-    font-size: 16px;
-    color: #222222;
-  }
-  
-  .stats {
-    display: flex;
-    justify-content: space-between;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  .stats div {
-    flex: 1;
-    padding: 10px;
-  }
-  
-  .stats div p {
-    margin: 5px 0;
-    font-size: 14px;
-    color: #333;
-  }
-  
-  .stats div h4 {
-    margin: 0;
-    font-size: 16px;
-  }
-  
-  .footer {
-    margin-top: 10px;
-  }
-  
-  footer details {
-    font-size: 14px;
-    color: #1DC690;
-    cursor: pointer;
-  }
-  
-  footer details summary {
-    font-size: 14px;
-    color: #1DC690;
-    cursor: pointer;
-    list-style: none;
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 10px;
-  }
-  
-  thead th {
-    background-color: #dbeafe; /* Soft Blue for Table Header */
-    color: white;
-    padding: 10px;
-    text-align: left;
-  }
-  
-  tbody td {
-    padding: 10px;
-    border: 1px solid #ccc;
-  }
-  
-  tbody tr:nth-child(odd) {
-    background-color: #f9f9f9;
-  }
-  
-  .more-info {
-    margin-top: 10px;
-  }
-  .back-button {
-    margin: 10px;
-  }
-  input{
-    width: 300px;
-    height: 30px;
-    border-radius: 10px;
-  }
+    }
             `];
 
   static properties = {
@@ -157,6 +104,30 @@ class Products extends ViewBase {
   navigateToMoreInfo(portfolioEntryTreeModels) {
     store.set('portfolioEntryTreeModels', portfolioEntryTreeModels); // Save data to store
     router.navigate('/portfolio-details'); // Navigate to the detailed view
+  }
+
+  navigateToTransactionHistory(detail) {
+    store.set('rootValueDateModels', detail.rootValueDateModels);
+    store.set('transactionData', [
+      // Include the provided JSON data here or fetch it dynamically
+      {
+        "rootPortfolioEntryId": "345de493-72f5-4357-8a7e-006fbf0615e6",
+        "valueType": "Market value",
+        "convertedValueDate": "2025-01-21T14:51:42.3532002+02:00",
+        "currencyAbbreviation": "ZAR",
+        "totalConvertedAmount": 748007.48,
+        "valueModels": [
+          {
+            "portfolioEntryId": "43d1c072-c077-4e18-8bcb-a4ee3d839a35",
+            "valueDate": "2025-01-21T00:00:00",
+            "exchangeRate": 1.0,
+            "convertedAmount": 748007.48,
+            "portfolioSharePercentage": 100.0
+          }
+        ]
+      }
+    ]);
+    router.navigate('/transaction-history');
   }
 
   handleSearchInput(event) {
@@ -216,6 +187,10 @@ class Products extends ViewBase {
 
   <!-- Stats Section -->
   <div class="stats">
+  <button @click="${() => this.navigateToTransactionHistory(detail)}">
+  View Transaction History
+</button>
+
     <div>
       <h4>${initialContributionAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || 'N/A'}</h4>
       <p>Initial Contribution</p>
@@ -246,8 +221,8 @@ class Products extends ViewBase {
           </thead>
           <tbody>
             ${portfolioEntryTreeModels.length > 0
-              ? portfolioEntryTreeModels.map(
-                  (entry) => html`
+        ? portfolioEntryTreeModels.map(
+          (entry) => html`
                     <tr>
                       <td>${entry.instrumentName || 'N/A'}</td>
                       <td>${entry.isinNumber || 'N/A'}</td>
@@ -255,8 +230,8 @@ class Products extends ViewBase {
                       <td></td>
                     </tr>
                   `
-                )
-              : html`
+        )
+        : html`
                   <tr>
                     <td colspan="4">No data available</td>
                   </tr>
