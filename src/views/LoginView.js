@@ -92,9 +92,8 @@ class LoginView extends ViewBase {
       this.isLoading = true;
       // Call login method from ClientProfileService
       const response = await this.clientProfileService.login(this.username, this.password, "admin@gmail.com");
-      console.log('Login response:', response);
       if (response.message === `Login successful!`) {
-        this.navigateBack(); // Redirect on successful login
+        this.navigateHome(); // Redirect on successful login
      } else {
        this.errorMessage = response.message || 'Login failed. Please try again.';
      }

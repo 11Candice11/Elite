@@ -5,12 +5,6 @@ import user from '/src/images/user.png';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
-import { router } from '/src/shell/Routing.js'
-import { ClientProfileService } from '/src/services/ClientProfileService.js';
-import user from '/src/images/user.png';
-import { store } from '/src/store/EliteStore.js';
-import { ViewBase } from './common/ViewBase.js';
-import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 
 class Dashboard extends ViewBase {
   static styles = css`
@@ -147,23 +141,6 @@ class Dashboard extends ViewBase {
     display: flex;
   }
 
-  .client-card {
-    background: #ffffff;
-    border: 1px solid #dcdcdc;
-    border-radius: 8px;
-    padding: 15px;
-    width: 280px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .client-card img {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    display: block;
-    margin: 0 auto 10px;
-  }
-
   .portfolio-container {
     flex: 1;
     display: flex;
@@ -219,6 +196,83 @@ class Dashboard extends ViewBase {
     color: red;
     margin-top: 20px;
   }
+    /* Client Card Animation */
+  .client-card {
+    background: rgb(215, 180, 120);
+    border-radius: 8px;
+    max-width: 420px;
+    margin: 20px auto;
+    padding: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-50px);
+    opacity: 0;
+    transition: all 0.6s ease;
+  }
+
+  .client-card.visible {
+    transform: translateY(0);
+    opacity: 1;
+    height: 325px;
+  }
+
+/* Client Card Header */
+.client-card-header {
+  background: rgb(0, 50, 100);
+  color: white;
+  padding: 15px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.client-card-header img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 15px;
+}
+
+/* Client Card Content */
+.client-card-content {
+  padding: 15px;
+  color: black;
+  background-color: rgb(200, 200, 200);
+  border-radius: 0 0 8px 8px;
+}
+
+.client-card-content p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: black;
+  line-height: 1.5;
+}
+
+/* Client Card Buttons */
+.client-card-actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 15px;
+  background-color: rgb(140, 120, 80);
+  border-radius: 0 0 8px 8px;
+}
+
+.client-card-actions button {
+  background-color: rgb(215, 180, 120);
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+  height: 50px;
+  font-size: 13px;
+  width: 120px;
+}
+
+.client-card-actions button:hover {
+  background-color: rgb(140, 120, 80);
+}
 `;
 
   static properties = {
@@ -234,16 +288,16 @@ class Dashboard extends ViewBase {
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
-    serviceUnavailable: { type: Boolean }
+    serviceUnavailable: { type: Boolean },
     performanceData: { type: Object }
   };
 
   constructor() {
     super();
-    this.clientID = store.get('searchID') || '';
+    this.clientID = '';
     this.clientInfo = store.get('clientInfo') || {};
     this.selectedPortfolio = store.get('selectedPortfolio') || null;
-    this.showPopup = false;
+    this.showPopup = true;
     this.selectedDates = [];
     this.customDate = '';
     this.searchCompleted = false;
@@ -261,6 +315,7 @@ class Dashboard extends ViewBase {
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
       this.clientID = store.get('searchID');
+      this.clientIDvalue = this.clientID;
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
     }
@@ -339,14 +394,14 @@ class Dashboard extends ViewBase {
       "2024-05-14",
       "2024-09-23",
       "2024-01-08"
-    ]; 
+    ];
     return dates;
   }
 
   handleDateSelection(option) {
     const earliestInceptionDate = this.clientInfo?.detailModels
-  ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-  .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
     const inceptionDate = new Date(earliestInceptionDate);
     const today = new Date();
@@ -380,12 +435,16 @@ class Dashboard extends ViewBase {
   async handleNext() {
     this.isLoading = true;
 
+    if (this.clientID === !this.clientIDvalue) {
+      this.showPopup = true;
+      return;
+    }
     const searchId = store.get('searchID');
 
     const earliestInceptionDate = this.clientInfo?.detailModels
-    ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-    .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
-    
+      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+
     const request = {
       TransactionDateStart: earliestInceptionDate.toISOString(),
       TransactionDateEnd: new Date().toISOString(),
@@ -399,24 +458,14 @@ class Dashboard extends ViewBase {
           RegistrationNumber: searchId
         }
       ]
-          SouthAfricanIdNumber: "",
-          PassportNumber: null,
-          RegistrationNumber: searchId
-        }
-      ]
     };
 
     try {
       const response = await this.clientService.getClientProfile(request);
-      const clientInfo = response.entityModels[1] || response.entityModels[0];
+      const clientInformation = response.entityModels[1] || response.entityModels[0];
 
-      store.set('clientInfo', clientInfo);
-      this.clientInfo = clientInfo;
-      this.showPopup = false;
-      const clientInfo = response.entityModels[1] || response.entityModels[0];
-
-      store.set('clientInfo', clientInfo);
-      this.clientInfo = clientInfo;
+      store.set('clientInfo', clientInformation);
+      this.clientInfo = clientInformation;
       this.showPopup = false;
     } catch (error) {
       console.error('Error fetching updated client information:', error);
@@ -442,15 +491,6 @@ class Dashboard extends ViewBase {
 
   renderPopup() {
     return html`
-      <div class="overlay" @click="${this.togglePopup}"></div>
-      <div class="popup" @click="${(e) => e.stopPropagation()}">
-        <h3>Select Dates</h3>
-        <input type="date" .value="${this.customDate}" @input="${(e) => this.customDate = e.target.value}" />
-        <button @click="${this.addCustomDate}">Add Date</button>
-        <div>
-          <button @click="${() => this.handleDateSelection('Jan')}">Jan</button>
-          <button @click="${() => this.handleDateSelection('Jan|Jun')}">Jan | Jun</button>
-          <button @click="${() => this.handleDateSelection('Jan|Jun|Oct')}">Jan | Jun | Oct</button>
       <div class="overlay" @click="${this.togglePopup}"></div>
       <div class="popup" @click="${(e) => e.stopPropagation()}">
         <h3>Select Dates</h3>
@@ -524,6 +564,26 @@ class Dashboard extends ViewBase {
     `;
   }
 
+
+  renderClientCard() {
+    return html`
+    <div class="client-card visible">
+      <div class="client-card-header">
+        <img src="${user}" alt="User Icon" class="client-card-icon" />
+        <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+      </div>
+      <div class="client-card-content">
+        <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+        <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+        <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+        <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+        <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+        <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+      </div>
+    </div>
+    `;
+  }
+
   render() {
     return html`
     ${this.showPopup ? this.renderPopup() : ''}
@@ -536,8 +596,8 @@ class Dashboard extends ViewBase {
         <input
           type="text"
           placeholder="Enter Clients ID"
-          .value="${this.clientID}"
-          @input="${(e) => (this.clientID = e.target.value)}"
+          .value="${this.clientIDvalue}"
+          @input="${(e) => (this.clientIDvalue = e.target.value)}"
         />
         <button @click="${this.searchClient}">Search</button>
       </div>
@@ -549,7 +609,8 @@ class Dashboard extends ViewBase {
       ${this.searchCompleted && this.clientInfo ? html`
         <div class="content-container visible">
           
-          <!-- Client Profile Card -->
+          ${this.clientInfo ? this.renderClientCard() : ''}
+          <!-- Client Profile Card
           <div class="client-card">
             <img src="${user}" alt="User Image" />
             <h3>${this.clientInfo.firstNames || 'Client Name'} ${this.clientInfo.surname || ''}</h3>
@@ -558,7 +619,7 @@ class Dashboard extends ViewBase {
             <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
             <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
             <button @click="${this.generateReport}">Generate Report</button>
-          </div>
+          </div> -->
   
           <!-- Portfolio List -->
           <div class="portfolio-container">
@@ -567,7 +628,8 @@ class Dashboard extends ViewBase {
                 <div class="portfolio-card">
                   <h3>${portfolio.instrumentName}</h3>
                   <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-                  <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
+                  <!-- <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button> -->
+                  <button @click="${this.generateReport}">Generate Report</button>
                   <button @click="${() => this.toggleExpand(index)}">
                     ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
                   </button>

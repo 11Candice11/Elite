@@ -2,7 +2,6 @@ import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
-import background from '/src/images/home.png';
 import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is correct
 import user from '/src/images/user.png';
 import { ViewBase } from './common/ViewBase.js';
@@ -407,6 +406,7 @@ li {
     transactionDateEnd: { type: String },
     isSearched: { type: Boolean },
     clientInfo: { type: Object },
+    profileMoved: { type: Boolean },
     isVisible: { type: Boolean },
     appointmentFrequency: { type: Number }, // Store selected frequency
     reportOptions: { type: Object },
@@ -418,12 +418,13 @@ li {
   constructor() {
     super();
     this.searchID = store.get('searchID') || '';
+    this.clientInfo = store.get('clientInfo') || {};
+    this.profileMoved = false;
     this.appointmentFrequency = 6; // Default to 6 months
     this.transactionDateStart = this.formatDateToISO(new Date(new Date().setMonth(new Date().getMonth() - 3)));
     this.transactionDateEnd = this.formatDateToISO(new Date());
-    this.clientInfo = store.get('clientInfo') || {};
     this.showDialog = false;
-    this.showDetailModelsDialog = false;
+    // this.showDetailModelsDialog = false;
     this.selectedDetailModel = null;
 
     this.reportOptions = {
@@ -460,6 +461,7 @@ li {
       email: entity.email || 'N/A',
       cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
       detailModels: entity.detailModels || [],
+      idNumber: this.searchID
     };
   }
 
@@ -482,14 +484,6 @@ li {
     return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
   }
 
-  applyPreSelectedDateRange(months) {
-    const today = new Date();
-    const startDate = new Date();
-    startDate.setMonth(today.getMonth() - months);
-    this.transactionDateStart = this.formatDateToISO(startDate);
-    this.transactionDateEnd = this.formatDateToISO(today);
-  }
-
   calculateValueDates(inceptionDate, frequencyInMonths) {
     const valueDates = [];
     const currentDate = new Date();
@@ -501,10 +495,6 @@ li {
     }
   
     return valueDates;
-  }
-
-  formatDateToISO(date) {
-    return date.toISOString().split('.')[0] + '+02:00'; // Format as: 2023-01-19T00:00:00+02:00
   }
 
   getEarliestInceptionDate(detailModels) {
@@ -537,41 +527,44 @@ li {
   
     try {
       // ✅ First API call to get client data
-      const initialResponse = await this.clientService.getClientProfile(request);
-      if (!initialResponse?.entityModels[1] || !initialResponse.entityModels[0]) return;
+      const response = await this.clientService.getClientProfile(request);
+      if (!response?.entityModels[1] || !response.entityModels[0]) return;
   
-      const entity = initialResponse.entityModels[1] || initialResponse.entityModels[0];
-      const detailModels = entity.detailModels || [];
-  
-      // ✅ Find the earliest inception date
-      const earliestInceptionDate = this.getEarliestInceptionDate(detailModels);
-      const frequency = this.appointmentFrequency || 6; // Default to 6 months
-  
-      // ✅ Calculate ValueDates based on the earliest inception date
-      const valueDates = this.calculateValueDates(earliestInceptionDate, frequency);
-  
-      // ✅ Second API call with ValueDates
-      const updatedRequest = {
-        ...request,
-        ValueDates: valueDates,
-      };
-  
-      const finalResponse = await this.clientService.getClientProfile(updatedRequest);
-      if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
-  
-      const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
-      this.clientInfo = {
-        firstNames: finalEntity.firstNames || 'N/A',
-        surname: finalEntity.surname || 'N/A',
-        registeredName: finalEntity.registeredName || 'N/A',
-        title: finalEntity.title || 'N/A',
-        nickname: finalEntity.nickname || 'N/A',
-        advisorName: finalEntity.advisorName || 'N/A',
-        email: finalEntity.email || 'N/A',
-        cellPhoneNumber: finalEntity.cellPhoneNumber || 'N/A',
-        detailModels: finalEntity.detailModels || [],
-      };
+      this.clientInfo = response.entityModels[1] || response.entityModels[0]
       store.set('clientInfo', this.clientInfo);
+
+    //   const entity = initialResponse.entityModels[1] || initialResponse.entityModels[0];
+    //   const detailModels = entity.detailModels || [];
+  
+    //   // ✅ Find the earliest inception date
+    //   const earliestInceptionDate = this.getEarliestInceptionDate(detailModels);
+    //   const frequency = this.appointmentFrequency || 6; // Default to 6 months
+  
+    //   // ✅ Calculate ValueDates based on the earliest inception date
+    //   const valueDates = this.calculateValueDates(earliestInceptionDate, frequency);
+  
+    //   // ✅ Second API call with ValueDates
+    //   const updatedRequest = {
+    //     ...request,
+    //     ValueDates: valueDates,
+    //   };
+  
+    //   const finalResponse = await this.clientService.getClientProfile(updatedRequest);
+    //   if (!finalResponse?.entityModels[1] || !finalResponse.entityModels[0]) return;
+  
+    //   const finalEntity = finalResponse.entityModels[1] || finalResponse.entityModels[0];
+    //   this.clientInfo = {
+    //     firstNames: finalEntity.firstNames || 'N/A',
+    //     surname: finalEntity.surname || 'N/A',
+    //     registeredName: finalEntity.registeredName || 'N/A',
+    //     title: finalEntity.title || 'N/A',
+    //     nickname: finalEntity.nickname || 'N/A',
+    //     advisorName: finalEntity.advisorName || 'N/A',
+    //     email: finalEntity.email || 'N/A',
+    //     cellPhoneNumber: finalEntity.cellPhoneNumber || 'N/A',
+    //     detailModels: finalEntity.detailModels || [],
+    //   };
+    //   store.set('clientInfo', this.clientInfo);
       this.isVisible = true;
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -582,10 +575,6 @@ li {
     router.navigate(`/${tabName}`);
   }
 
-  toggleDialog() {
-    this.showDialog = !this.showDialog;
-  }
-
   updateOption(e, option) {
     const { type, checked, value } = e.target;
     this.reportOptions = {
@@ -594,50 +583,46 @@ li {
     };
   }
 
-  toggleDetailModelsDialog() {
-    this.showDetailModelsDialog = true;
-    store.set('reportOptions', this.reportOptions);
-    this.showDialog = false;
-    this.requestUpdate();
-  }
-
   async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.selectedDetailModel, this.reportOptions.irr, this.searchID); // Generate the PDF
+    var base64 = await this.generatePDF(this.clientInfo, this.clientID);
     store.set('base64', base64);
-    router.navigate('/pdf'); // Navigate to the PDF viewer
-    // alert('Report generated!');
+    router.navigate('/pdf');
   }
 
-  handleSelectDetailModel(model) {
-    this.showDetailModelsDialog = false;
-    this.selectedDetailModel = model;
-    // Continue with generating the report
-    this.generateReport();
+  // handleSelectDetailModel(model) {
+  //   // this.showDetailModelsDialog = false;
+  //   this.selectedDetailModel = model;
+  //   // Continue with generating the report
+  //   this.generateReport();
+  // }
+
+  moveProfileCard() {
+    this.profileMoved = true;
   }
 
-  renderDetailModelsDialog() {
-    if (!this.clientInfo || !this.clientInfo.detailModels) return null;
+  // renderDetailModelsDialog() {
+  //   if (!this.clientInfo || !this.clientInfo.detailModels) return null;
   
-    return html`
-      <div class="dialog-overlay">
-        <div class="dialog-content">
-          <h3>📂 Select a Portfolio</h3>
-          <div class="portfolio-list">
-            ${this.clientInfo.detailModels.map(
-              (model) => html`
-                <div class="portfolio-card" @click="${() => this.handleSelectDetailModel(model)}">
-                  <h4>${model.instrumentName}</h4>
-                  <p><strong>Account Number:</strong> ${model.accountNumber || 'N/A'}</p>
-                  <p><strong>Balance:</strong> ${model.balance ? `R${model.balance}` : 'R0.00'}</p>
-                </div>
-              `
-            )}
-          </div>
-          <button class="cancel-btn" @click="${() => (this.showDetailModelsDialog = false)}">Cancel</button>
-        </div>
-      </div>
-    `;
-  }
+  //   return html`
+  //     <div class="dialog-overlay">
+  //       <div class="dialog-content">
+  //         <h3>📂 Select a Portfolio</h3>
+  //         <div class="portfolio-list">
+  //           ${this.clientInfo.detailModels.map(
+  //             (model) => html`
+  //               <div class="portfolio-card" @click="${() => this.handleSelectDetailModel(model)}">
+  //                 <h4>${model.instrumentName}</h4>
+  //                 <p><strong>Account Number:</strong> ${model.accountNumber || 'N/A'}</p>
+  //                 <p><strong>Balance:</strong> ${model.balance ? `R${model.balance}` : 'R0.00'}</p>
+  //               </div>
+  //             `
+  //           )}
+  //         </div>
+  //         <button class="cancel-btn" @click="${() => (this.showDetailModelsDialog = false)}">Cancel</button>
+  //       </div>
+  //     </div>
+  //   `;
+  // }
 
 
   renderDialog() {
@@ -652,12 +637,12 @@ li {
             <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
             <label>
               IRR (%):
-              <input type="number" .value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
+              <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
             </label>
           </div>
           <div class="dialog-actions">
             <button class="cancel-btn" @click="${() => (this.showDialog = false)}">Cancel</button>
-            <button class="generate-btn" @click="${this.toggleDetailModelsDialog}">Generate Report</button>
+            <button class="generate-btn" @click="${this.generateReport}">Generate Report</button>
           </div>
         </div>
       </div>
@@ -670,7 +655,7 @@ li {
         <header class="header">
           <h1>Morebo</h1>
         </header>
-        ${this.showDetailModelsDialog ? this.renderDetailModelsDialog() : ''}
+        <!-- ${this.showDetailModelsDialog ? this.renderDetailModelsDialog() : ''} -->
         ${this.showDialog ? this.renderDialog() : ''}
         <div class="hero">
           <div class="watermark">
@@ -762,9 +747,9 @@ li {
           </div>
         </div>
         <div class="client-card-actions">
-          <button @click="${() => this.handleTabNavigation('transactions')}">View Transactions</button>
+          <button @click="${() => this.handleTabNavigation('dashboard')}">View Portfolios</button>
           <button @click="${() => (this.showDialog = true)}">Generate Report</button>
-          <button @click="${() => this.handleTabNavigation('products')}">View Portfolios</button>
+          <!-- <button @click="${() => this.handleTabNavigation('products')}">View Portfolios</button> -->
         </div>
       </div>
     `;
