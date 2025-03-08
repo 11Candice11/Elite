@@ -11,7 +11,7 @@ export class ViewBase extends LitElement {
     }
 
   navigateBack() {
-    router.navigate('/dashboard');
+    router.navigate('/home');
   }
 
   navigateToTransactions() {
@@ -23,6 +23,10 @@ export class ViewBase extends LitElement {
   }
 
   navigateToProducts() {
+    router.navigate('/products');
+  }
+
+  navigateToRootTransactions() {
     router.navigate('/products');
   }
 

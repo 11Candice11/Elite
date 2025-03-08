@@ -225,11 +225,9 @@ class Dashboard extends ViewBase {
     customDate: { type: String },
     searchCompleted: { type: Boolean },
     isLoading: { type: Boolean },
-    searchMoved: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
-    performanceData: { type: Object },
     serviceUnavailable: { type: Boolean }
   };
 
@@ -238,14 +236,11 @@ class Dashboard extends ViewBase {
     this.clientID = store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.selectedPortfolio = store.get('selectedPortfolio') || null;
-    this.rootValueDateModels = [];
-    this.performanceData = {};
     this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
     this.searchCompleted = false;
     this.isLoading = false;
-    this.searchMoved = false;
     this.expandedCards = {};
     this.serviceUnavailable = false;
     this.clientService = new ClientProfileService();
@@ -258,22 +253,10 @@ class Dashboard extends ViewBase {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
-      console.log('Client info found in store:', storedClientInfo);
       this.clientID = store.get('searchID');
       this.clientInfo = storedClientInfo;
-      this.searchMoved = true;
       this.searchCompleted = true;
     }
-  }
-
-  handleInputChange(portfolioId, field, value) {
-    this.performanceData = {
-      ...this.performanceData,
-      [portfolioId]: {
-        ...this.performanceData[portfolioId],
-        [field]: value
-      }
-    };
   }
 
   navigateToRootTransactions(portfolio) {
@@ -358,8 +341,6 @@ class Dashboard extends ViewBase {
   ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
   .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
-  console.log(earliestInceptionDate.toISOString().split("T")[0]); // Output as YYYY-MM-DD
-
     const inceptionDate = new Date(earliestInceptionDate);
     const today = new Date();
     const dates = [];
@@ -394,8 +375,12 @@ class Dashboard extends ViewBase {
 
     const searchId = store.get('searchID');
 
+    const earliestInceptionDate = this.clientInfo?.detailModels
+    ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+    .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+    
     const request = {
-      TransactionDateStart: "2020-01-12T00:00:00+02:00",
+      TransactionDateStart: earliestInceptionDate.toISOString(),
       TransactionDateEnd: new Date().toISOString(),
       TargetCurrencyL: 170,
       ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
@@ -422,20 +407,6 @@ class Dashboard extends ViewBase {
     }
   }
 
-  selectPortfolio(portfolio) {
-    this.selectedPortfolio = portfolio;
-    store.set('selectedPortfolio', portfolio);
-
-    const detail = this.clientInfo.detailModels.find(
-      (d) => d.instrumentName === portfolio.instrumentName
-    );
-
-    if (detail && detail.rootValueDateModels) {
-      this.rootValueDateModels = detail.rootValueDateModels;
-      store.set('rootValueDateModels', detail.rootValueDateModels);
-    }
-  }
-
   logout() {
     store.set('clientInfo', null);
     store.set('searchID', '');
@@ -446,7 +417,6 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport() {
-    console.log('Generating report...');
     var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer

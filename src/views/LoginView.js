@@ -51,7 +51,7 @@ class LoginView extends ViewBase {
       padding: 10px;
       background-color: rgb(0, 50, 100);
       border: none;
-      color: #222222;
+      color: white;
       font-weight: bold;
       border-radius: 5px;
       cursor: pointer;

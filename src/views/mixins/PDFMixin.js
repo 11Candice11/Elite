@@ -8,14 +8,14 @@ export const PdfMixin = {
     const formatAmount = (amount) => `R ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
 
     const tableOptions = {
-        styles: { fontSize: 9, cellPadding: 2 }, // Smaller text for fitting more on the page
-        headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-        bodyStyles: { halign: "center", fillColor: [255, 255, 255] }
+      styles: { fontSize: 9, cellPadding: 2 }, // Smaller text for fitting more on the page
+      headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
+      bodyStyles: { halign: "center", fillColor: [255, 255, 255] }
     };
 
     // Extract DOB from ID Number
     const dob = clientInfo ? `19${clientInfo.substring(0, 2)}/${clientInfo.substring(2, 4)}/${clientInfo.substring(4, 6)}` : "Unknown DOB";
-    
+
     // Add Client Information
     doc.setFontSize(18);
     doc.text("Morebo Wealth Client Feedback Report", 10, 20);
@@ -27,13 +27,13 @@ export const PdfMixin = {
     doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 62);
     doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
     doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
-    
+
     doc.setFontSize(14);
     doc.text(new Date().toISOString().split("T")[0].replace(/-/g, "/"), 260, 20, { align: "right" });
     doc.setFontSize(12);
-    
-    
-    
+
+
+
     doc.addPage(); // Start portfolios on a new page
 
     // Generate Portfolios with Contributions, Withdrawals, and Interaction History
@@ -44,31 +44,63 @@ export const PdfMixin = {
       let startY = 30;
 
       // Contributions
-      const contributions = portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("contribution"));
+      const contributionsMap = {};
+      portfolio.transactionModels
+        .filter(t => t.transactionType.toLowerCase().includes("contribution"))
+        .forEach(t => {
+          const date = t.transactionDate.split("T")[0];
+          if (!contributionsMap[date]) {
+            contributionsMap[date] = { transactionType: "Contribution", total: 0 };
+          }
+          contributionsMap[date].total += t.convertedAmount || 0;
+        });
+
+      const contributions = Object.entries(contributionsMap).map(([date, data]) => [
+        date,
+        data.transactionType,
+        formatAmount(data.total)
+      ]);
+
       if (contributions.length > 0) {
-        const totalContributions = contributions.reduce((sum, t) => sum + t.convertedAmount, 0);
+        // Correctly sum the total using the pre-aggregated values
+        const totalContributions = contributions.reduce((sum, t) => sum + parseFloat(t[2].replace(/[^\d.-]/g, "")), 0);
+
         doc.text("Contributions", 10, startY);
         doc.autoTable({
           head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "GROSS AMOUNT"]],
-          body: contributions.map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]).concat([["", "TOTAL:", formatAmount(totalContributions)]]),
+          body: contributions.concat([["", "TOTAL:", formatAmount(totalContributions)]]),
           startY: startY + 5,
           ...tableOptions
         });
-        startY = doc.lastAutoTable.finalY + 10;
+        startY = doc.lastAutoTable.finalY;
       }
 
       // Withdrawals
-      const withdrawals = portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"));
+      const withdrawalsMap = {};
+      portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"))
+        .forEach(t => {
+          const date = t.transactionDate.split("T")[0];
+          if (!withdrawalsMap[date]) {
+            withdrawalsMap[date] = { transactionType: t.transactionType, total: 0 };
+          }
+          withdrawalsMap[date].total += t.convertedAmount;
+        });
+      
+      const withdrawals = Object.entries(withdrawalsMap).map(([date, data]) => [
+        date,
+        data.transactionType,
+        formatAmount(data.total)
+      ]);
       let totalWithdrawals = withdrawals.length > 0 ? withdrawals.reduce((sum, t) => sum + t.convertedAmount, 0) : 0;
       if (withdrawals.length > 0) {
-        doc.text("Withdrawals", 10, startY);
+        doc.text("Withdrawals", 10, startY + 10);
         doc.autoTable({
           head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
-          body: withdrawals.map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]).concat([["", "TOTAL:", formatAmount(totalWithdrawals)]]),
-          startY: startY + 5,
+          body: withdrawals.concat([["", "TOTAL:", formatAmount(totalWithdrawals)]]),
+          startY: startY + 15,
           ...tableOptions
         });
-        startY = doc.lastAutoTable.finalY + 10;
+        startY = doc.lastAutoTable.finalY;
       }
 
       // Regular Withdrawals Summary
@@ -80,16 +112,16 @@ export const PdfMixin = {
           ["Withdrawal Percentage:", `${portfolio.regularWithdrawalPercentage || 0} %`],
           ["Withdrawal Since Inception:", formatAmount(totalWithdrawals + (portfolio.regularWithdrawalAmount || 0))]
         ],
-        startY: startY,
+        startY: startY + 15,
         ...tableOptions
       });
-      startY = doc.lastAutoTable.finalY + 15;
+      startY = doc.lastAutoTable.finalY;
 
       // Interaction History
       const interactionHistory = portfolio.rootValueDateModels.filter(interaction => interaction.valueModels.length > 0);
       if (interactionHistory.length > 0) {
         doc.setFontSize(12);
-        doc.text("Interaction History", 10, startY);
+        doc.text("Interaction History", 10, startY + 8);
         startY += 20;
         interactionHistory.forEach((interaction) => {
           if (!interaction.valueModels || interaction.valueModels.length === 0) return;
@@ -106,10 +138,10 @@ export const PdfMixin = {
             doc.autoTable({
               head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
               body: interactionData,
-              startY: doc.lastAutoTable.finalY + 25,
+              startY: doc.lastAutoTable.finalY + 15,
               ...tableOptions
             });
-            startY = doc.lastAutoTable.finalY + 15;
+            startY = doc.lastAutoTable.finalY;
           }
         });
       }
