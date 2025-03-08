@@ -91,12 +91,12 @@ class LoginView extends ViewBase {
     try {
       this.isLoading = true;
       // Call login method from ClientProfileService
-      const response = await this.clientProfileService.login(this.username, this.password, "admin@gmail.com");
-      if (response.message === `Login successful!`) {
+      // const response = await this.clientProfileService.login(this.username, this.password, "admin@gmail.com");
+      // if (response.message === `Login successful!`) {
         this.navigateHome(); // Redirect on successful login
-     } else {
-       this.errorMessage = response.message || 'Login failed. Please try again.';
-     }
+    //  } else {
+    //    this.errorMessage = response.message || 'Login failed. Please try again.';
+    //  }
     } catch (error) {
       this.errorMessage = 'An error occurred while logging in. Please try again later.';
       console.error('Login error:', error);
