@@ -11,7 +11,7 @@ export class ViewBase extends LitElement {
     }
 
   navigateBack() {
-    router.navigate('/home');
+    router.navigate('/dashboard');
   }
 
   navigateToTransactions() {

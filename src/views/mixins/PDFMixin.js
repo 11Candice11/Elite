@@ -1,336 +1,123 @@
-import { PDFDocument, rgb } from 'pdf-lib';
-import { store } from '/src/store/EliteStore.js';
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 export const PdfMixin = {
-    async generatePDF(clientInfo, selectedDetailModel, irrPercentage, IDNumber) {
-        const pdfDoc = await PDFDocument.create();
-        let page = pdfDoc.addPage([595, 842]);
-      
-        const font = await pdfDoc.embedFont('Helvetica-Bold');
-        const normalFont = await pdfDoc.embedFont('Helvetica');
-      
-        const leftMargin = 50;
-        const rightMargin = 545;
-        let yPosition = 800;
-      
-        // Header
-        page.drawText('Morebo Wealth Client Feedback Report', {
-          x: leftMargin,
-          y: yPosition,
-          size: 16,
-          font,
-          color: rgb(0, 0, 0),
+  async generatePDF(selectedDetails, clientInfo) {
+    const doc = new jsPDF({ orientation: "landscape" }); // Landscape format
+
+    const formatAmount = (amount) => `R ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+
+    const tableOptions = {
+        styles: { fontSize: 9, cellPadding: 2 }, // Smaller text for fitting more on the page
+        headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
+        bodyStyles: { halign: "center", fillColor: [255, 255, 255] }
+    };
+
+    // Extract DOB from ID Number
+    const dob = clientInfo ? `19${clientInfo.substring(0, 2)}/${clientInfo.substring(2, 4)}/${clientInfo.substring(4, 6)}` : "Unknown DOB";
+    
+    // Add Client Information
+    doc.setFontSize(18);
+    doc.text("Morebo Wealth Client Feedback Report", 10, 20);
+    doc.setFontSize(12);
+    doc.text(`${selectedDetails.title} ${selectedDetails.firstNames} ${selectedDetails.surname}`, 10, 30);
+    doc.text(`Policy Number: ${selectedDetails.policyNumber || "N/A"}`, 10, 38);
+    doc.text(`ID Number: ${clientInfo}`, 10, 46);
+    doc.text(`DOB: ${dob}`, 10, 54);
+    doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 62);
+    doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
+    doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
+    
+    doc.setFontSize(14);
+    doc.text(new Date().toISOString().split("T")[0].replace(/-/g, "/"), 260, 20, { align: "right" });
+    doc.setFontSize(12);
+    
+    
+    
+    doc.addPage(); // Start portfolios on a new page
+
+    // Generate Portfolios with Contributions, Withdrawals, and Interaction History
+    selectedDetails.detailModels.forEach((portfolio, index) => {
+      if (index !== 0) doc.addPage(); // New page for each portfolio
+      doc.setFontSize(12);
+      doc.text(portfolio.instrumentName, 10, 20);
+      let startY = 30;
+
+      // Contributions
+      const contributions = portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("contribution"));
+      if (contributions.length > 0) {
+        const totalContributions = contributions.reduce((sum, t) => sum + t.convertedAmount, 0);
+        doc.text("Contributions", 10, startY);
+        doc.autoTable({
+          head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "GROSS AMOUNT"]],
+          body: contributions.map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]).concat([["", "TOTAL:", formatAmount(totalContributions)]]),
+          startY: startY + 5,
+          ...tableOptions
         });
-      
-        const currentDate = new Date().toLocaleDateString('en-GB');
-        page.drawText(currentDate, {
-          x: rightMargin - font.widthOfTextAtSize(currentDate, 12),
-          y: yPosition,
-          size: 12,
-          font,
-          color: rgb(0, 0, 0),
+        startY = doc.lastAutoTable.finalY + 10;
+      }
+
+      // Withdrawals
+      const withdrawals = portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"));
+      let totalWithdrawals = withdrawals.length > 0 ? withdrawals.reduce((sum, t) => sum + t.convertedAmount, 0) : 0;
+      if (withdrawals.length > 0) {
+        doc.text("Withdrawals", 10, startY);
+        doc.autoTable({
+          head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
+          body: withdrawals.map(t => [t.transactionDate.split("T")[0], t.transactionType, formatAmount(t.convertedAmount)]).concat([["", "TOTAL:", formatAmount(totalWithdrawals)]]),
+          startY: startY + 5,
+          ...tableOptions
         });
-      
-        yPosition -= 40;
-      
-        // Client Info Section
-        const { title, firstNames, surname } = clientInfo;
-        const { instrumentName, referenceNumber, inceptionDate, regularWithdrawalAmount, regularWithdrawalPercentage, transactionModels = [] } =
-          selectedDetailModel || {};
-      
-        page.drawText(`${title} ${firstNames} ${surname}`, {
-          x: leftMargin,
-          y: yPosition,
-          size: 14,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        page.drawText(instrumentName || 'N/A', {
-          x: rightMargin - font.widthOfTextAtSize(instrumentName || 'N/A', 12),
-          y: yPosition,
-          size: 12,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        page.drawText(`Policy Number: ${referenceNumber || 'N/A'}`, {
-          x: leftMargin,
-          y: yPosition,
-          size: 12,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        const formattedInceptionDate = inceptionDate
-          ? new Date(inceptionDate).toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: 'long',
-              year: 'numeric',
-            })
-          : 'N/A';
-      
-        page.drawText(`Inception Date: ${formattedInceptionDate}`, {
-          x: rightMargin - font.widthOfTextAtSize(`Inception Date: ${formattedInceptionDate}`, 12),
-          y: yPosition,
-          size: 12,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        const idNumber = IDNumber || 'N/A';
-        page.drawText(`ID Number: ${idNumber}`, {
-          x: leftMargin,
-          y: yPosition,
-          size: 12,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        page.drawText(`IRR Percentage: ${irrPercentage}%`, {
-          x: rightMargin - font.widthOfTextAtSize(`IRR Percentage: ${irrPercentage}%`, 12),
-          y: yPosition,
-          size: 12,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        const dob = idNumber.length >= 6
-          ? `DOB: ${idNumber.substring(0, 2)}-${idNumber.substring(2, 4)}-${idNumber.substring(4, 6)}`
-          : 'DOB: N/A';
-      
-        page.drawText(dob, {
-          x: leftMargin,
-          y: yPosition,
-          size: 12,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 40;
-      
-        // Regular Withdrawals Section
-        const withdrawalSinceInception = this.calculateWithdrawAmount(selectedDetailModel);
-      
-        page.drawText('Regular Withdrawals', {
-          x: leftMargin,
-          y: yPosition,
-          size: 12,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        // Add space below the header
-        yPosition -= 30;
-      
-        page.drawRectangle({
-          x: leftMargin,
-          y: yPosition,
-          width: 495,
-          height: 20,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-      
-        page.drawText('TRANSACTION TYPE', {
-          x: leftMargin + 10,
-          y: yPosition + 5,
-          size: 10,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        page.drawText('WITHDRAWAL AMOUNT', {
-          x: 300,
-          y: yPosition + 5,
-          size: 10,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        page.drawText('Current Withdrawal Amount:', {
-          x: leftMargin + 10,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-        page.drawText(`R ${regularWithdrawalAmount?.toFixed(2) || '0.00'}`, {
-          x: 300,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        page.drawText('Withdrawal Percentage:', {
-          x: leftMargin + 10,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-        page.drawText(`${regularWithdrawalPercentage?.toFixed(2) || '0.00'}%`, {
-          x: 300,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        page.drawText('Withdrawal Since Inception:', {
-          x: leftMargin + 10,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-        page.drawText(`R ${withdrawalSinceInception.toFixed(2)}`, {
-          x: 300,
-          y: yPosition,
-          size: 10,
-          font: normalFont,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 40;
-      
-        // Transaction History Section
-        const groupedTransactions = this.groupTransactionsByDate(transactionModels);
-      
-        page.drawText('Transaction History', {
-          x: leftMargin,
-          y: yPosition,
-          size: 12,
-          font,
-          color: rgb(0, 0, 0),
-        });
-      
-        yPosition -= 20;
-      
-        Object.keys(groupedTransactions).forEach((date) => {
-          if (yPosition < 100) {
-            page = pdfDoc.addPage([595, 842]);
-            yPosition = 800;
-          }
-      
-          page.drawText(date, {
-            x: leftMargin,
-            y: yPosition,
-            size: 12,
-            font,
-            color: rgb(0, 0, 0),
+        startY = doc.lastAutoTable.finalY + 10;
+      }
+
+      // Regular Withdrawals Summary
+      doc.text("Regular Withdrawals", 10, startY);
+      doc.autoTable({
+        head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
+        body: [
+          ["Current Withdrawal Amount:", formatAmount(portfolio.regularWithdrawalAmount || 0)],
+          ["Withdrawal Percentage:", `${portfolio.regularWithdrawalPercentage || 0} %`],
+          ["Withdrawal Since Inception:", formatAmount(totalWithdrawals + (portfolio.regularWithdrawalAmount || 0))]
+        ],
+        startY: startY,
+        ...tableOptions
+      });
+      startY = doc.lastAutoTable.finalY + 15;
+
+      // Interaction History
+      const interactionHistory = portfolio.rootValueDateModels.filter(interaction => interaction.valueModels.length > 0);
+      if (interactionHistory.length > 0) {
+        doc.setFontSize(12);
+        doc.text("Interaction History", 10, startY);
+        startY += 20;
+        interactionHistory.forEach((interaction) => {
+          if (!interaction.valueModels || interaction.valueModels.length === 0) return;
+          const interactionData = interaction.valueModels.map(entry => {
+            const matchedPortfolio = portfolio.portfolioEntryTreeModels.find(e => e.portfolioEntryId === entry.portfolioEntryId);
+            return [
+              matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
+              formatAmount(entry.convertedAmount || 0),
+              formatAmount(entry.portfolioSharePercentage || 0),
+            ];
           });
-      
-          yPosition -= 30;
-      
-          page.drawRectangle({
-            x: leftMargin,
-            y: yPosition,
-            width: 495,
-            height: 20,
-            color: rgb(0.8, 0.8, 0.8),
-          });
-      
-          page.drawText('Investment Funds', {
-            x: leftMargin + 10,
-            y: yPosition + 5,
-            size: 10,
-            font,
-            color: rgb(0, 0, 0),
-          });
-      
-          page.drawText('Rand Value', {
-            x: 300,
-            y: yPosition + 5,
-            size: 10,
-            font,
-            color: rgb(0, 0, 0),
-          });
-      
-          yPosition -= 20;
-      
-          groupedTransactions[date].forEach((transaction) => {
-            const randValue = transaction.convertedAmount
-              ? `R ${transaction.convertedAmount.toFixed(2)}`
-              : 'N/A';
-            page.drawText('Cash - USD', {
-              x: leftMargin + 10,
-              y: yPosition,
-              size: 10,
-              font: normalFont,
-              color: rgb(0, 0, 0),
+
+          if (interactionData.length > 0) {
+            doc.autoTable({
+              head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
+              body: interactionData,
+              startY: doc.lastAutoTable.finalY + 25,
+              ...tableOptions
             });
-            page.drawText(randValue, {
-              x: 300,
-              y: yPosition,
-              size: 10,
-              font: normalFont,
-              color: rgb(0, 0, 0),
-            });
-      
-            yPosition -= 20;
-          });
-      
-          yPosition -= 20; // Additional spacing between grouped transactions
-        });
-      
-        const pdfBytes = await pdfDoc.save();
-        return btoa(String.fromCharCode(...new Uint8Array(pdfBytes)));
-                              
-        //   const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-        //   const link = document.createElement('a');
-        //   link.href = URL.createObjectURL(blob);
-        //   link.download = 'Client_Report.pdf';
-        //   document.body.appendChild(link);
-        //   link.click();
-        //   document.body.removeChild(link);
-    },
-
-    formatTransactionDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-GB', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-        });
-    },
-
-    calculateWithdrawAmount(selectedDetailModel) {
-        if (!selectedDetailModel || !selectedDetailModel.transactionModels) return 0;
-
-        const totalWithdrawals = selectedDetailModel.transactionModels
-            .filter((transaction) =>
-                transaction.transactionType.toLowerCase().includes('withdrawal')
-            )
-            .reduce((total, transaction) => total + (transaction.amount || 0), 0);
-
-        return selectedDetailModel.initialContributionAmount - totalWithdrawals;
-    },
-
-    groupTransactionsByDate(transactionModels) {
-        const grouped = {};
-      
-        transactionModels.forEach((transaction) => {
-          const date = this.formatTransactionDate(transaction.transactionDate);
-          if (!grouped[date]) {
-            grouped[date] = [];
+            startY = doc.lastAutoTable.finalY + 15;
           }
-          grouped[date].push(transaction);
         });
-      
-        return grouped;
-      }      
+      }
+    });
+
+    const pdfBytes = doc.output("arraybuffer");
+    const uint8Array = new Uint8Array(pdfBytes);
+    const binaryString = new TextDecoder("utf-8").decode(uint8Array);
+    return btoa(unescape(encodeURIComponent(binaryString)));
+  }
 };
