@@ -297,7 +297,7 @@ class Dashboard extends ViewBase {
     this.clientID = '';
     this.clientInfo = store.get('clientInfo') || {};
     this.selectedPortfolio = store.get('selectedPortfolio') || null;
-    this.showPopup = true;
+    this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
     this.searchCompleted = false;
@@ -316,6 +316,8 @@ class Dashboard extends ViewBase {
     if (storedClientInfo) {
       this.clientID = store.get('searchID');
       this.clientIDvalue = this.clientID;
+      this.selectedDates = store.get('selectedDates') ?? [];
+      this.showPopup = this.selectedDates?.length === 0;
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
     }
@@ -341,7 +343,6 @@ class Dashboard extends ViewBase {
     if (!this.clientID.trim()) return;
 
     this.selectedDates = [];
-
     this.isLoading = true;
     this.clientInfo = null;
     this.searchCompleted = false;
@@ -422,7 +423,8 @@ class Dashboard extends ViewBase {
       });
     }
 
-    this.selectedDates = [...new Set([...this.selectedDates, ...dates])];
+    this.selectedDates = [...new Set([...this.selectedDates, ...dates])];store.get('selectedDates');
+    store.set('selectedDates', this.selectedDates);
   }
 
   addCustomDate() {
