@@ -452,7 +452,6 @@ class Dashboard extends ViewBase {
       TransactionDateEnd: new Date().toISOString(),
       TargetCurrencyL: 170,
       ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
-      ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
       InputEntityModels: [
         {
           SouthAfricanIdNumber: "",
@@ -612,17 +611,7 @@ class Dashboard extends ViewBase {
         <div class="content-container visible">
           
           ${this.clientInfo ? this.renderClientCard() : ''}
-          <!-- Client Profile Card
-          <div class="client-card">
-            <img src="${user}" alt="User Image" />
-            <h3>${this.clientInfo.firstNames || 'Client Name'} ${this.clientInfo.surname || ''}</h3>
-            <p><strong>Title:</strong> ${this.clientInfo.title || 'N/A'}</p>
-            <p><strong>Advisor:</strong> ${this.clientInfo.advisorName || 'N/A'}</p>
-            <p><strong>Email:</strong> ${this.clientInfo.email || 'N/A'}</p>
-            <p><strong>Phone:</strong> ${this.clientInfo.cellPhoneNumber || 'N/A'}</p>
-            <button @click="${this.generateReport}">Generate Report</button>
-          </div> -->
-  
+
           <!-- Portfolio List -->
           <div class="portfolio-container">
             ${this.clientInfo.detailModels?.length
@@ -651,16 +640,25 @@ class Dashboard extends ViewBase {
                           <th>Instrument Name</th>
                           <th>ISIN Number</th>
                           <th>MorningStar ID</th>
+                          <th>One Year</th>
+                          <th>Three years</th>
                         </tr>
-                        ${portfolio.portfolioEntryTreeModels?.map(
-            (entry) => html`
+                        ${portfolio.portfolioEntryTreeModels?.map((entry) => html`
                             <tr>
-                              <td>${entry.instrumentName}</td>
-                              <td>${entry.isinNumber || 'N/A'}</td>
-                              <td>${entry.morningStarId || 'N/A'}</td>
+                              <td>${this._renderInput()}</td>
+                              <td>${this._renderInput()}</td>
+                              <td>${this._renderInput()}</td>
+                              <td>${this._renderInput()}</td>
+                              <td>${this._renderInput()}</td>
                             </tr>
-                          `
-          )}
+                          `)}
+                          <tr>
+                            <td>${this._renderInput()}</td>
+                            <td>${this._renderInput()}</td>
+                            <td>${this._renderInput()}</td>
+                            <td>${this._renderInput()}</td>
+                            <td>${this._renderInput()}</td>
+                          </tr>
                       </table>
                     </div>
                   ` : ''}
@@ -672,6 +670,10 @@ class Dashboard extends ViewBase {
         </div>
       ` : ''}
     `;
+  }
+
+  _renderInput() {
+    return html`<input type="text" />`;
   }
 }
 
