@@ -565,31 +565,6 @@ li {
     this.profileMoved = true;
   }
 
-  // renderDetailModelsDialog() {
-  //   if (!this.clientInfo || !this.clientInfo.detailModels) return null;
-  
-  //   return html`
-  //     <div class="dialog-overlay">
-  //       <div class="dialog-content">
-  //         <h3>📂 Select a Portfolio</h3>
-  //         <div class="portfolio-list">
-  //           ${this.clientInfo.detailModels.map(
-  //             (model) => html`
-  //               <div class="portfolio-card" @click="${() => this.handleSelectDetailModel(model)}">
-  //                 <h4>${model.instrumentName}</h4>
-  //                 <p><strong>Account Number:</strong> ${model.accountNumber || 'N/A'}</p>
-  //                 <p><strong>Balance:</strong> ${model.balance ? `R${model.balance}` : 'R0.00'}</p>
-  //               </div>
-  //             `
-  //           )}
-  //         </div>
-  //         <button class="cancel-btn" @click="${() => (this.showDetailModelsDialog = false)}">Cancel</button>
-  //       </div>
-  //     </div>
-  //   `;
-  // }
-
-
   renderDialog() {
     return html`
       <div class="dialog-overlay">

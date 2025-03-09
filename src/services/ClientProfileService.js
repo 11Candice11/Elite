@@ -3,14 +3,14 @@ import { Service } from '/src/services/Service.js';
 
 export class ClientProfileService extends Service {
     constructor() {
-        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
-        // super('http://localhost:6200/api/elite/v1'); // Local development API
+        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
+        super('http://localhost:6200/api/elite/v1'); // Local development API
     }
 
-    async login(username, password, email) {
+    async login(username, password, idNumber) {
         try {
             const endpoint = '/login';
-            const body = { username, password, email };
+            const body = { username, password, idNumber };
             return await this.post(endpoint, body);
         } catch (error) {
             if (error.message.includes('401')) {
