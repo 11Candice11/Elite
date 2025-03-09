@@ -316,7 +316,7 @@ class Dashboard extends ViewBase {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
-      this.clientID = store.get('searchID');
+      this.clientID = store.get('searchID') ?? this.clientID;
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
@@ -351,20 +351,14 @@ class Dashboard extends ViewBase {
 
     try {
 
-      const existingClient = await this._checkExistingClient(this.clientID);
-
-      if (existingClient.firstNames) {
-        this.clientInfo = existingClient;
-      } else {
-        this.clientInfo = await this.getClientInfo(this.searchID);
-      }
+      this.clientInfo = await this.getClientInfo(this.clientID);
 
       if (this.clientInfo) {
         store.set('searchID', this.clientID);
         store.set('clientInfo', this.clientInfo);
         this.searchCompleted = true;
         this.showPopup = true;
-        this.selectedDates = this._getDates();
+        this.selectedDates = await this._getDates();
       } else {
         console.error("Service returned no data.");
         this.serviceUnavailable = true;
@@ -376,6 +370,7 @@ class Dashboard extends ViewBase {
       router.navigate('/service-unavailable');
     } finally {
       this.isLoading = false;
+      this.requestUpdate();
     }
   }
 
@@ -453,18 +448,12 @@ class Dashboard extends ViewBase {
     // store.set('selectedDates', this.selectedDates);
 
     const dates = store.get('selectedDates');
-    if (JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
-      console.log("Arrays are not equal! Storing to DB");
+    if (dates === undefined || JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
       store.set('selectedDates', this.selectedDates);
       const consultant = store.get('username');
-      const returnValue = await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
-      console.log(returnValue);
-      if (returnValue) {
-        console.log("Data stored successfully!");
-      }
+      await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
     }
 
-    console.log("Arrays are equal! Not storing to DB");
     this.showPopup = false;
     this.isLoading = false;
   }
@@ -472,6 +461,8 @@ class Dashboard extends ViewBase {
   logout() {
     store.set('clientInfo', null);
     store.set('searchID', '');
+    store.set('selectedDates', null);
+    store.set('username', '');
     this.clientID = '';
     this.clientInfo = null;
     this.searchCompleted = false;

@@ -492,13 +492,15 @@ li {
     this.isVisible = false;
     this.isLoading = true;
 
-    const searched = store.get('searchID') === this.searchID;
-    if (searched) return;
+    // const searched = store.get('searchID') === this.searchID;
+    // if (searched) {
+    //   this.isLoading = false;
+    //   return;
 
 
     const existingClient = await this._checkExistingClient(this.searchID);
 
-    if (existingClient.firstNames) {
+    if (existingClient?.firstNames) {
       this.clientInfo = existingClient;
     } else {
       this.clientInfo = await this.getClientInfo(this.searchID, this.transactionDateStart);
