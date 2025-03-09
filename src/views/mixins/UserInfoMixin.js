@@ -20,9 +20,16 @@ export const userInfoMixin = {
         };
     },
 
-    async getClientInfo(idNumber, startDate, dates = []) {
+    async getClientInfo(idNumber, startDate = null, dates = []) {
         store.set('searchID', idNumber);
 
+        if (!startDate) {
+            startDate = new Date();
+            startDate.setFullYear(startDate.getFullYear() - 3);
+            startDate = startDate.toISOString().split('T')[0];
+            const clientInfo = store.get('clientInfo');
+            if (clientInfo) return clientInfo;
+        }
         const request = {
             TransactionDateStart: startDate,
             TransactionDateEnd: new Date().toISOString().split('T')[0],
@@ -36,11 +43,15 @@ export const userInfoMixin = {
         };
 
         try {
+            let clientInfo = []
             // ✅ First API call to get client data
             const response = await this.clientProfileService.getClientProfile(request);
-            if (!response?.entityModels[1] && !response.entityModels[0]) return;
-
-            const clientInfo = response.entityModels[1] || response.entityModels[0]
+            // if (!response.entityModels[1] || !response?.entityModels[0] ) return;
+            if (response.entityModels[0].detailModels.length > 0 ) {
+                clientInfo = response.entityModels[0];
+            } else if (response.entityModels[1].detailModels.length > 0) {
+                clientInfo = response.entityModels[1];
+            }
             store.set('clientInfo', clientInfo);
             return clientInfo;
         } catch (error) {
@@ -97,23 +108,35 @@ export const userInfoMixin = {
 
         // TODO
         // Do service call to get client info
-        // const returnValue = await this.clientProfileService.getUser(idNumber);
-        // if (returnValue.firstNames) {
-        //     const clientInfo = {
-        //         firstNames: returnValue.firstNames || 'N/A',
-        //         surname: returnValue.surname || 'N/A',
-        //         registeredName: returnValue.registeredName || 'N/A',
-        //         title: returnValue.title || 'N/A',
-        //         nickname: returnValue.nickname || 'N/A',
-        //         advisorName: returnValue.advisorName || 'N/A',
-        //         email: returnValue.email || 'N/A',
-        //         cellPhoneNumber: returnValue.cellPhoneNumber || 'N/A',
-        //         detailModels: returnValue.detailModels || [],
-        //         idNumber: idNumber
-        //     };
-        //     store.set('clientInfo', clientInfo);
-        //     return clientInfo;
+        // try {
+        //     const returnValue = await this.clientProfileService.getClient(idNumber);
+        //     if (returnValue) {
+        //         const clientInfo = {
+        //             firstNames: returnValue.firstNames || 'N/A',
+        //             surname: returnValue.surname || 'N/A',
+        //             registeredName: returnValue.registeredName || 'N/A',
+        //             title: returnValue.title || 'N/A',
+        //             nickname: returnValue.nickname || 'N/A',
+        //             advisorName: returnValue.advisorName || 'N/A',
+        //             email: returnValue.email || 'N/A',
+        //             cellPhoneNumber: returnValue.cellPhoneNumber || 'N/A',
+        //             detailModels: returnValue.detailModels || [],
+        //             idNumber: idNumber
+        //         };
+        //         store.set('clientInfo', clientInfo);
+        //         return clientInfo;
+        //     }
+        // } catch (error) {
+        //     // TODO
+        //     // Add service call to add info to DB
+            const clientInfo = await this.getClientInfo(idNumber);
+            this.storeToDB(clientInfo);
+            // return clientInfo;
         // }
-        return {};
+    },
+
+    storeToDB(clientInfo) {
+        // TODO
+        // Add service call to store client info to DB
     }
 };
