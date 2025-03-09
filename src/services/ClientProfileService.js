@@ -3,8 +3,8 @@ import { Service } from '/src/services/Service.js';
 
 export class ClientProfileService extends Service {
     constructor() {
-        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
-        super('http://localhost:6200/api/elite/v1'); // Local development API
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
+        // super('http://localhost:6200/api/elite/v1'); // Local development API
     }
 
     async login(username, password, idNumber) {
@@ -73,11 +73,11 @@ export class ClientProfileService extends Service {
     }
 
     /**
-     * Update user's email
+     * Update user's ID number
      */
-    async updateUserEmail(username, newEmail) {
+    async updateUserIDNumber(username, newIDNumber) {
         try {
-            const endpoint = '/update-user-email';
+            const endpoint = '/update-user-id';
             const body = { username, newEmail };
             return await this.put(endpoint, body);
         } catch (error) {
@@ -94,9 +94,21 @@ export class ClientProfileService extends Service {
             const endpoint = `/delete-user/${encodeURIComponent(username)}`;
             return await this.delete(endpoint);
         } catch (error) {
-            console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.RegistrationNumber}`, error);
-            console.error(`Failed to fetch client profile for entity ID: ${request.InputEntityModels.RegistrationNumber}`, error);
             throw error;
         }
     }
+    
+    /**
+     * Get client data
+     */
+    async getClientData(username) {
+        try {
+            const endpoint = `/client-data/${encodeURIComponent(username)}`;
+            return await this.get(endpoint);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+
 }
