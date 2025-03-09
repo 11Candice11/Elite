@@ -2,7 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import user from '/src/images/user.png';
-import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
+import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';

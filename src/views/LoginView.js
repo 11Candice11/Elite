@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
-import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
+import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { ViewBase } from './common/ViewBase.js';
 class LoginView extends ViewBase {
   static styles = css`
