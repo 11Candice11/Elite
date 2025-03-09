@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import { store } from '/src/store/EliteStore.js';
 import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
 import { ViewBase } from './common/ViewBase.js';
 class LoginView extends ViewBase {
@@ -87,6 +88,8 @@ class LoginView extends ViewBase {
       this.errorMessage = 'Please enter a valid username and password.';
       return;
     }
+
+    store.set('username', this.password);
     this.isLoading = true;
 
     await this.loginUser(this.username, this.password);

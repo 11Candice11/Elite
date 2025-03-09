@@ -90,14 +90,14 @@ export const userInfoMixin = {
             .reduce((earliest, current) => (current < earliest ? current : earliest));
     },
 
-    _checkExistingClient(idNumber) {
+    async _checkExistingClient(idNumber) {
         // if (store.get('searchID') === idNumber) {
         //     return store.get('clientInfo');
         // }
 
         // TODO
         // Do service call to get client info
-        // const returnValue = this.clientProfileService.getClientData(idNumber);
+        // const returnValue = await this.clientProfileService.getUser(idNumber);
         // if (returnValue.firstNames) {
         //     const clientInfo = {
         //         firstNames: returnValue.firstNames || 'N/A',

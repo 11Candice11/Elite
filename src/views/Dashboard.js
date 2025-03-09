@@ -312,14 +312,12 @@ class Dashboard extends ViewBase {
     Object.assign(Dashboard.prototype, userInfoMixin);
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
       this.clientID = store.get('searchID');
-      this.clientIDvalue = this.clientID;
-      this.selectedDates = store.get('selectedDates') ?? [];
-      this.showPopup = this.selectedDates?.length === 0;
+      this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
     }
@@ -349,6 +347,8 @@ class Dashboard extends ViewBase {
     this.clientInfo = null;
     this.searchCompleted = false;
 
+    store.set('selectedDates', []);
+
     try {
 
       const existingClient = await this._checkExistingClient(this.clientID);
@@ -361,6 +361,7 @@ class Dashboard extends ViewBase {
 
       if (this.clientInfo) {
         store.set('searchID', this.clientID);
+        store.set('clientInfo', this.clientInfo);
         this.searchCompleted = true;
         this.showPopup = true;
         this.selectedDates = this._getDates();
@@ -390,16 +391,18 @@ class Dashboard extends ViewBase {
   }
 
   async _getDates() {
+    const storeDates = store.get('selectedDates');
+    if (storeDates) return storeDates;
+    this.showPopup = true;
     const dates = [
-      "2024-05-14",
-      "2024-09-23",
+      "2022-05-14",
+      "2023-09-23",
       "2024-01-08"
     ];
 
-    const returnValue = await this.clientService.getClientData(this.clientID);
-
-    if (returnValue) {
-      return returnValue;
+    const returnValue = await this.clientProfileService.getClientData(this.clientID);
+    if (returnValue[0]?.listDates) {
+      return returnValue[0].listDates;
     }
     return dates;
   }
@@ -428,7 +431,7 @@ class Dashboard extends ViewBase {
       });
     }
 
-    this.selectedDates = [...new Set([...this.selectedDates, ...dates])]; store.get('selectedDates');
+    this.selectedDates = [...new Set([...this.selectedDates, ...dates])]; 
   }
 
   addCustomDate() {
@@ -447,11 +450,21 @@ class Dashboard extends ViewBase {
 
     this.clientInfo = await this.getClientInfo(this.clientID, earliestInceptionDate.toISOString().split('T')[0], this.selectedDates.map(date => `${date}T00:00:00`));
 
-    store.set('selectedDates', this.selectedDates);
+    // store.set('selectedDates', this.selectedDates);
 
-    // TODO 
-    // store selected dates to database
-    // await this.clientService.storeSelectedDates(this.clientID, this.selectedDates);
+    const dates = store.get('selectedDates');
+    if (JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
+      console.log("Arrays are not equal! Storing to DB");
+      store.set('selectedDates', this.selectedDates);
+      const consultant = store.get('username');
+      const returnValue = await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
+      console.log(returnValue);
+      if (returnValue) {
+        console.log("Data stored successfully!");
+      }
+    }
+
+    console.log("Arrays are equal! Not storing to DB");
     this.showPopup = false;
     this.isLoading = false;
   }
@@ -578,8 +591,8 @@ class Dashboard extends ViewBase {
         <input
           type="text"
           placeholder="Enter Clients ID"
-          .value="${this.clientIDvalue}"
-          @input="${(e) => (this.clientIDvalue = e.target.value)}"
+          .value="${this.clientID}"
+          @input="${(e) => (this.clientID = e.target.value)}"
         />
         <button @click="${this.searchClient}">Search</button>
       </div>

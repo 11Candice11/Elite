@@ -1,4 +1,5 @@
 import { html, render } from 'lit';
+import { store } from '/src/store/EliteStore.js';
 import '/src/views/LoginView.js';  
 import '/src/views/HomeView.js';   
 import '/src/views/Dashboard.js';   
@@ -50,6 +51,11 @@ export class Routing {
         }
       } else {
         console.error('Route not found, redirecting to /login');
+        store.set('clientInfo', null);
+        store.set('searchID', '');
+        store.set('username', '');
+        store.set('selectedDates', []);
+        router.navigate('/login');    
         this.navigate('/login');  // Handle unknown routes
       }
   }
