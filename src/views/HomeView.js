@@ -6,7 +6,7 @@ import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is c
 import user from '/src/images/user.png';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
-import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
+import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 
 class HomeView extends ViewBase {
   static styles = [
