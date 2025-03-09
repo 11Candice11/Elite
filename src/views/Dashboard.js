@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import user from '/src/images/user.png';
+import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
@@ -296,7 +297,7 @@ class Dashboard extends ViewBase {
     super();
     this.clientID = '';
     this.clientInfo = store.get('clientInfo') || {};
-    this.selectedPortfolio = store.get('selectedPortfolio') || null;
+    // this.selectedPortfolio = store.get('selectedPortfolio') || null;
     this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
@@ -304,10 +305,11 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
     this.expandedCards = {};
     this.serviceUnavailable = false;
-    this.clientService = new ClientProfileService();
+    this.clientProfileService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
     Object.assign(Dashboard.prototype, PdfMixin);
+    Object.assign(Dashboard.prototype, userInfoMixin);
   }
 
   connectedCallback() {
@@ -348,19 +350,16 @@ class Dashboard extends ViewBase {
     this.searchCompleted = false;
 
     try {
-      const request = {
-        TransactionDateStart: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString(),
-        TransactionDateEnd: new Date().toISOString(),
-        TargetCurrencyL: 170,
-        ValueDates: [],
-        InputEntityModels: [{ RegistrationNumber: this.clientID }]
-      };
 
-      const response = await this.clientService.getClientProfile(request);
-      this.clientInfo = response.entityModels?.[1] || response.entityModels?.[0];
+      const existingClient = await this._checkExistingClient(this.clientID);
+
+      if (existingClient.firstNames) {
+        this.clientInfo = existingClient;
+      } else {
+        this.clientInfo = await this.getClientInfo(this.searchID);
+      }
 
       if (this.clientInfo) {
-        store.set('clientInfo', this.clientInfo);
         store.set('searchID', this.clientID);
         this.searchCompleted = true;
         this.showPopup = true;
@@ -390,12 +389,18 @@ class Dashboard extends ViewBase {
     this.showPopup = !this.showPopup;
   }
 
-  _getDates() {
+  async _getDates() {
     const dates = [
       "2024-05-14",
       "2024-09-23",
       "2024-01-08"
     ];
+
+    const returnValue = await this.clientService.getClientData(this.clientID);
+
+    if (returnValue) {
+      return returnValue;
+    }
     return dates;
   }
 
@@ -423,8 +428,7 @@ class Dashboard extends ViewBase {
       });
     }
 
-    this.selectedDates = [...new Set([...this.selectedDates, ...dates])];store.get('selectedDates');
-    store.set('selectedDates', this.selectedDates);
+    this.selectedDates = [...new Set([...this.selectedDates, ...dates])]; store.get('selectedDates');
   }
 
   addCustomDate() {
@@ -437,42 +441,19 @@ class Dashboard extends ViewBase {
   async handleNext() {
     this.isLoading = true;
 
-    if (this.clientID === !this.clientIDvalue) {
-      this.showPopup = true;
-      return;
-    }
-    const searchId = store.get('searchID');
-
     const earliestInceptionDate = this.clientInfo?.detailModels
-      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+    ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+    .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
-    const request = {
-      TransactionDateStart: earliestInceptionDate.toISOString(),
-      TransactionDateEnd: new Date().toISOString(),
-      TargetCurrencyL: 170,
-      ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
-      InputEntityModels: [
-        {
-          SouthAfricanIdNumber: "",
-          PassportNumber: null,
-          RegistrationNumber: searchId
-        }
-      ]
-    };
+    this.clientInfo = await this.getClientInfo(this.clientID, earliestInceptionDate.toISOString().split('T')[0], this.selectedDates.map(date => `${date}T00:00:00`));
 
-    try {
-      const response = await this.clientService.getClientProfile(request);
-      const clientInformation = response.entityModels[1] || response.entityModels[0];
+    store.set('selectedDates', this.selectedDates);
 
-      store.set('clientInfo', clientInformation);
-      this.clientInfo = clientInformation;
-      this.showPopup = false;
-    } catch (error) {
-      console.error('Error fetching updated client information:', error);
-    } finally {
-      this.isLoading = false;
-    }
+    // TODO 
+    // store selected dates to database
+    // await this.clientService.storeSelectedDates(this.clientID, this.selectedDates);
+    this.showPopup = false;
+    this.isLoading = false;
   }
 
   logout() {

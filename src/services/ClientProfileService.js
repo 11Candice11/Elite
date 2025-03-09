@@ -3,8 +3,8 @@ import { Service } from '/src/services/Service.js';
 
 export class ClientProfileService extends Service {
     constructor() {
-        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
-        // super('http://localhost:6200/api/elite/v1'); // Local development API
+        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1') // Production API
+        super('http://localhost:6200/api/elite/v1'); // Local development API
     }
 
     async login(username, password, idNumber) {
@@ -78,7 +78,7 @@ export class ClientProfileService extends Service {
     async updateUserIDNumber(username, newIDNumber) {
         try {
             const endpoint = '/update-user-id';
-            const body = { username, newEmail };
+            const body = { username, newIDNumber };
             return await this.put(endpoint, body);
         } catch (error) {
             console.error(`Failed to update email for user: ${username}`, error);

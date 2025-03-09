@@ -130,7 +130,7 @@ export const PdfMixin = {
             return [
               matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
               formatAmount(entry.convertedAmount || 0),
-              formatAmount(entry.portfolioSharePercentage || 0),
+              (entry.portfolioSharePercentage.toFixed(2) || 0),
             ];
           });
 

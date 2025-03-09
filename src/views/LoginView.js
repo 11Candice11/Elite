@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
-import { router } from '/src/shell/Routing.js';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
 import { ViewBase } from './common/ViewBase.js';
 class LoginView extends ViewBase {
   static styles = css`
@@ -74,6 +74,7 @@ class LoginView extends ViewBase {
     this.password = '';
     this.errorMessage = '';
     this.clientProfileService = new ClientProfileService(); // Initialize service
+    Object.assign(LoginView.prototype, userInfoMixin);
   }
 
   
@@ -86,21 +87,10 @@ class LoginView extends ViewBase {
       this.errorMessage = 'Please enter a valid username and password.';
       return;
     }
-    
-    // Trigger navigation to HomeView
-    try {
-      this.isLoading = true;
-      // Call login method from ClientProfileService
-      const response = await this.clientProfileService.login(this.username, this.password, "4904095074083");
-      if (response.message === `Login successful!`) {
-        this.navigateHome(); // Redirect on successful login
-     } else {
-       this.errorMessage = response.message || 'Login failed. Please try again.';
-     }
-    } catch (error) {
-      this.errorMessage = 'An error occurred while logging in. Please try again later.';
-      console.error('Login error:', error);
-    }
+    this.isLoading = true;
+
+    await this.loginUser(this.username, this.password);
+    this.isLoading = false;
   }
 
   render() {
