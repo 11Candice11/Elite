@@ -6,6 +6,7 @@ import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is c
 import user from '/src/images/user.png';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
+import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
 
 class HomeView extends ViewBase {
   static styles = [
@@ -443,9 +444,10 @@ li {
       vested: true,
       groupFunds: true,
     };
-    this.clientService = new ClientProfileService();
+    this.clientProfileService = new ClientProfileService();
     this.initClientInfo();
     Object.assign(HomeView.prototype, PdfMixin);
+    Object.assign(HomeView.prototype, userInfoMixin);
   }
 
   initClientInfo() {
@@ -486,61 +488,23 @@ li {
     return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
   }
 
-  calculateValueDates(inceptionDate, frequencyInMonths) {
-    const valueDates = [];
-    const currentDate = new Date();
-    let date = new Date(inceptionDate);
-  
-    while (date <= currentDate) {
-      valueDates.push(this.formatDateToISO(date)); // Format to ISO
-      date.setMonth(date.getMonth() + frequencyInMonths);
-    }
-  
-    return valueDates;
-  }
-
-  getEarliestInceptionDate(detailModels) {
-    if (!detailModels.length) return null;
-  
-    return detailModels
-      .map(model => new Date(model.inceptionDate))
-      .reduce((earliest, current) => (current < earliest ? current : earliest));
-  }
-
   async fetchData() {
     this.isVisible = false;
     this.isLoading = true;
 
     const searched = store.get('searchID') === this.searchID;
     if (searched) return;
-  
-    const request = {
-      TransactionDateStart: this.transactionDateStart,
-      TransactionDateEnd: this.transactionDateEnd,
-      TargetCurrencyL: 170,
-      ValueDates: [],
-      InputEntityModels: [
-        {
-          RegistrationNumber: this.searchID,
-        },
-      ],
-    };
-  
-    store.set('searchID', this.searchID);
-  
-    try {
-      // ✅ First API call to get client data
-      const response = await this.clientService.getClientProfile(request);
-      if (!response?.entityModels[1] && !response.entityModels[0]) return;
-  
-      this.clientInfo = response.entityModels[1] || response.entityModels[0]
-      store.set('clientInfo', this.clientInfo);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      this.isVisible = true;
-      this.isLoading = false;
+
+
+    const existingClient = await this._checkExistingClient(this.searchID);
+
+    if (existingClient.firstNames) {
+      this.clientInfo = existingClient;
+    } else {
+      this.clientInfo = await this.getClientInfo(this.searchID, this.transactionDateStart);
     }
+    this.isVisible = true;
+    this.isLoading = false;
   }
 
   handleTabNavigation(tabName) {
@@ -614,7 +578,7 @@ li {
           </div>
           <div class="filter-buttons">
   <label>
-    <input
+    <!-- <input
       type="radio"
       name="appointment-frequency"
       value="1"
@@ -649,7 +613,7 @@ li {
       @change="${this.handleFrequencyChange}"
     />
     12 Months
-  </label>
+  </label> -->
 </div>
           ${this.clientInfo && this.clientInfo.firstNames
         ? html`${this.renderClientCard()}`
@@ -666,7 +630,7 @@ li {
       month: 'long',
       year: 'numeric',
     });
-  
+
     return html`
     <div class="client-card visible">
     <div class="client-card-header">

@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import user from '/src/images/user.png';
+import { userInfoMixin } from '/src/views/mixins/userInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
@@ -296,7 +297,7 @@ class Dashboard extends ViewBase {
     super();
     this.clientID = '';
     this.clientInfo = store.get('clientInfo') || {};
-    this.selectedPortfolio = store.get('selectedPortfolio') || null;
+    // this.selectedPortfolio = store.get('selectedPortfolio') || null;
     this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
@@ -304,20 +305,19 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
     this.expandedCards = {};
     this.serviceUnavailable = false;
-    this.clientService = new ClientProfileService();
+    this.clientProfileService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
     Object.assign(Dashboard.prototype, PdfMixin);
+    Object.assign(Dashboard.prototype, userInfoMixin);
   }
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
       this.clientID = store.get('searchID');
-      this.clientIDvalue = this.clientID;
-      this.selectedDates = store.get('selectedDates') ?? [];
-      this.showPopup = this.selectedDates?.length === 0;
+      this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
     }
@@ -347,21 +347,21 @@ class Dashboard extends ViewBase {
     this.clientInfo = null;
     this.searchCompleted = false;
 
-    try {
-      const request = {
-        TransactionDateStart: new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString(),
-        TransactionDateEnd: new Date().toISOString(),
-        TargetCurrencyL: 170,
-        ValueDates: [],
-        InputEntityModels: [{ RegistrationNumber: this.clientID }]
-      };
+    store.set('selectedDates', []);
 
-      const response = await this.clientService.getClientProfile(request);
-      this.clientInfo = response.entityModels?.[1] || response.entityModels?.[0];
+    try {
+
+      const existingClient = await this._checkExistingClient(this.clientID);
+
+      if (existingClient.firstNames) {
+        this.clientInfo = existingClient;
+      } else {
+        this.clientInfo = await this.getClientInfo(this.searchID);
+      }
 
       if (this.clientInfo) {
-        store.set('clientInfo', this.clientInfo);
         store.set('searchID', this.clientID);
+        store.set('clientInfo', this.clientInfo);
         this.searchCompleted = true;
         this.showPopup = true;
         this.selectedDates = this._getDates();
@@ -390,12 +390,20 @@ class Dashboard extends ViewBase {
     this.showPopup = !this.showPopup;
   }
 
-  _getDates() {
+  async _getDates() {
+    const storeDates = store.get('selectedDates');
+    if (storeDates) return storeDates;
+    this.showPopup = true;
     const dates = [
-      "2024-05-14",
-      "2024-09-23",
+      "2022-05-14",
+      "2023-09-23",
       "2024-01-08"
     ];
+
+    const returnValue = await this.clientProfileService.getClientData(this.clientID);
+    if (returnValue[0]?.listDates) {
+      return returnValue[0].listDates;
+    }
     return dates;
   }
 
@@ -423,8 +431,7 @@ class Dashboard extends ViewBase {
       });
     }
 
-    this.selectedDates = [...new Set([...this.selectedDates, ...dates])];store.get('selectedDates');
-    store.set('selectedDates', this.selectedDates);
+    this.selectedDates = [...new Set([...this.selectedDates, ...dates])]; 
   }
 
   addCustomDate() {
@@ -437,42 +444,29 @@ class Dashboard extends ViewBase {
   async handleNext() {
     this.isLoading = true;
 
-    if (this.clientID === !this.clientIDvalue) {
-      this.showPopup = true;
-      return;
-    }
-    const searchId = store.get('searchID');
-
     const earliestInceptionDate = this.clientInfo?.detailModels
-      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+    ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+    .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
-    const request = {
-      TransactionDateStart: earliestInceptionDate.toISOString(),
-      TransactionDateEnd: new Date().toISOString(),
-      TargetCurrencyL: 170,
-      ValueDates: this.selectedDates.map(date => `${date}T00:00:00`),
-      InputEntityModels: [
-        {
-          SouthAfricanIdNumber: "",
-          PassportNumber: null,
-          RegistrationNumber: searchId
-        }
-      ]
-    };
+    this.clientInfo = await this.getClientInfo(this.clientID, earliestInceptionDate.toISOString().split('T')[0], this.selectedDates.map(date => `${date}T00:00:00`));
 
-    try {
-      const response = await this.clientService.getClientProfile(request);
-      const clientInformation = response.entityModels[1] || response.entityModels[0];
+    // store.set('selectedDates', this.selectedDates);
 
-      store.set('clientInfo', clientInformation);
-      this.clientInfo = clientInformation;
-      this.showPopup = false;
-    } catch (error) {
-      console.error('Error fetching updated client information:', error);
-    } finally {
-      this.isLoading = false;
+    const dates = store.get('selectedDates');
+    if (JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
+      console.log("Arrays are not equal! Storing to DB");
+      store.set('selectedDates', this.selectedDates);
+      const consultant = store.get('username');
+      const returnValue = await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
+      console.log(returnValue);
+      if (returnValue) {
+        console.log("Data stored successfully!");
+      }
     }
+
+    console.log("Arrays are equal! Not storing to DB");
+    this.showPopup = false;
+    this.isLoading = false;
   }
 
   logout() {
@@ -597,8 +591,8 @@ class Dashboard extends ViewBase {
         <input
           type="text"
           placeholder="Enter Clients ID"
-          .value="${this.clientIDvalue}"
-          @input="${(e) => (this.clientIDvalue = e.target.value)}"
+          .value="${this.clientID}"
+          @input="${(e) => (this.clientID = e.target.value)}"
         />
         <button @click="${this.searchClient}">Search</button>
       </div>
