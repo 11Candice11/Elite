@@ -67,6 +67,7 @@ class LoginView extends ViewBase {
     username: { type: String },
     password: { type: String },
     errorMessage: { type: String },
+    isLoading: { type: Boolean },
   };
 
   constructor() {
@@ -74,6 +75,7 @@ class LoginView extends ViewBase {
     this.username = '';
     this.password = '';
     this.errorMessage = '';
+    this.isLoading = false;
     this.clientProfileService = new ClientProfileService(); // Initialize service
     Object.assign(LoginView.prototype, userInfoMixin);
   }
@@ -88,9 +90,9 @@ class LoginView extends ViewBase {
       this.errorMessage = 'Please enter a valid username and password.';
       return;
     }
+    this.isLoading = true;
 
     store.set('username', this.password);
-    this.isLoading = true;
 
     await this.loginUser(this.username, this.password);
     this.isLoading = false;
@@ -123,11 +125,10 @@ class LoginView extends ViewBase {
               />
             </div>
                   <!-- Loading Indicator -->
-      ${this.isLoading ? html`<div class="loading">Loading...</div>` : ''}
             ${this.errorMessage
               ? html`<div class="form-group error">${this.errorMessage}</div>`
               : ''}
-            <button class="button" type="submit">Login</button>
+            <button class="button" type="submit">${this.isLoading ? `Processing` : `Login`}</button>
           </form>
         </div>
       </div>

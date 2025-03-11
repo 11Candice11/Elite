@@ -213,7 +213,8 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 325px;
+    height: 350px;
+    text-align: center;
   }
 
 /* Client Card Header */
@@ -296,6 +297,8 @@ class Dashboard extends ViewBase {
   constructor() {
     super();
     this.clientID = '';
+    this.oneYear = '';
+    this.threeYears = '';
     this.clientInfo = store.get('clientInfo') || {};
     // this.selectedPortfolio = store.get('selectedPortfolio') || null;
     this.showPopup = false;
@@ -330,7 +333,8 @@ class Dashboard extends ViewBase {
     );
     store.set('rootValueDateModels', detail?.rootValueDateModels || []);
     store.set('selectedInstrumentName', this.selectedPortfolio);
-    super.navigateToRootTransactions();
+    // super.navigateToProducts();
+    router.navigate('/transaction-history');
   }
 
   navigateToTransactions(portfolio) {
@@ -387,7 +391,7 @@ class Dashboard extends ViewBase {
 
   async _getDates() {
     const storeDates = store.get('selectedDates');
-    if (storeDates) return storeDates;
+    if (storeDates?.length > 0) return storeDates;
     this.showPopup = true;
     const dates = [
       "2022-05-14",
@@ -426,7 +430,7 @@ class Dashboard extends ViewBase {
       });
     }
 
-    this.selectedDates = [...new Set([...this.selectedDates, ...dates])]; 
+    this.selectedDates = [...new Set([...this.selectedDates, ...dates])];
   }
 
   addCustomDate() {
@@ -440,8 +444,8 @@ class Dashboard extends ViewBase {
     this.isLoading = true;
 
     const earliestInceptionDate = this.clientInfo?.detailModels
-    ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
-    .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
+      ?.map(detail => new Date(detail.inceptionDate)) // Convert to Date objects
+      .reduce((earliest, current) => (current < earliest ? current : earliest), new Date());
 
     this.clientInfo = await this.getClientInfo(this.clientID, earliestInceptionDate.toISOString().split('T')[0], this.selectedDates.map(date => `${date}T00:00:00`));
 
@@ -499,57 +503,56 @@ class Dashboard extends ViewBase {
     `;
   }
 
-  renderPortfolioInfo(portfolio) {
+  _renderPortfolios() {
     return html`
-      <div class="portfolio-info">
-        <h4>General Information</h4>
-        <div class="info-grid">
-          <div class="info-item"><strong>Reference Number:</strong> ${portfolio.referenceNumber}</div>
-          <div class="info-item"><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</div>
-          <div class="info-item"><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ${portfolio.initialContributionCurrencyAbbreviation}</div>
-          <div class="info-item"><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ${portfolio.regularContributionCurrencyAbbreviation} (${portfolio.regularContributionFrequency})</div>
-          <div class="info-item"><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</div>
-        </div>
+      <div class="portfolio-container">
+        ${this.clientInfo.detailModels?.length
+          ? this.clientInfo.detailModels.map((portfolio, index) => html`
+            <div class="portfolio-card">
+              <h3>${portfolio.instrumentName}</h3>
+              <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
+              <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
+              <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
+              <button @click="${() => this.toggleExpand(index)}">
+                ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
+              </button>
 
-        <h4>Portfolio Entries</h4>
-        <table>
-          <tr>
-            <th>Instrument Name</th>
-            <th>ISIN Number</th>
-            <th>MorningStar ID</th>
-          </tr>
-          ${portfolio.portfolioEntryTreeModels?.map(
-      (entry) => html`
-              <tr>
-                <td>${entry.instrumentName}</td>
-                <td>${entry.isinNumber || 'N/A'}</td>
-                <td>${entry.morningStarId || 'N/A'}</td>
-              </tr>
-            `
-    )}
-        </table>
+              ${this.expandedCards[index] ? html`
+                <div class="portfolio-info">
+                  <h4>General Information</h4>
+                  <p><strong>Reference Number:</strong> ${portfolio.referenceNumber}</p>
+                  <p><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</p>
+                  <p><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ZAR</p>
+                  <p><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ZAR (${portfolio.regularContributionFrequency})</p>
+                  <p><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</p>
 
-        <h4>Portfolio Entries</h4>
-        <table>
-          <tr>
-            <th>Instrument Name</th>
-            <th>ISIN Number</th>
-            <th>MorningStar ID</th>
-          </tr>
-          ${portfolio.portfolioEntryTreeModels?.map(
-      (entry) => html`
-              <tr>
-                <td>${entry.instrumentName}</td>
-                <td>${entry.isinNumber || 'N/A'}</td>
-                <td>${entry.morningStarId || 'N/A'}</td>
-              </tr>
-            `
-    )}
-        </table>
+                  <h4>Portfolio Entries</h4>
+                  <table>
+                    <tr>
+                      <th>Instrument Name</th>
+                      <th>ISIN Number</th>
+                      <th>MorningStar ID</th>
+                      <th>One Year</th>
+                      <th>Three years</th>
+                    </tr>
+                    ${portfolio.portfolioEntryTreeModels?.map((entry) => html`
+                        <tr>
+                          <td>${entry.instrumentName}</td>
+                          <td>${entry.isinNumber || 'N/A'}</td>
+                          <td>${entry.morningStarId || 'N/A'}</td>
+                          <td>${this._renderInput("oneYear")}</td>
+                          <td>${this._renderInput("threeYears")}</td>
+                        </tr>
+                      `)}
+                  </table>
+                </div>
+              ` : ''}
+            </div>
+          `)
+    : html`<p>No Portfolios Found</p>`}
       </div>
     `;
   }
-
 
   renderClientCard() {
     return html`
@@ -566,6 +569,7 @@ class Dashboard extends ViewBase {
         <p><strong>Email:</strong> ${this.clientInfo.email}</p>
         <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
       </div>
+      <button @click="${() => this.generateReport()}">Generate Report</button>
     </div>
     `;
   }
@@ -598,67 +602,21 @@ class Dashboard extends ViewBase {
           ${this.clientInfo ? this.renderClientCard() : ''}
 
           <!-- Portfolio List -->
-          <div class="portfolio-container">
-            ${this.clientInfo.detailModels?.length
-          ? this.clientInfo.detailModels.map((portfolio, index) => html`
-                <div class="portfolio-card">
-                  <h3>${portfolio.instrumentName}</h3>
-                  <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-                  <!-- <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button> -->
-                  <button @click="${this.generateReport}">Generate Report</button>
-                  <button @click="${() => this.toggleExpand(index)}">
-                    ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
-                  </button>
-  
-                  ${this.expandedCards[index] ? html`
-                    <div class="portfolio-info">
-                      <h4>General Information</h4>
-                      <p><strong>Reference Number:</strong> ${portfolio.referenceNumber}</p>
-                      <p><strong>Inception Date:</strong> ${new Date(portfolio.inceptionDate).toLocaleDateString()}</p>
-                      <p><strong>Initial Contribution:</strong> ${portfolio.initialContributionAmount} ZAR</p>
-                      <p><strong>Regular Contribution:</strong> ${portfolio.regularContributionAmount} ZAR (${portfolio.regularContributionFrequency})</p>
-                      <p><strong>Report Notes:</strong> ${portfolio.reportNotes || 'N/A'}</p>
-  
-                      <h4>Portfolio Entries</h4>
-                      <table>
-                        <tr>
-                          <th>Instrument Name</th>
-                          <th>ISIN Number</th>
-                          <th>MorningStar ID</th>
-                          <th>One Year</th>
-                          <th>Three years</th>
-                        </tr>
-                        ${portfolio.portfolioEntryTreeModels?.map((entry) => html`
-                            <tr>
-                              <td>${this._renderInput()}</td>
-                              <td>${this._renderInput()}</td>
-                              <td>${this._renderInput()}</td>
-                              <td>${this._renderInput()}</td>
-                              <td>${this._renderInput()}</td>
-                            </tr>
-                          `)}
-                          <tr>
-                            <td>${this._renderInput()}</td>
-                            <td>${this._renderInput()}</td>
-                            <td>${this._renderInput()}</td>
-                            <td>${this._renderInput()}</td>
-                            <td>${this._renderInput()}</td>
-                          </tr>
-                      </table>
-                    </div>
-                  ` : ''}
-                </div>
-              `)
-          : html`<p>No Portfolios Found</p>`}
-          </div>
-  
+           ${this._renderPortfolios()}
         </div>
       ` : ''}
     `;
   }
 
-  _renderInput() {
-    return html`<input type="text" />`;
+  _renderInput(year) {
+    return html`
+        <input
+          type="text"
+          placeholder=""
+          .value="${this[`${year}`]}"
+          @input="${(e) => (this[`${year}`] = e.target.value)}"
+        />
+      `;
   }
 }
 

@@ -38,10 +38,6 @@ export class ViewBase extends LitElement {
     return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
   }
 
-  navigateToRootTransactions() {
-    router.navigate('/products');
-  }
-
   static styles = css`
   button {
     background-color: rgb(0, 50, 100);
