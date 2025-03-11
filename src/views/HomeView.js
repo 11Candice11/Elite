@@ -502,9 +502,11 @@ li {
 
     if (existingClient?.firstNames) {
       this.clientInfo = existingClient;
-    } else {
-      this.clientInfo = await this.getClientInfo(this.searchID, this.transactionDateStart);
-    }
+    } 
+    // else {
+    //   this.clientInfo = await this.getClientInfo(this.searchID, this.transactionDateStart);
+    // }
+    
     this.isVisible = true;
     this.isLoading = false;
   }

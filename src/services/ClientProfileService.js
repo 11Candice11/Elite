@@ -60,7 +60,7 @@ export class ClientProfileService extends Service {
      */
     async createUser(username, email, password) {
         try {
-            const endpoint = '/create';
+            const endpoint = '/sve-client';
             const body = { username, email, password };
             return await this.post(endpoint, body);
         } catch (error) {

@@ -14,7 +14,8 @@ export const PdfMixin = {
     };
 
     // Extract DOB from ID Number
-    const dob = clientInfo ? `19${clientInfo.substring(0, 2)}/${clientInfo.substring(2, 4)}/${clientInfo.substring(4, 6)}` : "Unknown DOB";
+    const century = parseInt(clientInfo.substring(0, 2)) < 22 ? "20" : "19";
+    const dob = clientInfo ? `${century}${clientInfo.substring(0, 2)}/${clientInfo.substring(2, 4)}/${clientInfo.substring(4, 6)}` : "Unknown DOB";
 
     // Add Client Information
     doc.setFontSize(18);
@@ -128,6 +129,7 @@ export const PdfMixin = {
           const interactionData = interaction.valueModels.map(entry => {
             const matchedPortfolio = portfolio.portfolioEntryTreeModels.find(e => e.portfolioEntryId === entry.portfolioEntryId);
             return [
+              entry ? entry.valueDate : "Unknown Date",
               matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
               formatAmount(entry.convertedAmount || 0),
               (entry.portfolioSharePercentage.toFixed(2) || 0),
@@ -136,7 +138,7 @@ export const PdfMixin = {
 
           if (interactionData.length > 0) {
             doc.autoTable({
-              head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
+              head: [["Date", "Investment Funds", "Rand Value", "% Share per Portfolio"]],
               body: interactionData,
               startY: doc.lastAutoTable.finalY + 15,
               ...tableOptions

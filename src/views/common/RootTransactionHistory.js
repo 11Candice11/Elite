@@ -144,7 +144,7 @@ export class RootTransactionHistory extends ViewBase {
 
   render() {
     return html`
-      <button class="back-button" @click="${this.navigateBack}">⬅ Back to Products</button>
+      <button class="back-button" @click="${this.navigateBack}">⬅ Back</button>
       <h1>Interaction History</h1>
       ${this.rootValueDateModels.length > 0
         ? this.rootValueDateModels.map((model) => this.renderTransaction(model))
