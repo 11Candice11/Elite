@@ -19,7 +19,7 @@ import { RETIREMENT_ANNUITY } from '/src/constants/RetirementAnnuity';
 // import { LINKED_LIFE_ANNUITY } from '/src/constants/LinkedLifeAnnuity';
 // import { STANLIB } from '/src/constants/Stanlib';
 
-class Documents extends ViewBase {
+export class Documents extends ViewBase {
   static styles = [
     css`
       /* General styles */

@@ -472,11 +472,6 @@ class Dashboard extends ViewBase {
     this.portfolioRatings[portfolioId][period] = value;
   }
 
-  navigateToPDFViewer() {
-    // navigate to the PDF viewer related to the selected portfolio
-    router.navigate('/documents');
-  }
-
   logout() {
     store.set('clientInfo', null);
     store.set('searchID', '');
@@ -527,7 +522,6 @@ class Dashboard extends ViewBase {
               <h3>${portfolio.instrumentName}</h3>
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
-              <button @click="${() => this.navigateToPDFViewer(portfolio)}">Fill PDF</button>
               <!-- <button @click="${() => this.generateReport(portfolio)}">Generate Report</button> -->
               <button @click="${() => this.toggleExpand(index)}">
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}

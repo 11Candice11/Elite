@@ -523,6 +523,11 @@ li {
     };
   }
 
+  navigateToPDFViewer() {
+    // navigate to the PDF viewer related to the selected portfolio
+    router.navigate('/documents');
+  }
+
   async generateReport() {
     var base64 = await this.generatePDF(this.clientInfo, this.clientID);
     store.set('base64', base64);
@@ -657,7 +662,8 @@ li {
         </div>
         <div class="client-card-actions">
           <button @click="${() => this.handleTabNavigation('dashboard')}">View Portfolios</button>
-          <button @click="${() => (this.showDialog = true)}">Generate Report</button>
+          <button @click="${() => this.navigateToPDFViewer()}">Fill PDF</button>
+          <!-- <button @click="${() => (this.showDialog = true)}">Generate Report</button> -->
           <!-- <button @click="${() => this.handleTabNavigation('products')}">View Portfolios</button> -->
         </div>
       </div>
