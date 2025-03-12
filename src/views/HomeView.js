@@ -582,7 +582,7 @@ li {
           </div>
           <div class="filter-buttons">
   <label>
-    <!-- <input
+    <input
       type="radio"
       name="appointment-frequency"
       value="1"
@@ -617,7 +617,7 @@ li {
       @change="${this.handleFrequencyChange}"
     />
     12 Months
-  </label> -->
+  </label>
 </div>
           ${this.clientInfo && this.clientInfo.firstNames
         ? html`${this.renderClientCard()}`

@@ -23,6 +23,7 @@ export class Routing {
       '/portfolio-details': () => html`<portfolio-details></portfolio-details>`,
       '/dashboard': () => html`<dashboard-view></dashboard-view>`,
       '/pdf': () => html`<pdf-viewer></pdf-viewer>`,
+      '/documents': () => html`<my-documents></my-documents>`,
       '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`
     };
 

@@ -291,7 +291,8 @@ class Dashboard extends ViewBase {
     transactionDateStart: { type: String },
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean },
-    performanceData: { type: Object }
+    performanceData: { type: Object },
+    portfolioRatings: { type: Object }
   };
 
   constructor() {
@@ -308,6 +309,8 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
     this.expandedCards = {};
     this.serviceUnavailable = false;
+    this.portfolioRatings = {}; // One Year, Three Year
+
     this.clientProfileService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
@@ -462,6 +465,18 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
   }
 
+  updatePortfolioRatings(portfolioId, period, value) {
+    if (!this.portfolioRatings[portfolioId]) {
+      this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
+    }
+    this.portfolioRatings[portfolioId][period] = value;
+  }
+
+  navigateToPDFViewer() {
+    // navigate to the PDF viewer related to the selected portfolio
+    router.navigate('/documents');
+  }
+
   logout() {
     store.set('clientInfo', null);
     store.set('searchID', '');
@@ -474,7 +489,7 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.clientID); // Generate the PDF
+    var base64 = await this.generatePDF(this.clientInfo, this.clientID, this.portfolioRatings); // Generate the PDF
     store.set('base64', base64);
     router.navigate('/pdf'); // Navigate to the PDF viewer
   }
@@ -512,7 +527,8 @@ class Dashboard extends ViewBase {
               <h3>${portfolio.instrumentName}</h3>
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
-              <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
+              <button @click="${() => this.navigateToPDFViewer(portfolio)}">Fill PDF</button>
+              <!-- <button @click="${() => this.generateReport(portfolio)}">Generate Report</button> -->
               <button @click="${() => this.toggleExpand(index)}">
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
@@ -608,15 +624,15 @@ class Dashboard extends ViewBase {
     `;
   }
 
-  _renderInput(year) {
+  _renderInput(portfolioId, year) {
     return html`
-        <input
-          type="text"
-          placeholder=""
-          .value="${this[`${year}`]}"
-          @input="${(e) => (this[`${year}`] = e.target.value)}"
-        />
-      `;
+      <input
+        type="text"
+        placeholder=""
+        .value="${this.portfolioRatings[portfolioId]?.[year] || ''}"
+        @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
+      />
+    `;
   }
 }
 

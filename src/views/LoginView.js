@@ -105,7 +105,7 @@ class LoginView extends ViewBase {
           <h2>Login</h2>
           <form @submit=${this.handleLogin}>
             <div class="form-group">
-              <label for="username">Username</label>
+              <label for="username">Nope Username</label>
               <input
                 type="text"
                 id="username"
