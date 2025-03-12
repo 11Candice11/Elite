@@ -18,87 +18,82 @@ import { RETIREMENT_ANNUITY } from '/src/constants/RetirementAnnuity.js';
 export class FillDocument extends ViewBase {
     static styles = css`
     :host {
-        display: flex;
-        flex-direction: column;
-        font-family: Arial, sans-serif;
-        background: #f5f7fa;
-        min-height: 100vh;
-        color: #333;
-        align-items: center;
-        justify-content: center;
-      }
-    
-      .client-card {
-        background: #d4af7a;
-        border-radius: 12px;
-        max-width: 450px;
-        margin: 20px auto;
-        padding: 0;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        overflow: hidden;
-      }
-    
-      .client-card-header {
-        background: #002f6c;
-        color: white;
-        padding: 15px;
-        display: flex;
-        align-items: center;
-      }
-    
-      .client-card-header img {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        margin-right: 15px;
-      }
-    
-      .client-card-header h3 {
-        margin: 0;
-        font-size: 20px;
-        font-weight: bold;
-      }
-    
-      .client-card-content {
-        padding: 20px;
-        background-color: #e0e0e0;
-        text-align: center;
-      }
-    
-      .client-card-content p {
-        margin: 8px 0;
-        font-size: 14px;
-        line-height: 1.5;
-        font-weight: bold;
-      }
-    
-      .client-card-content span {
-        font-weight: normal;
-      }
-    
-      .client-card-actions {
-        display: flex;
-        justify-content: space-around;
-        padding: 15px;
-        background-color: #b08c56;
-      }
-    
-      .client-card-actions button {
-        background-color: #d4af7a;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        transition: background-color 0.3s ease;
-        font-size: 14px;
-        width: 130px;
-      }
-    
-      .client-card-actions button:hover {
-        background-color: #a07a44;
-      }  
+      display: flex;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      color: #333;
+      align-items: center;
+      justify-content: center;
+    }
+  
+    .client-card {
+      background: #0077b6;
+      border-radius: 8px;
+      max-width: 420px;
+      margin: 20px auto;
+      padding: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+    }
+  
+    .client-card-header {
+      background: #005f8a;
+      color: white;
+      padding: 15px;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  
+    .client-card-header img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      margin-right: 15px;
+    }
+  
+    .client-card-content {
+      padding: 15px;
+      background-color: white;
+      border-radius: 0 0 8px 8px;
+      color: black;
+    }
+  
+    .client-card-content p {
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  
+    .client-card-actions {
+      display: flex;
+      justify-content: space-around;
+      padding: 15px;
+      background-color: #0077b6;
+      border-radius: 0 0 8px 8px;
+    }
+  
+    .client-card-actions button {
+      background-color: #005f8a;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+      height: 50px;
+      font-size: 13px;
+      width: 120px;
+    }
+  
+    .client-card-actions button:hover {
+      background-color: #004b70;
+    }
+  
     /* Popup Styles */
     .popup-overlay {
       position: fixed;
@@ -113,7 +108,7 @@ export class FillDocument extends ViewBase {
     }
 
     .show { 
-        display: flex;
+        display: flex
     }
   
     .popup-content {
@@ -409,29 +404,51 @@ export class FillDocument extends ViewBase {
 
     render() {
         return html`
-      <div class="client-card">
-        <div class="client-card-header">
-          <img src="${user}" alt="User Icon" />
-          <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+      <div class="client-profile-container">
+        <!-- Header and Back Button -->
+        <div class="header">
+          <button class="back-button" @click="${(e) => this.navigateHome()}">←</button>
+          <h2>Client Profile</h2>
         </div>
-        <div class="client-card-content">
-          <p><strong>Title:</strong> <span>${this.clientInfo.title}</span></p>
-          <p><strong>Registered Name:</strong> <span>${this.clientInfo.registeredName}</span></p>
-          <p><strong>Nickname:</strong> <span>${this.clientInfo.nickname}</span></p>
-          <p><strong>Advisor Name:</strong> <span>${this.clientInfo.advisorName}</span></p>
-          <p><strong>Email:</strong> <span>${this.clientInfo.email}</span></p>
-          <p><strong>Cell Phone Number:</strong> <span>${this.clientInfo.cellPhoneNumber}</span></p>
-          <p><strong>Upcoming Appointments:</strong></p>
-          <p><span>12 September 2025</span></p>
-          <p><span>12 March 2026</span></p>
-          <p><span>12 September 2026</span></p>
-          <p><span>12 March 2027</span></p>
+
+        <!-- Profile Section -->
+        <div class="profile-section">
+          <div class="profile-picture">
+            <div class="placeholder"></div>
+          </div>
+          <div class="profile-details">
+            <h3>${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
+            <div class="detail-item">
+              <strong>ID Number:</strong>
+              <span>${this.clientInfo.passportOrId}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Entity ID:</strong>
+              <span>${this.clientInfo.entityId}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Client Code:</strong>
+              <span>${this.clientInfo.clientCode}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Company:</strong>
+              <span>${this.clientInfo.company}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Date of Birth:</strong>
+              <span>${this.clientInfo.dateOfBirth}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Language:</strong>
+              <span>${this.clientInfo.homeLanguage}</span>
+            </div>
+            <div class="detail-item">
+              <strong>Last interaction date:</strong>
+              <span>${this.clientInfo.lastInteractionDate}</span>
+            </div>
+            </div>
+            <button class="my-button" @click="${(e) => this.goToMore(e)}">View More</button>
         </div>
-        <div class="client-card-actions">
-          <button @click="${() => console.log('View Portfolios')}">View Portfolios</button>
-          <button @click="${() => console.log('Fill PDF')}">Fill PDF</button>
-        </div>
-      </div>
 
         <!-- Documents Section -->
         <div class="documents-section">
