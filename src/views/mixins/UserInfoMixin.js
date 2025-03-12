@@ -127,14 +127,14 @@ export const userInfoMixin = {
                 return clientInfo;
             } else {
                 const clientInfo = await this.getClientInfo(idNumber);
-                this.storeToDB(clientInfo);
+                // this.storeToDB(clientInfo);
                 return clientInfo;    
             }
         } catch (error) {
             // TODO
             // Add service call to add info to DB
             const clientInfo = await this.getClientInfo(idNumber);
-            this.storeToDB(clientInfo);
+            // this.storeToDB(clientInfo);
             return clientInfo;
         }
     },

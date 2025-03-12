@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
 export const PdfMixin = {
-  async generatePDF(selectedDetails, clientInfo) {
+  async generatePDF(selectedDetails, clientInfo, portfolioRatings) {
     const doc = new jsPDF({ orientation: "landscape" }); // Landscape format
 
     const formatAmount = (amount) => `R ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
@@ -86,7 +86,7 @@ export const PdfMixin = {
           }
           withdrawalsMap[date].total += t.convertedAmount;
         });
-      
+
       const withdrawals = Object.entries(withdrawalsMap).map(([date, data]) => [
         date,
         data.transactionType,
@@ -145,6 +145,18 @@ export const PdfMixin = {
             });
             startY = doc.lastAutoTable.finalY;
           }
+        });
+        doc.autoTable({
+          head: [["Instrument Name", "ISIN Number", "MorningStar ID", "One Year", "Three Years"]],
+          body: selectedDetails.detailModels.map(portfolio => [
+            portfolio.instrumentName,
+            portfolio.isinNumber || "N/A",
+            portfolio.morningStarID || "N/A",
+            portfolioRatings[portfolio.instrumentName]?.oneYear || "N/A",  // Retrieve stored value
+            portfolioRatings[portfolio.instrumentName]?.threeYears || "N/A"
+          ]),
+          startY: startY + 10,
+          ...tableOptions
         });
       }
     });

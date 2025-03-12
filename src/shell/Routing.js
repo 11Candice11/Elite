@@ -3,6 +3,7 @@ import { store } from '/src/store/EliteStore.js';
 import '/src/views/LoginView.js';  
 import '/src/views/HomeView.js';   
 import '/src/views/Dashboard.js';   
+import '/src/views/FillDocument.js';   
 import '/src/views/common/Products.js';  
 import '/src/views/common/Portfolio.js';  
 import '/src/views/common/Transactions.js';  
@@ -23,6 +24,7 @@ export class Routing {
       '/portfolio-details': () => html`<portfolio-details></portfolio-details>`,
       '/dashboard': () => html`<dashboard-view></dashboard-view>`,
       '/pdf': () => html`<pdf-viewer></pdf-viewer>`,
+      '/documents': () => html`<documents-view></documents-view>`,
       '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`
     };
 
@@ -55,7 +57,7 @@ export class Routing {
         store.set('searchID', '');
         store.set('username', '');
         store.set('selectedDates', []);
-        router.navigate('/login');    
+        // router.navigate('/login');    
         this.navigate('/login');  // Handle unknown routes
       }
   }
