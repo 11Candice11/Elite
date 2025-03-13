@@ -58,7 +58,12 @@ export class Routing {
         store.set('username', '');
         store.set('selectedDates', []);
         // router.navigate('/login');    
-        this.navigate('/login');  // Handle unknown routes
+        const currRoute = store.get('currentRoute');
+        if(currRoute) {
+          this.navigate(`/${currRoute}`);
+        } else {
+          this.navigate('/login');
+        }
       }
   }
 

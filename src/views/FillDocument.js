@@ -205,6 +205,20 @@ export class FillDocument extends ViewBase {
     .pdfCanvas {
         height: 720px;
     }
+    button {
+        background: #0077b6;
+        color: white;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px 0;
+      }
+    
+      button:hover {
+        background: #005f8a;
+      }
+    
     `;
 
     static properties = {
@@ -316,7 +330,7 @@ export class FillDocument extends ViewBase {
             const currentPage = pages[i];
 
             // await this.addText(currentPage, pdfData, pdfDoc, 'title', this.clientInfo.title, 5, 3, i + 1);
-            await this.addText(currentPage, pdfData, pdfDoc, 'title', 'Mr', 5, 3, i + 1);
+            await this.addText(currentPage, pdfData, pdfDoc, 'title', this.clientInfo.title, 5, 3, i + 1);
             await this.addText(currentPage, pdfData, pdfDoc, 'surname', this.clientInfo.surname, 5, 3, i + 1);
             await this.addText(currentPage, pdfData, pdfDoc, 'first name', this.clientInfo.firstNames, 5, 3, i + 1);
             await this.addText(currentPage, pdfData, pdfDoc, 'id or passport number', idNumber, 5, 3, i + 1);
@@ -356,7 +370,7 @@ export class FillDocument extends ViewBase {
 
     async handleSelectTemplate() {
         this.isLoading = true;
-        const currentPDF = this.pdfs[this.pdfIndex].slice(0); // Clone to avoid detaching the buffer
+        const currentPDF = this.pdfs[this.pdfIndex].slice(0); // Clone to avoid detaching the buffer this.currentPDF; 
         await this.modifyAndRenderPDF(currentPDF);
         this.isLoading = false;
     }
@@ -398,6 +412,23 @@ export class FillDocument extends ViewBase {
         link.click();
         URL.revokeObjectURL(link.href); // Clean up the URL
     }
+
+    // async handlePDFUpload(event) {
+    //     const file = event.target.files[0];
+    //     if (!file) return;
+    
+    //     this.showPopup = true;
+
+    //     const reader = new FileReader();
+    //     reader.onload = async (e) => {
+    //         const arrayBuffer = e.target.result;
+    //         this.currentPDF = arrayBuffer;
+    //         this.originalPDF = arrayBuffer;
+    //         this.renderPDF(this.currentPDF, 1); // Render first page
+    //     };
+    //     reader.readAsArrayBuffer(file);
+    //     // await this.modifyAndRenderPDF(currentPDF);
+    // }
 
     renderPDF(pdfData, pageIndex) {
         const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(0) }); // Clone to avoid issues
@@ -448,49 +479,13 @@ export class FillDocument extends ViewBase {
     <div class="client-profile-container">
         <!-- Header and Back Button -->
         <div class="header">
-          <button class="back-button" @click="${(e) => this.navigateHome()}">←</button>
+          <button class="" @click="${(e) => this.navigateHome()}">← Back</button>
           <h2>Client Profile</h2>
         </div>
 
         <!-- Profile Section -->
          ${this.renderClientCard()}
-        <!-- <div class="profile-section">
-          <div class="profile-picture">
-            <div class="placeholder"></div>
-          </div>
-          <div class="profile-details">
-            <h3>${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
-            <div class="detail-item">
-              <strong>ID Number:</strong>
-              <span>${this.clientInfo.passportOrId}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Entity ID:</strong>
-              <span>${this.clientInfo.entityId}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Client Code:</strong>
-              <span>${this.clientInfo.clientCode}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Company:</strong>
-              <span>${this.clientInfo.company}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Date of Birth:</strong>
-              <span>${this.clientInfo.dateOfBirth}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Language:</strong>
-              <span>${this.clientInfo.homeLanguage}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Last interaction date:</strong>
-              <span>${this.clientInfo.lastInteractionDate}</span>
-            </div>
-            </div>
-            <button class="my-button" @click="${(e) => this.goToMore(e)}">View More</button>
-        </div> -->
+
 
         <!-- Documents Section -->
         <div class="documents-section">
@@ -511,11 +506,18 @@ export class FillDocument extends ViewBase {
           </div>
         </div>
 
+        <div class="upload-section">
+    <input type="file" id="pdfUpload" accept="application/pdf" @change="${this.handlePDFUpload}" hidden />
+    <button class="upload-button" @click="${() => this.shadowRoot.getElementById('pdfUpload').click()}">
+        Upload PDF
+    </button>
+</div>
+
         <!-- Popup Overlay -->
         <div class="popup-overlay ${this.showPopup ? 'show' : ''}">
             <button class="arrow-left" @click="${() => this.changePage(-1)}">←</button>
             <div class="popup-content">
-                <button class="close-button" @click="${this.togglePopup}">✖</button>
+                <button class="" @click="${this.togglePopup}">✖</button>
                 <h3>Select template PDF for ${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
                 <canvas id="pdfCanvasId" class="pdfCanvas"></canvas>
                 <div class="footer">
