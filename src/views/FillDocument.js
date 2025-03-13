@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
+import user from '/src/images/user.png';
 // import { sharedStyles } from '../../styles/shared-styles.js';
 import * as pdfjsLib from 'pdfjs-dist';
 // import 'pdfjs-dist/build/pdf.worker.entry';
@@ -14,6 +15,12 @@ import { TAX_FREE } from '/src/constants/TaxFree.js';
 import { INVESTMENT_POLICY } from '/src/constants/InvestmentPolicy.js';
 import { LIVING_ANNUITY } from '/src/constants/LivingAnnuity.js';
 import { RETIREMENT_ANNUITY } from '/src/constants/RetirementAnnuity.js';
+import { DIRECT_INVESTMENT } from '/src/constants/DirectInvestment.js';
+import { INVESTO } from '/src/constants/Investo.js';
+import { LIFESTYLE_PROTECTOR } from '/src/constants/LifestyleProtector.js';
+import { CLASSIC_INVESTMENT } from '/src/constants/ClassicInvestment.js';
+import { LINKED_LIFE_ANNUITY } from '/src/constants/LinkedLifeAnnuity.js';
+import { STANLIB } from '/src/constants/Stanlib.js';
 
 export class FillDocument extends ViewBase {
     static styles = css`
@@ -28,56 +35,69 @@ export class FillDocument extends ViewBase {
       justify-content: center;
     }
   
+    /* Client Card Animation */
     .client-card {
-      background: #0077b6;
-      border-radius: 8px;
-      max-width: 420px;
-      margin: 20px auto;
-      padding: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      text-align: center;
-    }
-  
+        background: rgb(215, 180, 120);
+        border-radius: 8px;
+        max-width: 420px;
+        margin: 20px auto;
+        padding: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-50px);
+        opacity: 0;
+        transition: all 0.6s ease;
+      }
+    
+      .client-card.visible {
+        transform: translateY(0);
+        opacity: 1;
+        height: 400px;
+        text-align: center;
+      }
+    
+    /* Client Card Header */
     .client-card-header {
-      background: #005f8a;
+      background: rgb(0, 50, 100);
       color: white;
       padding: 15px;
       border-radius: 8px 8px 0 0;
       display: flex;
       align-items: center;
-      justify-content: center;
     }
-  
+    
     .client-card-header img {
       width: 50px;
       height: 50px;
       border-radius: 50%;
       margin-right: 15px;
     }
-  
+    
+    /* Client Card Content */
     .client-card-content {
       padding: 15px;
-      background-color: white;
-      border-radius: 0 0 8px 8px;
       color: black;
+      background-color: rgb(200, 200, 200);
+      border-radius: 0 0 8px 8px;
     }
-  
+    
     .client-card-content p {
       margin: 8px 0;
       font-size: 14px;
+      color: black;
       line-height: 1.5;
     }
-  
+    
+    /* Client Card Buttons */
     .client-card-actions {
       display: flex;
       justify-content: space-around;
       padding: 15px;
-      background-color: #0077b6;
+      background-color: rgb(140, 120, 80);
       border-radius: 0 0 8px 8px;
     }
-  
+    
     .client-card-actions button {
-      background-color: #005f8a;
+      background-color: rgb(215, 180, 120);
       color: white;
       padding: 10px 15px;
       border: none;
@@ -89,11 +109,11 @@ export class FillDocument extends ViewBase {
       font-size: 13px;
       width: 120px;
     }
-  
+    
     .client-card-actions button:hover {
-      background-color: #004b70;
+      background-color: rgb(140, 120, 80);
     }
-  
+      
     /* Popup Styles */
     .popup-overlay {
       position: fixed;
@@ -186,7 +206,7 @@ export class FillDocument extends ViewBase {
         height: 720px;
     }
     `;
-  
+
     static properties = {
         isLoading: { type: Boolean },
         dob: { type: String },
@@ -222,12 +242,12 @@ export class FillDocument extends ViewBase {
             this.base64ToArrayBuffer(INVESTMENT_POLICY),
             this.base64ToArrayBuffer(LIVING_ANNUITY),
             this.base64ToArrayBuffer(RETIREMENT_ANNUITY),
-            //   this.base64ToArrayBuffer(DIRECT_INVESTMENT),
-            //   this.base64ToArrayBuffer(INVESTO),
-            //   this.base64ToArrayBuffer(LIFESTYLE_PROTECTOR),
-            //   this.base64ToArrayBuffer(CLASSIC_INVESTMENT),
-            //   this.base64ToArrayBuffer(LINKED_LIFE_ANNUITY),
-            //   this.base64ToArrayBuffer(STANLIB)
+            this.base64ToArrayBuffer(DIRECT_INVESTMENT),
+            this.base64ToArrayBuffer(INVESTO),
+            this.base64ToArrayBuffer(LIFESTYLE_PROTECTOR),
+            this.base64ToArrayBuffer(CLASSIC_INVESTMENT),
+            this.base64ToArrayBuffer(LINKED_LIFE_ANNUITY),
+            this.base64ToArrayBuffer(STANLIB)
         ];
 
         // Render the default PDF on load
@@ -348,6 +368,7 @@ export class FillDocument extends ViewBase {
     }
 
     switchPDF(direction) {
+        this.isLoading = false;
         this.pdfIndex = (this.pdfIndex + direction + this.pdfs.length) % this.pdfs.length;
         this.currentPageIndex = 1; // Reset to the first page of the new PDF
         this.currentPDF = this.pdfs[this.pdfIndex].slice(0); // Load a fresh copy of the selected PDF
@@ -365,9 +386,9 @@ export class FillDocument extends ViewBase {
         const clientName = store.get('clientInfo')?.firstNames || 'Unknown';
         const clientSurname = store.get('clientInfo')?.surname || 'Unknown';
         const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-'); // Format as DD-MM-YYYY
-    
+
         const fileName = `${clientName}_${clientSurname}_${currentDate}_Report.pdf`;
-    
+
         // Create a Blob from the Base64-encoded PDF and trigger the download
         const pdfBlob = new Blob([this.currentPDF], { type: "application/pdf" });
 
@@ -376,7 +397,7 @@ export class FillDocument extends ViewBase {
         link.download = fileName;
         link.click();
         URL.revokeObjectURL(link.href); // Clean up the URL
-      }    
+    }
 
     renderPDF(pdfData, pageIndex) {
         const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(0) }); // Clone to avoid issues
@@ -384,7 +405,8 @@ export class FillDocument extends ViewBase {
             this.totalPages = pdf.numPages;
             pdf.getPage(pageIndex).then(page => {
                 const viewport = page.getViewport({ scale: 1.0 });
-                const canvas = this.shadowRoot.getElementById('pdfCanvas');
+                const canvas = this.shadowRoot.getElementById('pdfCanvasId');
+                if (!canvas) return;
                 const ctx = canvas.getContext('2d');
 
                 // Clear the canvas before rendering
@@ -402,9 +424,28 @@ export class FillDocument extends ViewBase {
         });
     }
 
+    renderClientCard() {
+        return html`
+        <div class="client-card visible">
+          <div class="client-card-header">
+            <img src="${user}" alt="User Icon" class="client-card-icon" />
+            <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+          </div>
+          <div class="client-card-content">
+            <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+            <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+            <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+            <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+            <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+            <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+          </div>
+        </div>
+        `;
+    }
+
     render() {
         return html`
-      <div class="client-profile-container">
+    <div class="client-profile-container">
         <!-- Header and Back Button -->
         <div class="header">
           <button class="back-button" @click="${(e) => this.navigateHome()}">←</button>
@@ -412,7 +453,8 @@ export class FillDocument extends ViewBase {
         </div>
 
         <!-- Profile Section -->
-        <div class="profile-section">
+         ${this.renderClientCard()}
+        <!-- <div class="profile-section">
           <div class="profile-picture">
             <div class="placeholder"></div>
           </div>
@@ -448,7 +490,7 @@ export class FillDocument extends ViewBase {
             </div>
             </div>
             <button class="my-button" @click="${(e) => this.goToMore(e)}">View More</button>
-        </div>
+        </div> -->
 
         <!-- Documents Section -->
         <div class="documents-section">
@@ -471,22 +513,22 @@ export class FillDocument extends ViewBase {
 
         <!-- Popup Overlay -->
         <div class="popup-overlay ${this.showPopup ? 'show' : ''}">
-            <button class="arrow-left" @click="${() => this.switchPDF(-1)}">←</button>
+            <button class="arrow-left" @click="${() => this.changePage(-1)}">←</button>
             <div class="popup-content">
                 <button class="close-button" @click="${this.togglePopup}">✖</button>
                 <h3>Select template PDF for ${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
-                <canvas id="pdfCanvas" class="pdfCanvas"></canvas>
+                <canvas id="pdfCanvasId" class="pdfCanvas"></canvas>
                 <div class="footer">
-                    <button class="my-button" @click="${() => this.changePage(-1)}">Previous Page</button>
-                    <button class="my-button" @click="${() => this.changePage(1)}">Next Page</button>
+                    <button class="my-button" @click="${() => this.switchPDF(-1)}">Previous PDF</button>
+                    <button class="my-button" @click="${() => this.switchPDF(1)}">Next PDF</button>
                     <button class="my-button" @click="${() => this.downloadPDF()}">Download</button>
                     <button class="my-button" ?disabled="${this.isLoading}" @click="${this.handleSelectTemplate}">${this.isLoading ? `Loading...` : `Select template`}</button>
                     <button class="my-button cancel" @click="${this.clearTemplate}">Clear Template</button>
                 </div>
             </div>
-            <button class="arrow-right" @click="${() => this.switchPDF(1)}">→</button>
+            <button class="arrow-right" @click="${() => this.changePage(1)}">→</button>
         </div>
-      </div>
+    </div>
     `;
     }
 }

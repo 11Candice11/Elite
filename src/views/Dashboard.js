@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import user from '/src/images/user.png';
+import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is correct
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
@@ -62,7 +63,7 @@ class Dashboard extends ViewBase {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background 0.3s ease;
+    transition: logo 0.3s ease;
   }
 
   .popup button:hover {
@@ -213,7 +214,7 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 350px;
+    height: 400px;
     text-align: center;
   }
 
@@ -274,6 +275,25 @@ class Dashboard extends ViewBase {
 
 .client-card-actions button:hover {
   background-color: rgb(140, 120, 80);
+}
+
+/* Watermark Styling */
+.watermark {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center the watermark */
+  opacity: 0.05; /* Faded effect */
+  z-index: 1; /* Behind the content */
+  pointer-events: none; /* Ensure it's non-interactive */
+}
+
+.watermark img {
+  max-width: 80%; /* Responsive size */
+  height: auto;
+}
+.report-btn {
+  margin-top: 25px;
 }
 `;
 
@@ -516,6 +536,9 @@ class Dashboard extends ViewBase {
   _renderPortfolios() {
     return html`
       <div class="portfolio-container">
+        <div class="watermark">
+            <img src="${logo}" alt="Morebo Watermark" />
+        </div>
         ${this.clientInfo.detailModels?.length
           ? this.clientInfo.detailModels.map((portfolio, index) => html`
             <div class="portfolio-card">
@@ -579,7 +602,7 @@ class Dashboard extends ViewBase {
         <p><strong>Email:</strong> ${this.clientInfo.email}</p>
         <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
       </div>
-      <button @click="${() => this.generateReport()}">Generate Report</button>
+      <button class="report-btn" @click="${() => this.generateReport()}">Generate Report</button>
     </div>
     `;
   }
