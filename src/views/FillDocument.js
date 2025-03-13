@@ -14,6 +14,12 @@ import { TAX_FREE } from '/src/constants/TaxFree.js';
 import { INVESTMENT_POLICY } from '/src/constants/InvestmentPolicy.js';
 import { LIVING_ANNUITY } from '/src/constants/LivingAnnuity.js';
 import { RETIREMENT_ANNUITY } from '/src/constants/RetirementAnnuity.js';
+import { DIRECT_INVESTMENT } from '/src/constants/DirectInvestment.js';
+import { INVESTO } from '/src/constants/Investo.js';
+import { LIFESTYLE_PROTECTOR } from '/src/constants/LifestyleProtector.js';
+import { CLASSIC_INVESTMENT } from '/src/constants/ClassicInvestment.js';
+import { LINKED_LIFE_ANNUITY } from '/src/constants/LinkedLifeAnnuity.js';
+import { STANLIB } from '/src/constants/Stanlib.js';
 
 export class FillDocument extends ViewBase {
     static styles = css`
@@ -186,7 +192,7 @@ export class FillDocument extends ViewBase {
         height: 720px;
     }
     `;
-  
+
     static properties = {
         isLoading: { type: Boolean },
         dob: { type: String },
@@ -222,12 +228,12 @@ export class FillDocument extends ViewBase {
             this.base64ToArrayBuffer(INVESTMENT_POLICY),
             this.base64ToArrayBuffer(LIVING_ANNUITY),
             this.base64ToArrayBuffer(RETIREMENT_ANNUITY),
-            //   this.base64ToArrayBuffer(DIRECT_INVESTMENT),
-            //   this.base64ToArrayBuffer(INVESTO),
-            //   this.base64ToArrayBuffer(LIFESTYLE_PROTECTOR),
-            //   this.base64ToArrayBuffer(CLASSIC_INVESTMENT),
-            //   this.base64ToArrayBuffer(LINKED_LIFE_ANNUITY),
-            //   this.base64ToArrayBuffer(STANLIB)
+            this.base64ToArrayBuffer(DIRECT_INVESTMENT),
+            this.base64ToArrayBuffer(INVESTO),
+            this.base64ToArrayBuffer(LIFESTYLE_PROTECTOR),
+            this.base64ToArrayBuffer(CLASSIC_INVESTMENT),
+            this.base64ToArrayBuffer(LINKED_LIFE_ANNUITY),
+            this.base64ToArrayBuffer(STANLIB)
         ];
 
         // Render the default PDF on load
@@ -348,6 +354,7 @@ export class FillDocument extends ViewBase {
     }
 
     switchPDF(direction) {
+        this.isLoading = false;
         this.pdfIndex = (this.pdfIndex + direction + this.pdfs.length) % this.pdfs.length;
         this.currentPageIndex = 1; // Reset to the first page of the new PDF
         this.currentPDF = this.pdfs[this.pdfIndex].slice(0); // Load a fresh copy of the selected PDF
@@ -365,9 +372,9 @@ export class FillDocument extends ViewBase {
         const clientName = store.get('clientInfo')?.firstNames || 'Unknown';
         const clientSurname = store.get('clientInfo')?.surname || 'Unknown';
         const currentDate = new Date().toLocaleDateString('en-GB').replace(/\//g, '-'); // Format as DD-MM-YYYY
-    
+
         const fileName = `${clientName}_${clientSurname}_${currentDate}_Report.pdf`;
-    
+
         // Create a Blob from the Base64-encoded PDF and trigger the download
         const pdfBlob = new Blob([this.currentPDF], { type: "application/pdf" });
 
@@ -376,7 +383,7 @@ export class FillDocument extends ViewBase {
         link.download = fileName;
         link.click();
         URL.revokeObjectURL(link.href); // Clean up the URL
-      }    
+    }
 
     renderPDF(pdfData, pageIndex) {
         const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(0) }); // Clone to avoid issues
@@ -384,7 +391,8 @@ export class FillDocument extends ViewBase {
             this.totalPages = pdf.numPages;
             pdf.getPage(pageIndex).then(page => {
                 const viewport = page.getViewport({ scale: 1.0 });
-                const canvas = this.shadowRoot.getElementById('pdfCanvas');
+                const canvas = this.shadowRoot.getElementById('pdfCanvasId');
+                if (!canvas) return;
                 const ctx = canvas.getContext('2d');
 
                 // Clear the canvas before rendering
@@ -475,7 +483,7 @@ export class FillDocument extends ViewBase {
             <div class="popup-content">
                 <button class="close-button" @click="${this.togglePopup}">✖</button>
                 <h3>Select template PDF for ${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
-                <canvas id="pdfCanvas" class="pdfCanvas"></canvas>
+                <canvas id="pdfCanvasId" class="pdfCanvas"></canvas>
                 <div class="footer">
                     <button class="my-button" @click="${() => this.changePage(-1)}">Previous Page</button>
                     <button class="my-button" @click="${() => this.changePage(1)}">Next Page</button>
