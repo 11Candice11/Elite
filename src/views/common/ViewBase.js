@@ -1,4 +1,5 @@
 import { router } from '/src/shell/Routing.js'
+import { store } from '/src/store/EliteStore.js';
 import { LitElement, html, css } from 'lit';
 
 export class ViewBase extends LitElement {
@@ -11,27 +12,48 @@ export class ViewBase extends LitElement {
     }
 
   navigateBack() {
+    store.set('currentRoute', 'dashboard');
     router.navigate('/dashboard');
   }
 
   navigateHome() {
+    store.set('currentRoute', 'home');
     router.navigate('/home');
   }
 
   navigateToTransactions() {
+    store.set('currentRoute', 'transactions');
     router.navigate('/transactions');
   }
 
   navigateToRootTransactions() {
+    store.set('currentRoute', 'transaction-history');
     router.navigate('/transaction-history');
   }
 
   navigateToPortfolio() {
+    store.set('currentRoute', 'portfolio');
     router.navigate('/portfolio');
   }
 
   navigateToProducts() {
+    store.set('currentRoute', 'products');
     router.navigate('/products');
+  }
+
+  navigateToPDFViewer() {
+    store.set('currentRoute', 'pdf');
+    router.navigate('/documents');
+  }
+
+  navigateToDocuments() {
+    store.set('currentRoute', 'documents');
+    router.navigate('/documents');
+  }
+
+  navigateToLogin() {
+    store.set('currentRoute', 'login');
+    router.navigate('/login');
   }
 
   formatDateToISO(date) {

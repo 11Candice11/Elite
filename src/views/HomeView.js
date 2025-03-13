@@ -492,11 +492,13 @@ li {
     this.isVisible = false;
     this.isLoading = true;
 
-    // const searched = store.get('searchID') === this.searchID;
-    // if (searched) {
-    //   this.isLoading = false;
-    //   return;
-
+    const searched = store.get('searchID') === this.searchID;
+    if (searched) {
+      this.isLoading = false;
+      return;
+    } else {
+      store.set('searchID', this.searchID);
+    }
 
     const existingClient = await this._checkExistingClient(this.searchID);
 
@@ -511,10 +513,6 @@ li {
     this.isLoading = false;
   }
 
-  handleTabNavigation(tabName) {
-    router.navigate(`/${tabName}`);
-  }
-
   updateOption(e, option) {
     const { type, checked, value } = e.target;
     this.reportOptions = {
@@ -523,15 +521,11 @@ li {
     };
   }
 
-  navigateToPDFViewer() {
-    // navigate to the PDF viewer related to the selected portfolio
-    router.navigate('/documents');
-  }
-
   async generateReport() {
     var base64 = await this.generatePDF(this.clientInfo, this.clientID);
     store.set('base64', base64);
-    router.navigate('/pdf');
+    super.navigateToDocuments();
+    // router.navigate('/pdf');
   }
 
   moveProfileCard() {
@@ -582,7 +576,7 @@ li {
               .value="${this.searchID}"
               @input="${(e) => (this.searchID = e.target.value)}"
             />
-            <button class="button" @click="${this.fetchData}">${this.isLoading ? 'Processing...' : 'Search'}
+            <button class="button" @click="${() => this.fetchData()}">${this.isLoading ? 'Processing...' : 'Search'}
             </button>
           </div>
           <div class="filter-buttons">
@@ -661,8 +655,8 @@ li {
           </div>
         </div>
         <div class="client-card-actions">
-          <button @click="${() => this.handleTabNavigation('dashboard')}">View Portfolios</button>
-          <button @click="${() => this.navigateToPDFViewer()}">Fill PDF</button>
+          <button @click="${() => this.navigateBack()}">View Portfolios</button>
+          <button @click="${() => super.navigateToPDFViewer()}">Fill PDF</button>
           <!-- <button @click="${() => (this.showDialog = true)}">Generate Report</button> -->
           <!-- <button @click="${() => this.handleTabNavigation('products')}">View Portfolios</button> -->
         </div>

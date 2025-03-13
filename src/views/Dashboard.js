@@ -342,10 +342,12 @@ class Dashboard extends ViewBase {
     super.connectedCallback();
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
+      this.isLoading = true;
       this.clientID = store.get('searchID') ?? this.clientID;
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
+      this.requestUpdate();
     }
   }
 
@@ -356,14 +358,15 @@ class Dashboard extends ViewBase {
     );
     store.set('rootValueDateModels', detail?.rootValueDateModels || []);
     store.set('selectedInstrumentName', this.selectedPortfolio);
-    // super.navigateToProducts();
-    router.navigate('/transaction-history');
+    super.navigateToRootTransactions();
+    // router.navigate('/transaction-history');
   }
 
   navigateToTransactions(portfolio) {
     this.selectedPortfolio = portfolio;
     store.set('selectedInstrumentName', portfolio);
-    router.navigate('/transactions');
+    super.navigateToTransactions()
+    // router.navigate('/transactions');
   }
 
   async searchClient() {
@@ -410,11 +413,12 @@ class Dashboard extends ViewBase {
 
   togglePopup() {
     this.showPopup = !this.showPopup;
+    this.isLoading = false;
   }
 
   async _getDates() {
     const storeDates = store.get('selectedDates');
-    if (storeDates?.length > 0) return storeDates;
+    if (storeDates !== undefined && storeDates.length > 0) return storeDates;
     this.showPopup = true;
     const dates = [
       "2022-05-14",
@@ -422,11 +426,20 @@ class Dashboard extends ViewBase {
       "2024-01-08"
     ];
 
-    const returnValue = await this.clientProfileService.getClientData(this.clientID);
-    if (returnValue[0]?.listDates) {
-      return returnValue[0].listDates;
+    try {
+
+      const returnValue = await this.clientProfileService.getClientData(this.clientID);
+      if (returnValue[0]?.listDates) {
+        this.isLoading = false;
+        return returnValue[0].listDates;
+      }
+      this.isLoading = false;
+      return dates;
+    } catch (error) {
+      console.error("Error fetching client:", error);
+      this.isLoading = false;
+      return dates;
     }
-    return dates;
   }
 
   handleDateSelection(option) {
@@ -454,6 +467,7 @@ class Dashboard extends ViewBase {
     }
 
     this.selectedDates = [...new Set([...this.selectedDates, ...dates])];
+    this.requestUpdate();
   }
 
   addCustomDate() {
@@ -478,7 +492,12 @@ class Dashboard extends ViewBase {
     if (dates === undefined || JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
       store.set('selectedDates', this.selectedDates);
       const consultant = store.get('username');
-      await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
+      try {
+        await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
+      } catch (error) {
+        this.isLoading = false;
+        console.error("Error updating client data:", error);
+      }
     }
 
     this.showPopup = false;
@@ -490,6 +509,7 @@ class Dashboard extends ViewBase {
       this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
     }
     this.portfolioRatings[portfolioId][period] = value;
+    store.set('portfolioRatings', this.portfolioRatings);
   }
 
   logout() {
@@ -500,19 +520,22 @@ class Dashboard extends ViewBase {
     this.clientID = '';
     this.clientInfo = null;
     this.searchCompleted = false;
-    router.navigate('/login');
+    this.isLoading = false;
+    super.navigateToLogin();
+    // router.navigate('/login');
   }
 
   async generateReport() {
     var base64 = await this.generatePDF(this.clientInfo, this.clientID, this.portfolioRatings); // Generate the PDF
     store.set('base64', base64);
-    router.navigate('/pdf'); // Navigate to the PDF viewer
+    router.navigate(`/pdf`); // Navigate to the PDF viewer
   }
 
   renderPopup() {
     return html`
       <div class="overlay" @click="${this.togglePopup}"></div>
       <div class="popup" @click="${(e) => e.stopPropagation()}">
+        <button @click="${() => this._getDates()}">Refresh</button>
         <h3>Select Dates</h3>
         <input type="date" .value="${this.customDate}" @input="${(e) => this.customDate = e.target.value}" />
         <button @click="${this.addCustomDate}">Add Date</button>
@@ -540,7 +563,7 @@ class Dashboard extends ViewBase {
             <img src="${logo}" alt="Morebo Watermark" />
         </div>
         ${this.clientInfo.detailModels?.length
-          ? this.clientInfo.detailModels.map((portfolio, index) => html`
+        ? this.clientInfo.detailModels.map((portfolio, index) => html`
             <div class="portfolio-card">
               <h3>${portfolio.instrumentName}</h3>
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
@@ -573,8 +596,8 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
-                          <td>${this._renderInput("oneYear")}</td>
-                          <td>${this._renderInput("threeYears")}</td>
+                          <td>${this._renderInput("oneYear", 1)}</td>
+                          <td>${this._renderInput("threeYears", 3)}</td>
                         </tr>
                       `)}
                   </table>
@@ -582,7 +605,7 @@ class Dashboard extends ViewBase {
               ` : ''}
             </div>
           `)
-    : html`<p>No Portfolios Found</p>`}
+        : html`<p>No Portfolios Found</p>`}
       </div>
     `;
   }

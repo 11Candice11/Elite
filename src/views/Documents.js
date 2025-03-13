@@ -368,7 +368,8 @@ export class Documents extends ViewBase {
   }
   goToMore(event) {
     event.preventDefault();
-    router.navigate('/dashboard');
+    super.navigateBack();
+    // router.navigate('/dashboard');
   }
 
   togglePopup() {

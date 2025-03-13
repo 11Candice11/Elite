@@ -1,4 +1,6 @@
 import { jsPDF } from "jspdf";
+import { store } from '/src/store/EliteStore.js';
+
 import "jspdf-autotable";
 
 export const PdfMixin = {
@@ -146,19 +148,24 @@ export const PdfMixin = {
             startY = doc.lastAutoTable.finalY;
           }
         });
-        doc.autoTable({
-          head: [["Instrument Name", "ISIN Number", "MorningStar ID", "One Year", "Three Years"]],
-          body: selectedDetails.detailModels.map(portfolio => [
-            portfolio.instrumentName,
-            portfolio.isinNumber || "N/A",
-            portfolio.morningStarID || "N/A",
-            portfolioRatings[portfolio.instrumentName]?.oneYear || "N/A",  // Retrieve stored value
-            portfolioRatings[portfolio.instrumentName]?.threeYears || "N/A"
-          ]),
-          startY: startY + 10,
-          ...tableOptions
-        });
       }
+      doc.text("Performances", 10, startY + 20);
+
+      const portfolioRatings = store.get("portfolioRatings");
+
+
+      doc.autoTable({
+        head: [["Instrument Name", "ISIN Number", "MorningStar ID", "One Year", "Three Years"]],
+        body: [
+          [portfolio.instrumentName, portfolio.isinNumber || "N/A", 
+          portfolio.morningStarID || "N/A",
+          portfolioRatings?.oneYear || " ",  // Retrieve stored value
+          portfolioRatings?.threeYears || " "]
+        ],
+        startY: startY + 30,
+        ...tableOptions
+      });
+
     });
 
     const pdfBytes = doc.output("arraybuffer");
