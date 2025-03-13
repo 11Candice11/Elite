@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
+import user from '/src/images/user.png';
 // import { sharedStyles } from '../../styles/shared-styles.js';
 import * as pdfjsLib from 'pdfjs-dist';
 // import 'pdfjs-dist/build/pdf.worker.entry';
@@ -34,56 +35,69 @@ export class FillDocument extends ViewBase {
       justify-content: center;
     }
   
+    /* Client Card Animation */
     .client-card {
-      background: #0077b6;
-      border-radius: 8px;
-      max-width: 420px;
-      margin: 20px auto;
-      padding: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      text-align: center;
-    }
-  
+        background: rgb(215, 180, 120);
+        border-radius: 8px;
+        max-width: 420px;
+        margin: 20px auto;
+        padding: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        transform: translateY(-50px);
+        opacity: 0;
+        transition: all 0.6s ease;
+      }
+    
+      .client-card.visible {
+        transform: translateY(0);
+        opacity: 1;
+        height: 400px;
+        text-align: center;
+      }
+    
+    /* Client Card Header */
     .client-card-header {
-      background: #005f8a;
+      background: rgb(0, 50, 100);
       color: white;
       padding: 15px;
       border-radius: 8px 8px 0 0;
       display: flex;
       align-items: center;
-      justify-content: center;
     }
-  
+    
     .client-card-header img {
       width: 50px;
       height: 50px;
       border-radius: 50%;
       margin-right: 15px;
     }
-  
+    
+    /* Client Card Content */
     .client-card-content {
       padding: 15px;
-      background-color: white;
-      border-radius: 0 0 8px 8px;
       color: black;
+      background-color: rgb(200, 200, 200);
+      border-radius: 0 0 8px 8px;
     }
-  
+    
     .client-card-content p {
       margin: 8px 0;
       font-size: 14px;
+      color: black;
       line-height: 1.5;
     }
-  
+    
+    /* Client Card Buttons */
     .client-card-actions {
       display: flex;
       justify-content: space-around;
       padding: 15px;
-      background-color: #0077b6;
+      background-color: rgb(140, 120, 80);
       border-radius: 0 0 8px 8px;
     }
-  
+    
     .client-card-actions button {
-      background-color: #005f8a;
+      background-color: rgb(215, 180, 120);
       color: white;
       padding: 10px 15px;
       border: none;
@@ -95,11 +109,11 @@ export class FillDocument extends ViewBase {
       font-size: 13px;
       width: 120px;
     }
-  
+    
     .client-card-actions button:hover {
-      background-color: #004b70;
+      background-color: rgb(140, 120, 80);
     }
-  
+      
     /* Popup Styles */
     .popup-overlay {
       position: fixed;
@@ -410,9 +424,28 @@ export class FillDocument extends ViewBase {
         });
     }
 
+    renderClientCard() {
+        return html`
+        <div class="client-card visible">
+          <div class="client-card-header">
+            <img src="${user}" alt="User Icon" class="client-card-icon" />
+            <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
+          </div>
+          <div class="client-card-content">
+            <p><strong>Title:</strong> ${this.clientInfo.title}</p>
+            <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
+            <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
+            <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
+            <p><strong>Email:</strong> ${this.clientInfo.email}</p>
+            <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
+          </div>
+        </div>
+        `;
+    }
+
     render() {
         return html`
-      <div class="client-profile-container">
+    <div class="client-profile-container">
         <!-- Header and Back Button -->
         <div class="header">
           <button class="back-button" @click="${(e) => this.navigateHome()}">←</button>
@@ -420,7 +453,8 @@ export class FillDocument extends ViewBase {
         </div>
 
         <!-- Profile Section -->
-        <div class="profile-section">
+         ${this.renderClientCard()}
+        <!-- <div class="profile-section">
           <div class="profile-picture">
             <div class="placeholder"></div>
           </div>
@@ -456,7 +490,7 @@ export class FillDocument extends ViewBase {
             </div>
             </div>
             <button class="my-button" @click="${(e) => this.goToMore(e)}">View More</button>
-        </div>
+        </div> -->
 
         <!-- Documents Section -->
         <div class="documents-section">
@@ -479,22 +513,22 @@ export class FillDocument extends ViewBase {
 
         <!-- Popup Overlay -->
         <div class="popup-overlay ${this.showPopup ? 'show' : ''}">
-            <button class="arrow-left" @click="${() => this.switchPDF(-1)}">←</button>
+            <button class="arrow-left" @click="${() => this.changePage(-1)}">←</button>
             <div class="popup-content">
                 <button class="close-button" @click="${this.togglePopup}">✖</button>
                 <h3>Select template PDF for ${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
                 <canvas id="pdfCanvasId" class="pdfCanvas"></canvas>
                 <div class="footer">
-                    <button class="my-button" @click="${() => this.changePage(-1)}">Previous Page</button>
-                    <button class="my-button" @click="${() => this.changePage(1)}">Next Page</button>
+                    <button class="my-button" @click="${() => this.switchPDF(-1)}">Previous PDF</button>
+                    <button class="my-button" @click="${() => this.switchPDF(1)}">Next PDF</button>
                     <button class="my-button" @click="${() => this.downloadPDF()}">Download</button>
                     <button class="my-button" ?disabled="${this.isLoading}" @click="${this.handleSelectTemplate}">${this.isLoading ? `Loading...` : `Select template`}</button>
                     <button class="my-button cancel" @click="${this.clearTemplate}">Clear Template</button>
                 </div>
             </div>
-            <button class="arrow-right" @click="${() => this.switchPDF(1)}">→</button>
+            <button class="arrow-right" @click="${() => this.changePage(1)}">→</button>
         </div>
-      </div>
+    </div>
     `;
     }
 }
