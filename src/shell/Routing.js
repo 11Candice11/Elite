@@ -55,7 +55,7 @@ export class Routing {
         console.error('Route not found, redirecting to /login');
         store.set('clientInfo', null);
         store.set('searchID', '');
-        store.set('username', '');
+        // store.set('username', '');
         store.set('selectedDates', []);
         // router.navigate('/login');    
         const currRoute = store.get('currentRoute');

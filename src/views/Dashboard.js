@@ -7,6 +7,7 @@ import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
+import * as XLSX from 'xlsx';
 
 class Dashboard extends ViewBase {
   static styles = css`
@@ -295,6 +296,34 @@ class Dashboard extends ViewBase {
 .report-btn {
   margin-top: 25px;
 }
+
+.popup.excel-popup {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -20%);
+  width: 60%;
+  max-width: 700px; /* Adjust max width */
+  max-height: 80vh; /* Ensure it doesn't get too big */
+  background: white;
+  border: 2px solid #0077b6;
+  padding: 20px;
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  overflow: hidden; /* Prevents full overflow */
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-content.excel-content {
+  flex-grow: 1; /* Allows content to take available space */
+  max-height: 60vh; /* Limits the content height */
+  overflow-y: auto; /* Enables scrolling if content is too large */
+  padding: 10px;
+  border-radius: 5px;
+  background: #f9f9f9;
+}
 `;
 
   static properties = {
@@ -306,9 +335,11 @@ class Dashboard extends ViewBase {
     rootValueDateModels: { type: Array },
     customDate: { type: String },
     searchCompleted: { type: Boolean },
+    showExcel: { type: Boolean },
     isLoading: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
+    excelSrc: { type: String },
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean },
     performanceData: { type: Object },
@@ -327,9 +358,11 @@ class Dashboard extends ViewBase {
     this.customDate = '';
     this.searchCompleted = false;
     this.isLoading = false;
+    this.showExcel = false;
     this.expandedCards = {};
     this.serviceUnavailable = false;
     this.portfolioRatings = {}; // One Year, Three Year
+    this.excelSrc = ``;
 
     this.clientProfileService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
@@ -525,10 +558,163 @@ class Dashboard extends ViewBase {
     // router.navigate('/login');
   }
 
-  async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.clientID, this.portfolioRatings); // Generate the PDF
+  async handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Detect file type
+    const fileType = file.name.endsWith('.pdf') ? 'pdf' : file.name.endsWith('.xls') || file.name.endsWith('.xlsx') ? 'excel' : 'unknown';
+
+    if (fileType === 'unknown') {
+      alert('Unsupported file format! Please upload a PDF or Excel file.');
+      return;
+    }
+
+    const base64String = await this.fileToBase64(file);
+
+    if (fileType === 'pdf') {
+      this.pdfSrc = `data:application/pdf;base64,${base64String}`;
+      this.generateReport(); // Call function to load PDF
+    } else if (fileType === 'excel') {
+      this.excelSrc = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64String}`;
+      this.loadExcel(); // Call function to process Excel
+    }
+  }
+
+  // Convert File to Base64
+  fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(",")[1]); // Extract Base64
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async loadExcel() {
+    try {
+      // Convert Base64 to ArrayBuffer
+      const arrayBuffer = this.base64ToArrayBuffer(this.excelSrc.split(",")[1]);
+
+      // Read Excel data
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0]; // Get the first sheet
+      const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      if (sheet.length === 0) {
+        console.error("❌ Excel file is empty.");
+        return;
+      }
+
+      console.log("📊 Extracted Excel Data:", sheet);
+
+      // Store the extracted values in `portfolioRatings`
+      this.extractPortfolioRatings(sheet);
+
+      this.showExcel = true;
+      await this.requestUpdate();
+      this.renderExcel(sheet);
+
+    } catch (error) {
+      console.error("❌ Error loading Excel:", error);
+    }
+  }
+
+  extractPortfolioRatings(sheetData) {
+    console.log("🔍 Processing Excel Data...");
+
+    sheetData.forEach((row, index) => {
+      const instrumentName = row["Instrument Name"];
+      const oneYear = row["oneYear"] || "";
+      const threeYears = row["threeYears"] || "";
+
+      if (instrumentName) {
+        this.portfolioRatings[instrumentName] = {
+          1: oneYear,
+          3: threeYears,
+        };
+        console.log(`✅ Mapped ${instrumentName}: {1 Year: ${oneYear}, 3 Years: ${threeYears}}`);
+      }
+    });
+
+    this.requestUpdate();
+  }
+
+  // Convert Base64 back to ArrayBuffer
+  base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  async generateReport(portfolio = null) {
+    let clientInformation = JSON.parse(JSON.stringify(this.clientInfo)); // Deep copy to avoid mutation
+    if (portfolio) {
+      clientInformation.detailModels = [portfolio]; // Modify only the copy
+    }
+
+    var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
     store.set('base64', base64);
     router.navigate(`/pdf`); // Navigate to the PDF viewer
+  }
+
+  acceptExcel() {
+    this.showExcel = false;
+
+    // TODO
+    // add logic to read from Excel
+
+    // check if logic already exists
+    // I think it does. this should just save the value
+
+    // const oneYear = this.getFromExcel(`oneYear`);
+    // const threeYears = this.getFromExcel(`threeYears`);
+  }
+
+  async renderExcel(sheetData) {
+
+    if (!sheetData || sheetData.length === 0) {
+      console.error("❌ No Excel data to render.");
+      return;
+    }
+
+    let tableHtml = `<table border="1" class="excel-table"><thead><tr>`;
+
+    // Log headers to check if they exist
+    const headers = Object.keys(sheetData[0]);
+    headers.forEach((header) => {
+      tableHtml += `<th>${header}</th>`;
+    });
+
+    tableHtml += `</tr></thead><tbody>`;
+
+    // Log rows to check if data exists
+    sheetData.forEach((row, index) => {
+      tableHtml += `<tr>`;
+      Object.values(row).forEach((cell) => {
+        tableHtml += `<td>${cell}</td>`;
+      });
+      tableHtml += `</tr>`;
+    });
+
+    tableHtml += `</tbody></table>`;
+
+    this.showExcel = true; // Ensure popup opens
+    await this.requestUpdate();
+
+    setTimeout(() => {
+      const popupContainer = this.shadowRoot?.querySelector('.popup #excelContainer');
+
+      if (popupContainer) {
+        popupContainer.innerHTML = tableHtml;
+      } else {
+        console.error("❌ `excelContainer` inside the popup not found.");
+      }
+    }, 100); // Delay to ensure UI is ready
   }
 
   renderPopup() {
@@ -568,7 +754,7 @@ class Dashboard extends ViewBase {
               <h3>${portfolio.instrumentName}</h3>
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
-              <!-- <button @click="${() => this.generateReport(portfolio)}">Generate Report</button> -->
+              <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
               <button @click="${() => this.toggleExpand(index)}">
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
@@ -596,8 +782,8 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
-                          <td>${this._renderInput("oneYear", 1)}</td>
-                          <td>${this._renderInput("threeYears", 3)}</td>
+                          <td>${this._renderInput(entry.instrumentName, 1)}</td>
+                          <td>${this._renderInput(entry.instrumentName, 3)}</td>
                         </tr>
                       `)}
                   </table>
@@ -625,9 +811,32 @@ class Dashboard extends ViewBase {
         <p><strong>Email:</strong> ${this.clientInfo.email}</p>
         <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
       </div>
-      <button class="report-btn" @click="${() => this.generateReport()}">Generate Report</button>
+      <div class="upload-section">
+        <button class="report-btn" @click="${() => this.generateReport()}">Generate Report</button>
+        <input type="file" id="excelUpload" accept=".xls,.xlsx" @change="${this.handleFileUpload}" hidden />
+        <button class="upload-button" @click="${() => this.shadowRoot.getElementById('excelUpload').click()}">
+          Upload Excel
+        </button>
+      </div>
     </div>
     `;
+  }
+
+  renderExcelDocument() {
+    return html`
+    <div class="overlay" @click="${() => this.showExcel = false}"></div>
+    <div class="popup excel-popup" @click="${(e) => e.stopPropagation()}">
+      <h3>View Excel</h3>
+      <div class="popup-content excel-content">
+        <div id="excelContainer">
+          <p>Loading Excel Data...</p> 
+        </div>
+      </div>
+      <button @click="${() => this.acceptExcel()}" ?disabled="${this.isLoading}">
+        ${this.isLoading ? 'Processing...' : 'Accept'}
+      </button>
+    </div>
+  `;
   }
 
   render() {
@@ -657,8 +866,13 @@ class Dashboard extends ViewBase {
           
           ${this.clientInfo ? this.renderClientCard() : ''}
 
+                <div id="excelContainer">
+        <!-- ${this.showExcel ? html`<p>Loading Excel Data...</p>` : ""} -->
+      </div>
+
           <!-- Portfolio List -->
            ${this._renderPortfolios()}
+           ${this.showExcel ? this.renderExcelDocument() : ``}
         </div>
       ` : ''}
     `;
