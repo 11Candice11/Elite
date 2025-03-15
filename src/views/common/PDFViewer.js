@@ -58,8 +58,17 @@ class PDFViewer extends ViewBase {
   connectedCallback() {
     super.connectedCallback();
     this.base64 = store.get(`base64`);
+    const byteCharacters = atob(this.base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const pdfBlob = new Blob([byteArray], { type: "application/pdf" });
+
+    this.pdfSrc = URL.createObjectURL(pdfBlob);
     this.pdfSrc = `data:application/pdf;base64,${this.base64}`;
-}
+  }
 
   async firstUpdated() {
     this.loadPDF();
@@ -79,25 +88,25 @@ class PDFViewer extends ViewBase {
 
   async renderPage(pageNum) {
     const page = await this.pdfDoc.getPage(pageNum);
-  
+
     // Get the original viewport
     const viewport = page.getViewport({ scale: 1.5 });
-  
+
     const canvas = this.renderRoot.querySelector('canvas');
     const context = canvas.getContext('2d');
-  
+
     canvas.width = viewport.width;   // Keep the width as-is for landscape
     canvas.height = viewport.height; // Keep the height as-is for landscape 
 
     // Clear canvas before rendering
     context.clearRect(0, 0, canvas.width, canvas.height);
-  
+
     // Render the page with the adjusted context
     const renderContext = {
       canvasContext: context,
       viewport: viewport // Using the original viewport (portrait) after rotation
     };
-  
+
     await page.render(renderContext).promise;
   }
 
