@@ -652,11 +652,12 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport(portfolio = null) {
+    let clientInformation = JSON.parse(JSON.stringify(this.clientInfo)); // Deep copy to avoid mutation
     if (portfolio) {
-      this.clientInfo.detailModels = [portfolio];
+      clientInformation.detailModels = [portfolio]; // Modify only the copy
     }
 
-    var base64 = await this.generatePDF(this.clientInfo, this.clientID, this.portfolioRatings); // Generate the PDF
+    var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
     store.set('base64', base64);
     router.navigate(`/pdf`); // Navigate to the PDF viewer
   }
@@ -666,6 +667,9 @@ class Dashboard extends ViewBase {
 
     // TODO
     // add logic to read from Excel
+
+    // check if logic already exists
+    // I think it does. this should just save the value
 
     // const oneYear = this.getFromExcel(`oneYear`);
     // const threeYears = this.getFromExcel(`threeYears`);

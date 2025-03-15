@@ -23,7 +23,7 @@ export const PdfMixin = {
 
     const formatAmount = (amount, currencyCode) => {
       const symbol = currencySymbols[currencyCode] || currencyCode; // Fallback to code if symbol not found
-      return `${symbol} ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
+      return Number.isInteger(amount) ? `${symbol} ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` : `${symbol} ${amount}`;
     };
 
     const formatDate = (dateString) => {
@@ -194,11 +194,11 @@ export const PdfMixin = {
             doc.text(`Date: ${formatDate(interactionDate)}`, 10, startY + 10); // SPACE BETWEEN HEADER AND PREVIOUS TABLE
 
             // Calculate totals
-            const totalRandValue = interactionData.reduce((sum, row) => sum + row[1], 0);
+            const totalRandValue = interactionData.reduce((sum, row) => row[1], 0);
             const totalPortfolioShare = interactionData.reduce((sum, row) => sum + row[2], 0);
 
             // Add totals row
-            interactionData.push(["Total", formatAmount(totalRandValue, "ZAR"), totalPortfolioShare.toFixed(2)]);
+            interactionData.push(["Total", totalRandValue, totalPortfolioShare.toFixed(2)]);
 
             doc.autoTable({
               head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
