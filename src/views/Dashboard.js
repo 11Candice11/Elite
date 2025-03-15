@@ -324,6 +324,85 @@ class Dashboard extends ViewBase {
   border-radius: 5px;
   background: #f9f9f9;
 }
+
+/* Overlay for dimming the background */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Dialog Container */
+.dialog-content {
+  background: white;
+  border-radius: 12px;
+  width: 400px;
+  padding: 25px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgb(0, 50, 100);
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+/* Dialog Heading */
+.dialog-content h3 {
+  color: rgb(0, 50, 100);
+  margin-bottom: 20px;
+  font-size: 20px;
+  text-align: center;
+}
+
+/* Options Section */
+.dialog-options label {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  font-weight: bold;
+  color: black;
+}
+
+.dialog-options input[type="checkbox"] {
+  margin-right: 10px;
+  accent-color: rgb(0, 50, 100); /* Checkbox color */
+}
+
+/* IRR Input Styling */
+.dialog-options input[type="number"] {
+  width: 70px;
+  padding: 5px;
+  margin-left: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  transition: border 0.3s ease;
+}
+
+.dialog-options input[type="number"]:focus {
+  border-color: rgb(0, 50, 100);
+}
+
+/* Action Buttons */
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.dialog-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
 `;
 
   static properties = {
@@ -335,6 +414,7 @@ class Dashboard extends ViewBase {
     rootValueDateModels: { type: Array },
     customDate: { type: String },
     searchCompleted: { type: Boolean },
+    showDialog: { type: Boolean },
     showExcel: { type: Boolean },
     isLoading: { type: Boolean },
     expandedCards: { type: Object },
@@ -363,6 +443,15 @@ class Dashboard extends ViewBase {
     this.serviceUnavailable = false;
     this.portfolioRatings = {}; // One Year, Three Year
     this.excelSrc = ``;
+
+    this.reportOptions = {
+      contributions: true,
+      withdrawals: true,
+      regularWithdrawals: true,
+      interactionHistory: true,
+      includePercentage: false,
+      irr: 7.0,
+    };
 
     this.clientProfileService = new ClientProfileService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
@@ -435,6 +524,14 @@ class Dashboard extends ViewBase {
       this.isLoading = false;
       this.requestUpdate();
     }
+  }
+
+  updateOption(e, option) {
+    const { type, checked, value } = e.target;
+    this.reportOptions = {
+      ...this.reportOptions,
+      [option]: type === 'checkbox' ? checked : parseFloat(value),
+    };
   }
 
   toggleExpand(index) {
@@ -652,14 +749,22 @@ class Dashboard extends ViewBase {
   }
 
   async generateReport(portfolio = null) {
-    let clientInformation = JSON.parse(JSON.stringify(this.clientInfo)); // Deep copy to avoid mutation
-    if (portfolio) {
-      clientInformation.detailModels = [portfolio]; // Modify only the copy
-    }
+    this.showDialog = !this.showDialog;
 
-    var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
-    store.set('base64', base64);
-    router.navigate(`/pdf`); // Navigate to the PDF viewer
+    if (!this.showDialog) {
+      let clientInformation = JSON.parse(JSON.stringify(this.clientInfo)); // Deep copy to avoid mutation
+      if (portfolio) {
+        clientInformation.detailModels = [portfolio]; // Modify only the copy
+      }
+      store.set(`reportOptions`, this.reportOptions);
+      var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
+      store.set('base64', base64);
+      router.navigate(`/pdf`); // Navigate to the PDF viewer  
+    }
+  }
+
+  generateClientReport() {
+    this.showDialog = false;
   }
 
   acceptExcel() {
@@ -842,6 +947,7 @@ class Dashboard extends ViewBase {
   render() {
     return html`
     ${this.showPopup ? this.renderPopup() : ''}
+    ${this.showDialog ? this.renderDialog() : ''}
           <!-- Logout Button (Only Visible When Logged In) -->
           ${this.clientInfo ? html`
         <button class="logout-button" @click="${this.logout}">Logout</button>
@@ -886,6 +992,30 @@ class Dashboard extends ViewBase {
         .value="${this.portfolioRatings[portfolioId]?.[year] || ''}"
         @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
       />
+    `;
+  }
+
+  renderDialog() {
+    return html`
+      <div class="dialog-overlay">
+        <div class="dialog-content">
+          <h3>📊 Generate Report</h3>
+          <div class="dialog-options">
+            <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
+            <label><input ?disabled="${true}" type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
+            <label>
+              IRR (%):
+              <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
+            </label>
+          </div>
+          <div class="dialog-actions">
+            <button class="cancel-btn" @click="${() => (this.showDialog = false)}">Cancel</button>
+            <button class="generate-btn" @click="${() => this.generateReport()}">Generate Report</button>
+          </div>
+        </div>
+      </div>
     `;
   }
 }
