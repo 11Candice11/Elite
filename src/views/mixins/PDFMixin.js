@@ -5,6 +5,7 @@ import "jspdf-autotable";
 
 export const PdfMixin = {
   async generatePDF(selectedDetails, clientId, portfolioRatings) {
+    let totalWithdrawals = 0;
     const doc = new jsPDF({ orientation: "landscape" }); // Landscape format
 
     const currencySymbols = {
@@ -131,7 +132,11 @@ export const PdfMixin = {
           formatAmount(data.total, "ZAR"),
           data.exchangeRate.toFixed(2)
         ]);
-        let totalWithdrawals = withdrawals.length > 0 ? withdrawals.reduce((sum, t) => sum + t.convertedAmount, 0) : 0;
+
+        totalWithdrawals = withdrawals.length > 0 
+          ? withdrawals.reduce((sum, t) => sum + parseFloat(t[3].replace(/[^\d.-]/g, "")), 0) 
+          : 0;
+
         if (withdrawals.length > 0) {
           doc.text("Withdrawals", 10, startY + 10);
           doc.autoTable({
