@@ -432,7 +432,7 @@ class Dashboard extends ViewBase {
     this.oneYear = '';
     this.threeYears = '';
     this.clientInfo = store.get('clientInfo') || {};
-    // this.selectedPortfolio = store.get('selectedPortfolio') || null;
+    this.selectedPortfolio = store.get('selectedPortfolio') || null;
     this.showPopup = false;
     this.selectedDates = [];
     this.customDate = '';
@@ -443,7 +443,6 @@ class Dashboard extends ViewBase {
     this.serviceUnavailable = false;
     this.portfolioRatings = {}; // One Year, Three Year
     this.excelSrc = ``;
-
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -451,6 +450,7 @@ class Dashboard extends ViewBase {
       interactionHistory: true,
       includePercentage: false,
       irr: 7.0,
+      currency: "ZAR"
     };
 
     this.clientProfileService = new ClientProfileService();
@@ -530,7 +530,7 @@ class Dashboard extends ViewBase {
     const { type, checked, value } = e.target;
     this.reportOptions = {
       ...this.reportOptions,
-      [option]: type === 'checkbox' ? checked : parseFloat(value),
+      [option]: type === 'checkbox' ? checked : parseFloat(value) ?? value,
     };
   }
 
@@ -720,18 +720,43 @@ class Dashboard extends ViewBase {
   extractPortfolioRatings(sheetData) {
     console.log("🔍 Processing Excel Data...");
 
-    sheetData.forEach((row, index) => {
-      const instrumentName = row["Instrument Name"];
-      const oneYear = row["oneYear"] || "";
-      const threeYears = row["threeYears"] || "";
+    sheetData.forEach((row) => {
+      const oneYear = row["12 Month Return"] || "";
+      const threeYears = row["36 Month Return (ann)"] || "";
 
-      if (instrumentName) {
-        this.portfolioRatings[instrumentName] = {
-          1: oneYear,
-          3: threeYears,
-        };
-        console.log(`✅ Mapped ${instrumentName}: {1 Year: ${oneYear}, 3 Years: ${threeYears}}`);
+      if (!this.clientInfo || !this.clientInfo.detailModels || this.clientInfo.detailModels.length === 0) {
+        console.error("❌ detailModels is missing or empty:", this.clientInfo.detailModels);
+        return;
       }
+
+      // Extract ISIN reference from the Excel file
+      const extractedIsin = row["ExportFile_TenforeId"]?.substring(5).trim();
+      console.log(`🔍 Extracted ISIN: ${extractedIsin}`);
+
+      let matchingEntry = null;
+
+      // Iterate through all detailModels and find matching portfolio entry
+      for (const detail of this.clientInfo.detailModels) {
+        if (detail.portfolioEntryTreeModels && detail.portfolioEntryTreeModels.length > 0) {
+          matchingEntry = detail.portfolioEntryTreeModels.find(entry => entry.isinNumber === extractedIsin);
+          if (matchingEntry) break; // Stop searching once a match is found
+        }
+      }
+
+      if (!matchingEntry) {
+        console.warn(`⚠️ No matching ISIN found for extracted reference: ${extractedIsin}`);
+        return;
+      }
+
+      console.log("✅ Found matching portfolio entry:", matchingEntry);
+
+      const isinNumber = matchingEntry.isinNumber;
+      this.portfolioRatings[isinNumber] = {
+        1: oneYear,
+        3: threeYears,
+      };
+
+      console.log(`✅ Mapped ${isinNumber}: {1 Year: ${oneYear}, 3 Years: ${threeYears}}`);
     });
 
     this.requestUpdate();
@@ -751,10 +776,12 @@ class Dashboard extends ViewBase {
   async generateReport(portfolio = null) {
     this.showDialog = !this.showDialog;
 
+    this.selectedPortfolio = portfolio ?? this.selectedPortfolio;
+
     if (!this.showDialog) {
       let clientInformation = JSON.parse(JSON.stringify(this.clientInfo)); // Deep copy to avoid mutation
-      if (portfolio) {
-        clientInformation.detailModels = [portfolio]; // Modify only the copy
+      if (this.selectedPortfolio) {
+        clientInformation.detailModels = [this.selectedPortfolio]; // Modify only the copy
       }
       store.set(`reportOptions`, this.reportOptions);
       var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
@@ -1004,10 +1031,15 @@ class Dashboard extends ViewBase {
             <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
             <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
             <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.interactionHistory}" @change="${(e) => this.updateOption(e, 'interactionHistory')}" /> Interaction History</label>
             <label><input ?disabled="${true}" type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
             <label>
               IRR (%):
               <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
+            </label>
+            <label>
+              Currency (eg. USD):
+              <input type="text" value="${this.reportOptions.currency}" @input="${(e) => this.updateOption(e, 'currency')}" />
             </label>
           </div>
           <div class="dialog-actions">

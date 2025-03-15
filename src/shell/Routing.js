@@ -57,7 +57,6 @@ export class Routing {
         store.set('searchID', '');
         // store.set('username', '');
         store.set('selectedDates', []);
-        // router.navigate('/login');    
         const currRoute = store.get('currentRoute');
         if(currRoute) {
           this.navigate(`/${currRoute}`);
