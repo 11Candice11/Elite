@@ -528,10 +528,14 @@ class Dashboard extends ViewBase {
 
   updateOption(e, option) {
     const { type, checked, value } = e.target;
-    this.reportOptions = {
-      ...this.reportOptions,
-      [option]: type === 'checkbox' ? checked : parseFloat(value) ?? value,
-    };
+    if(type === `text`) {
+      this.reportOptions.currency = value;
+    } else {
+      this.reportOptions = {
+        ...this.reportOptions,
+        [option]: type === 'checkbox' ? checked : parseFloat(value),
+      };
+    }
   }
 
   toggleExpand(index) {
@@ -702,8 +706,6 @@ class Dashboard extends ViewBase {
         console.error("❌ Excel file is empty.");
         return;
       }
-
-      console.log("📊 Extracted Excel Data:", sheet);
 
       // Store the extracted values in `portfolioRatings`
       this.extractPortfolioRatings(sheet);
