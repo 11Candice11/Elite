@@ -469,6 +469,7 @@ class Dashboard extends ViewBase {
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
+      this.isLoading = false;
       this.requestUpdate();
     }
   }
