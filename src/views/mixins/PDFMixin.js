@@ -68,11 +68,11 @@ export const PdfMixin = {
       const hasWithdrawals = this.reportOptions.withdrawals && portfolio.transactionModels.some(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"));
       const hasRegularWithdrawals = this.reportOptions.regularWithdrawals && (portfolio.regularWithdrawalAmount > 0 || portfolio.regularWithdrawalPercentage > 0);
       const hasInteractionHistory = this.reportOptions.interactionHistory && portfolio.rootValueDateModels.some(interaction => interaction.valueModels.length > 0);
-      
+
       if (!hasContributions && !hasWithdrawals && !hasRegularWithdrawals && !hasInteractionHistory) {
         return; // Skip this portfolio if it has no relevant data
       }
-      
+
       if (index !== 0) doc.addPage(); // New page for each portfolio
       doc.setFontSize(12);
       doc.text(portfolio.instrumentName, 10, 20);
@@ -99,7 +99,7 @@ export const PdfMixin = {
         const contributions = Object.entries(contributionsMap)
           .filter(([_, data]) => data.total !== 0) // Exclude contributions where rand value is 0
           .map(([date, data]) => {
-            const amount = data.total * data.exchangeRate;
+            const amount = data.total / data.exchangeRate;
             return [
               date,
               data.transactionType,
@@ -112,12 +112,20 @@ export const PdfMixin = {
 
         // Sum using the raw numerical value stored in the last element of each row
         const totalContributions = contributions.reduce((sum, t) => sum + t[5], 0);
+        const totalContributionsRand = contributions.reduce((sum, t) => sum + parseFloat(t[3].replace(/[^0-9.-]+/g, "")), 0);
 
         if (contributions.length > 0) {
+          const estimatedTableHeight = contributions.length * 10 + 20; // Estimate row height
+          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage(); // Move the header and table together
+            startY = 30; // Reset position for new page
+          }
           doc.text("Contributions", 10, startY);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
-            body: contributions.concat([["", "TOTAL:", formatAmount(totalContributions, "ZAR")]]),
+            body: contributions.concat([
+              ["", "TOTAL:", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR")]
+            ]),
             startY: startY + 5,
             ...tableOptions
           });
@@ -152,22 +160,22 @@ export const PdfMixin = {
           });
 
         const withdrawals = Object.entries(withdrawalsMap)
-          .flatMap(([date, transactions]) => 
-            (transactions && Array.isArray(transactions)) 
+          .flatMap(([date, transactions]) =>
+            (transactions && Array.isArray(transactions))
               ? transactions.filter(t => t.convertedAmount !== 0).map(t => {
-                  const amount = t.convertedAmount * t.exchangeRate;
-                  return [
-                    date,
-                    t.transactionType,
-                    formatAmount(amount.toFixed(2), t.currencyAbbreviation, t.exchangeRate),
-                    formatAmount(t.convertedAmount.toFixed(2), "ZAR", true),
-                    t.exchangeRate.toFixed(2),
-                    amount
-                  ];
-                })
+                const amount = t.convertedAmount / t.exchangeRate;
+                return [
+                  date,
+                  t.transactionType,
+                  formatAmount(amount.toFixed(2), t.currencyAbbreviation, t.exchangeRate),
+                  formatAmount(t.convertedAmount.toFixed(2), "ZAR", true),
+                  t.exchangeRate.toFixed(2),
+                  amount
+                ];
+              })
               : []
           );
-          
+
         totalWithdrawals = withdrawals.length > 0
           ? withdrawals.reduce((sum, t) => sum + t[5], 0)
           : 0;
@@ -176,6 +184,11 @@ export const PdfMixin = {
           .reduce((sum, t) => sum + t.convertedAmount, 0);
 
         if (withdrawals.length > 0) {
+          const estimatedTableHeight = withdrawals.length * 10 + 20; // Estimate row height
+          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage(); // Move the header and table together
+            startY = 30; // Reset position for new page
+          }
           doc.text("Withdrawals", 10, startY + 10);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
@@ -194,6 +207,11 @@ export const PdfMixin = {
           (portfolio.regularWithdrawalPercentage && portfolio.regularWithdrawalPercentage > 0)
 
         if (hasValidRegularWithdrawals) {
+          const estimatedTableHeight = 30; // Estimate row height
+          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage(); // Move the header and table together
+            startY = 30; // Reset position for new page
+          }
           doc.text("Regular Withdrawals", 10, startY + 10);
 
           const regularWithdrawalsBody = [
@@ -208,6 +226,11 @@ export const PdfMixin = {
           }
 
           if (regularWithdrawalsBody.length > 0) {
+            const estimatedTableHeight = regularWithdrawalsBody.length * 10 + 20; // Estimate row height
+            if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+              doc.addPage(); // Move the header and table together
+              startY = 30; // Reset position for new page
+            }
             doc.autoTable({
               head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"]],
               body: regularWithdrawalsBody,
@@ -229,26 +252,41 @@ export const PdfMixin = {
             if (!interaction.valueModels || interaction.valueModels.length === 0) return;
             const interactionData = interaction.valueModels.map(entry => {
               const matchedPortfolio = portfolio.portfolioEntryTreeModels.find(e => e.portfolioEntryId === entry.portfolioEntryId);
+              const amount = entry.exchangeRate !== 0 ? entry.convertedAmount / entry.exchangeRate : 0;
               return [
                 matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
-                formatAmount(entry.convertedAmount || 0, "ZAR"),
+                formatAmount(amount, entry.currencyAbbreviation, entry.exchangeRate), // Amount in original currency
+                formatAmount(entry.convertedAmount, "ZAR"), // Amount in Rands
                 entry.portfolioSharePercentage ? parseFloat(entry.portfolioSharePercentage).toFixed(2) : "0.00"
               ];
             });
 
             if (interactionData.length > 0) {
               const interactionDate = interaction.valueModels[0].valueDate || "Unknown Date";
+              const estimatedTableHeight = interactionData.length * 10 + 20; // Estimate row height
+              if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+                doc.addPage(); // Move the header and table together
+                startY = 30; // Reset position for new page
+              }
               doc.text(`${formatDate(interactionDate)}`, 10, startY + 10); // SPACE BETWEEN HEADER AND PREVIOUS TABLE
 
               // Calculate totals
-              const totalRandValue = interactionData.reduce((sum, row) => row[1], 0);
-              const totalPortfolioShare = interactionData.reduce((sum, row) => sum + parseFloat(row[2]), 0).toFixed(2);
+              const totalRandValue = interaction.valueModels
+                .filter(entry => !isNaN(entry.convertedAmount)) // Ensure valid numbers
+                .reduce((sum, entry) => sum + entry.convertedAmount, 0);
+              const totalPortfolioShare = interactionData
+                .filter(row => !isNaN(parseFloat(row[3]))) // Ensure valid numbers
+                .reduce((sum, row) => sum + parseFloat(row[3] || 0), 0);
 
               // Add totals row
-              interactionData.push(["Total", totalRandValue, totalPortfolioShare]);
+              interactionData.push([
+                "Total",
+                formatAmount(totalRandValue || 0, "ZAR"), // Ensure it's always a valid number
+                !isNaN(totalPortfolioShare) ? totalPortfolioShare.toFixed(2) : "0.00"
+              ]);
 
               doc.autoTable({
-                head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
+                head: [["Investment Funds", "Amount", "Rand Value", "% Share per Portfolio"]],
                 body: interactionData,
                 startY: startY + 15,
                 ...tableOptions
