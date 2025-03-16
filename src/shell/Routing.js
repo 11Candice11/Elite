@@ -53,16 +53,16 @@ export class Routing {
         }
       } else {
         console.error('Route not found, redirecting to /login');
-        store.set('clientInfo', null);
-        store.set('searchID', '');
-        // store.set('username', '');
-        store.set('selectedDates', []);
-        const currRoute = store.get('currentRoute');
-        if(currRoute) {
-          this.navigate(`/${currRoute}`);
-        } else {
+        // store.set('clientInfo', null);
+        // store.set('searchID', '');
+        // // store.set('username', '');
+        // store.set('selectedDates', []);
+        // const currRoute = store.get('currentRoute');
+        // if(currRoute) {
+        //   this.navigate(`/${currRoute}`);
+        // } else {
           this.navigate('/login');
-        }
+        // }
       }
   }
 

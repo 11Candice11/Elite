@@ -6,6 +6,7 @@ import "jspdf-autotable";
 export const PdfMixin = {
   async generatePDF(selectedDetails, clientId, portfolioRatings) {
     let totalWithdrawals = 0;
+    let totalWithdrawalsSinceInception = 0;
     const doc = new jsPDF({ orientation: "landscape" }); // Landscape format
 
     const currencySymbols = {
@@ -22,9 +23,9 @@ export const PdfMixin = {
       MXN: "MX$"
     };
 
-    const formatAmount = (amount, currencyCode) => {
-      const symbol = currencySymbols[currencyCode] || currencyCode; // Fallback to code if symbol not found
-      return Number.isInteger(amount) ? `${symbol} ${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}` : `${symbol} ${amount}`;
+    const formatAmount = (amount, currencyCode, exchangeRate) => {
+      const symbol = exchangeRate === 1 ? "R" : (currencySymbols[currencyCode] || currencyCode || "");
+      return `${symbol} ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
     };
 
     const formatDate = (dateString) => {
@@ -62,6 +63,16 @@ export const PdfMixin = {
 
     // Generate Portfolios with Contributions, Withdrawals, and Interaction History
     selectedDetails.detailModels.forEach((portfolio, index) => {
+      // Check if the portfolio has data before rendering
+      const hasContributions = this.reportOptions.contributions && portfolio.transactionModels.some(t => t.transactionType.toLowerCase().includes("contribution"));
+      const hasWithdrawals = this.reportOptions.withdrawals && portfolio.transactionModels.some(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"));
+      const hasRegularWithdrawals = this.reportOptions.regularWithdrawals && (portfolio.regularWithdrawalAmount > 0 || portfolio.regularWithdrawalPercentage > 0);
+      const hasInteractionHistory = this.reportOptions.interactionHistory && portfolio.rootValueDateModels.some(interaction => interaction.valueModels.length > 0);
+      
+      if (!hasContributions && !hasWithdrawals && !hasRegularWithdrawals && !hasInteractionHistory) {
+        return; // Skip this portfolio if it has no relevant data
+      }
+      
       if (index !== 0) doc.addPage(); // New page for each portfolio
       doc.setFontSize(12);
       doc.text(portfolio.instrumentName, 10, 20);
@@ -76,7 +87,7 @@ export const PdfMixin = {
             const date = t.transactionDate.split("T")[0];
             if (!contributionsMap[date]) {
               contributionsMap[date] = {
-                currencyAbbreviation: t.currencyAbbreviation,
+                currencyAbbreviation: this.reportOptions.currency,
                 exchangeRate: t.exchangeRate,
                 transactionType: t.transactionType,
                 total: 0
@@ -85,18 +96,24 @@ export const PdfMixin = {
             contributionsMap[date].total += t.convertedAmount || 0;
           });
 
-        const contributions = Object.entries(contributionsMap).map(([date, data]) => [
-          date,
-          data.transactionType,
-          formatAmount((data.total * data.exchangeRate), data.currencyAbbreviation),
-          formatAmount(data.total, "ZAR"),
-          data.exchangeRate.toFixed(2)
-        ]);
+        const contributions = Object.entries(contributionsMap)
+          .filter(([_, data]) => data.total !== 0) // Exclude contributions where rand value is 0
+          .map(([date, data]) => {
+            const amount = data.total * data.exchangeRate;
+            return [
+              date,
+              data.transactionType,
+              formatAmount(amount.toFixed(2), data.currencyAbbreviation, data.exchangeRate),
+              formatAmount(data.total.toFixed(2), "ZAR", true),
+              data.exchangeRate.toFixed(2),
+              amount // Store raw numerical value separately for summing
+            ];
+          });
+
+        // Sum using the raw numerical value stored in the last element of each row
+        const totalContributions = contributions.reduce((sum, t) => sum + t[5], 0);
 
         if (contributions.length > 0) {
-          // Correctly sum the total using the pre-aggregated values
-          const totalContributions = contributions.reduce((sum, t) => sum + parseFloat(t[2].replace(/[^\d.-]/g, "")), 0);
-
           doc.text("Contributions", 10, startY);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
@@ -111,31 +128,52 @@ export const PdfMixin = {
       if (this.reportOptions.withdrawals) {
         // Withdrawals
         const withdrawalsMap = {};
-        portfolio.transactionModels.filter(t => t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular"))
+        portfolio.transactionModels.filter(t => {
+          return t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular")
+        })
           .forEach(t => {
             const date = t.transactionDate.split("T")[0];
             if (!withdrawalsMap[date]) {
-              withdrawalsMap[date] = {
+              withdrawalsMap[date] = [];
+            }
+            const existingIndex = withdrawalsMap[date].findIndex(trx => trx.convertedAmount === -t.convertedAmount);
+
+            if (existingIndex !== -1) {
+              // If an opposite value exists, remove it (cancels out to zero)
+              withdrawalsMap[date].splice(existingIndex, 1);
+            } else {
+              withdrawalsMap[date].push({
                 currencyAbbreviation: t.currencyAbbreviation,
                 exchangeRate: t.exchangeRate,
                 transactionType: t.transactionType,
-                total: 0
-              };
+                convertedAmount: t.convertedAmount
+              });
             }
-            withdrawalsMap[date].total += t.convertedAmount;
           });
 
-        const withdrawals = Object.entries(withdrawalsMap).map(([date, data]) => [
-          date,
-          data.transactionType,
-          formatAmount((data.total * data.exchangeRate), data.currencyAbbreviation),
-          formatAmount(data.total, "ZAR"),
-          data.exchangeRate.toFixed(2)
-        ]);
-
-        totalWithdrawals = withdrawals.length > 0 
-          ? withdrawals.reduce((sum, t) => sum + parseFloat(t[3].replace(/[^\d.-]/g, "")), 0) 
+        const withdrawals = Object.entries(withdrawalsMap)
+          .flatMap(([date, transactions]) => 
+            (transactions && Array.isArray(transactions)) 
+              ? transactions.filter(t => t.convertedAmount !== 0).map(t => {
+                  const amount = t.convertedAmount * t.exchangeRate;
+                  return [
+                    date,
+                    t.transactionType,
+                    formatAmount(amount.toFixed(2), t.currencyAbbreviation, t.exchangeRate),
+                    formatAmount(t.convertedAmount.toFixed(2), "ZAR", true),
+                    t.exchangeRate.toFixed(2),
+                    amount
+                  ];
+                })
+              : []
+          );
+          
+        totalWithdrawals = withdrawals.length > 0
+          ? withdrawals.reduce((sum, t) => sum + t[5], 0)
           : 0;
+        totalWithdrawalsSinceInception = portfolio.transactionModels
+          .filter(t => t.transactionType.toLowerCase().includes("withdraw"))
+          .reduce((sum, t) => sum + t.convertedAmount, 0);
 
         if (withdrawals.length > 0) {
           doc.text("Withdrawals", 10, startY + 10);
@@ -154,26 +192,24 @@ export const PdfMixin = {
         const hasValidRegularWithdrawals =
           (portfolio.regularWithdrawalAmount && portfolio.regularWithdrawalAmount > 0) ||
           (portfolio.regularWithdrawalPercentage && portfolio.regularWithdrawalPercentage > 0)
-        // (totalWithdrawals && totalWithdrawals > 0);
 
         if (hasValidRegularWithdrawals) {
           doc.text("Regular Withdrawals", 10, startY + 10);
 
           const regularWithdrawalsBody = [
-            portfolio.regularWithdrawalAmount > 0 ? ["Current Withdrawal Amount:", formatAmount(portfolio.regularWithdrawalAmount, "ZAR")] : null,
-            portfolio.regularWithdrawalPercentage > 0 ? ["Withdrawal Percentage:", `${portfolio.regularWithdrawalPercentage} %`] : null,
-            totalWithdrawals > 0 ? ["Withdrawal Since Inception:", formatAmount(totalWithdrawals, "ZAR")] : null
+            portfolio.regularWithdrawalAmount > 0 ? ["Regular Withdrawal", formatAmount(portfolio.regularWithdrawalAmount, "ZAR"), `${portfolio.regularWithdrawalPercentage.toFixed(2)} %`, formatAmount(totalWithdrawalsSinceInception, "ZAR")] : null,
+            totalWithdrawals !== 0 ? ["Withdrawal Since Inception:", formatAmount(totalWithdrawals, "ZAR"), "", formatAmount(totalWithdrawalsSinceInception, "ZAR")] : null
           ].filter(row => row !== null); // Remove null entries
 
           // Add total row if there's data
           if (regularWithdrawalsBody.length > 0) {
             const totalAmount = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
-            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR")]);
+            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR"), ""]);
           }
 
           if (regularWithdrawalsBody.length > 0) {
             doc.autoTable({
-              head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]],
+              head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"]],
               body: regularWithdrawalsBody,
               startY: startY + 15,
               ...tableOptions
@@ -188,7 +224,6 @@ export const PdfMixin = {
         const interactionHistory = portfolio.rootValueDateModels.filter(interaction => interaction.valueModels.length > 0);
         if (interactionHistory.length > 0) {
           doc.setFontSize(12);
-          doc.text("Interaction History", 10, startY + 10); // MOVES HEADER AWAY FROM PREVIOUS TABLE
           startY += 10; // SPACE BETWEEN HEADER AND TABLE
           interactionHistory.forEach((interaction) => {
             if (!interaction.valueModels || interaction.valueModels.length === 0) return;
@@ -197,20 +232,20 @@ export const PdfMixin = {
               return [
                 matchedPortfolio ? matchedPortfolio.instrumentName : "Unknown Fund",
                 formatAmount(entry.convertedAmount || 0, "ZAR"),
-                entry.portfolioSharePercentage || 0
+                entry.portfolioSharePercentage ? parseFloat(entry.portfolioSharePercentage).toFixed(2) : "0.00"
               ];
             });
 
             if (interactionData.length > 0) {
               const interactionDate = interaction.valueModels[0].valueDate || "Unknown Date";
-              doc.text(`Date: ${formatDate(interactionDate)}`, 10, startY + 10); // SPACE BETWEEN HEADER AND PREVIOUS TABLE
+              doc.text(`${formatDate(interactionDate)}`, 10, startY + 10); // SPACE BETWEEN HEADER AND PREVIOUS TABLE
 
               // Calculate totals
               const totalRandValue = interactionData.reduce((sum, row) => row[1], 0);
-              const totalPortfolioShare = interactionData.reduce((sum, row) => sum + row[2], 0);
+              const totalPortfolioShare = interactionData.reduce((sum, row) => sum + parseFloat(row[2]), 0).toFixed(2);
 
               // Add totals row
-              interactionData.push(["Total", totalRandValue, totalPortfolioShare.toFixed(2)]);
+              interactionData.push(["Total", totalRandValue, totalPortfolioShare]);
 
               doc.autoTable({
                 head: [["Investment Funds", "Rand Value", "% Share per Portfolio"]],
