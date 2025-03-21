@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@lottiefiles/lottie-player": "^2.0.12",
     "command-line-args": "^6.0.1",
     "compression": "^1.7.5",
     "cors": "^2.8.5",

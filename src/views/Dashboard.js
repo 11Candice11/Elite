@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
+import { PdfRetrievalService } from '/src/services/PdfRetrievalService.js';
 import user from '/src/images/user.png';
 import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is correct
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
@@ -466,6 +467,7 @@ class Dashboard extends ViewBase {
     };
 
     this.clientProfileService = new ClientProfileService();
+    this.pdfProxyService = new PdfRetrievalService();
     this.transactionDateStart = new Date(new Date().setMonth(new Date().getMonth() - 3)).toISOString();
     this.transactionDateEnd = new Date().toISOString();
     Object.assign(Dashboard.prototype, PdfMixin);
@@ -482,6 +484,7 @@ class Dashboard extends ViewBase {
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
       this.isLoading = false;
+      
       this.requestUpdate();
     }
   }
@@ -697,15 +700,6 @@ class Dashboard extends ViewBase {
     }
   }
 
-  // Convert File to Base64
-  fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result.split(",")[1]); // Extract Base64
-      reader.onerror = (error) => reject(error);
-      reader.readAsDataURL(file);
-    });
-  }
 
   async loadExcel() {
     try {
@@ -775,17 +769,6 @@ class Dashboard extends ViewBase {
     this.requestUpdate();
   }
 
-  // Convert Base64 back to ArrayBuffer
-  base64ToArrayBuffer(base64) {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  }
-
   async generateReport(portfolio = null) {
     this.showDialog = !this.showDialog;
 
@@ -799,12 +782,21 @@ class Dashboard extends ViewBase {
       store.set(`reportOptions`, this.reportOptions);
       var base64 = await this.generatePDF(clientInformation, this.clientID, this.portfolioRatings); // Generate the PDF
       store.set('base64', base64);
+      store.set('currentRoute', 'dashboard');
       router.navigate(`/pdf`); // Navigate to the PDF viewer  
     }
   }
 
   generateClientReport() {
     this.showDialog = false;
+  }
+
+  fundFacts() {
+    this.showDialog = false;
+    this.isLoading = true;
+    store.set('selectedPortfolio', this.selectedPortfolio);
+    store.set('currentRoute', 'fund-facts');
+    router.navigate('/fund-facts');
   }
 
   getPaginatedDates() {
@@ -914,7 +906,7 @@ class Dashboard extends ViewBase {
   
         <button @click="${() => this.selectedDates = []}">Clear</button>
         <button @click="${this.handleNext}" ?disabled="${this.isLoading}">
-          ${this.isLoading ? 'Processing...' : 'Next'}
+          ${this.isLoading ? 'Processing...' : 'Confirm'}
         </button>
       </div>
     `;
@@ -933,6 +925,7 @@ class Dashboard extends ViewBase {
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
               <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
+              <button class="report-btn" @click="${() => this.fundFacts()}">Fund Fact Sheet</button>
               <button @click="${() => this.toggleExpand(index)}">
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
