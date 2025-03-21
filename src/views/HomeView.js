@@ -419,7 +419,7 @@ li {
 
   constructor() {
     super();
-    this.searchID = store.get('searchID') || '';
+    this.searchID = localStorage.getItem("searchID"); // store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.profileMoved = false;
     this.isLoading = false;

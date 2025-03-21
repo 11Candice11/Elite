@@ -76,6 +76,7 @@ class LoginView extends ViewBase {
     this.password = '';
     this.errorMessage = '';
     this.isLoading = false;
+    localStorage.setItem("username", null);
     this.clientProfileService = new ClientProfileService(); // Initialize service
     Object.assign(LoginView.prototype, userInfoMixin);
   }
@@ -93,6 +94,7 @@ class LoginView extends ViewBase {
     this.isLoading = true;
 
     store.set('username', this.password);
+    localStorage.setItem("username", JSON.stringify(this.password));
 
     await this.loginUser(this.username, this.password);
     this.isLoading = false;

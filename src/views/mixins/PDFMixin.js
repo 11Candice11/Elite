@@ -274,6 +274,9 @@ export const PdfMixin = {
               const totalRandValue = interaction.valueModels
                 .filter(entry => !isNaN(entry.convertedAmount)) // Ensure valid numbers
                 .reduce((sum, entry) => sum + entry.convertedAmount, 0);
+              const totalValue = interaction.valueModels
+                .filter(entry => !isNaN(entry.convertedAmount)) // Ensure valid numbers
+                .reduce((sum, entry) => sum + (entry.convertedAmount / entry.exchangeRate), 0);
               const totalPortfolioShare = interactionData
                 .filter(row => !isNaN(parseFloat(row[3]))) // Ensure valid numbers
                 .reduce((sum, row) => sum + parseFloat(row[3] || 0), 0);
@@ -281,8 +284,9 @@ export const PdfMixin = {
               // Add totals row
               interactionData.push([
                 "Total",
+                formatAmount(totalValue || 0, this.reportOptions.currency), // Ensure it's always a valid number
                 formatAmount(totalRandValue || 0, "ZAR"), // Ensure it's always a valid number
-                !isNaN(totalPortfolioShare) ? totalPortfolioShare.toFixed(2) : "0.00"
+                // !isNaN(totalPortfolioShare) ? totalPortfolioShare.toFixed(2) : "0.00"
               ]);
 
               doc.autoTable({
