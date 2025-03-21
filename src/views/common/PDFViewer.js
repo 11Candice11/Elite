@@ -5,6 +5,7 @@ import base64PDF from '/src/constants/Base64.js';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './ViewBase.js';
+import { router } from '/src/shell/Routing.js'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.worker.min.js';
@@ -57,17 +58,13 @@ class PDFViewer extends ViewBase {
 
   connectedCallback() {
     super.connectedCallback();
-    this.base64 = store.get(`base64`);
-    const byteCharacters = atob(this.base64);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    const byteArray = new Uint8Array(byteNumbers);
-    const pdfBlob = new Blob([byteArray], { type: "application/pdf" });
 
-    this.pdfSrc = URL.createObjectURL(pdfBlob);
-    this.pdfSrc = `data:application/pdf;base64,${this.base64}`;
+    this.pdfSrc = store.get('pdfSrc') || '';
+
+    if (!this.pdfSrc && store.get('base64')) {
+      this.base64 = store.get('base64');
+      this.pdfSrc = `data:application/pdf;base64,${this.base64}`;
+    }
   }
 
   async firstUpdated() {
@@ -75,17 +72,36 @@ class PDFViewer extends ViewBase {
   }
 
   async loadPDF() {
+    if (!this.pdfSrc) {
+      console.error('No PDF source found!');
+      return;
+    }
+  
     try {
-      const loadingTask = pdfjsLib.getDocument(this.pdfSrc);
+      let loadingTask;
+  
+      // If pdfSrc is a string, pass it directly to getDocument(...)
+      if (typeof this.pdfSrc === 'string') {
+        // e.g. "data:application/pdf;base64,..." or "blob:http://..."
+        loadingTask = pdfjsLib.getDocument(this.pdfSrc);
+  
+      // If pdfSrc is an object with .data (like { data: Uint8Array })
+      } else if (this.pdfSrc.data) {
+        loadingTask = pdfjsLib.getDocument({ data: this.pdfSrc.data });
+  
+      } else {
+        throw new Error('Unsupported pdfSrc format. Provide a string or an object with .data');
+      }
+  
+      // Await the PDF load
       this.pdfDoc = await loadingTask.promise;
       this.totalPages = this.pdfDoc.numPages;
       this.renderPage(1);
     } catch (error) {
       console.error('Error loading PDF:', error);
-      console.error('Stack trace:', error.stack);
     }
   }
-
+  
   async renderPage(pageNum) {
     const page = await this.pdfDoc.getPage(pageNum);
 
@@ -144,10 +160,20 @@ class PDFViewer extends ViewBase {
     URL.revokeObjectURL(link.href); // Clean up the URL
   }
 
+  back() {
+    store.set('base64', null);
+    const currRoute = store.get('currentRoute');
+    if (currRoute) {
+      router.navigate(`/${currRoute}`);
+    } else {
+      router.navigate('/dashboard');
+    }
+  }
+
   render() {
     return html`
           <div class="back-button">
-        <button class="button" @click="${() => this.navigateBack()}">Back</button>
+        <button class="button" @click="${() => this.back()}">Back</button>
       </div>
         <h1>View Document</h1>
       <div id="pdf-container">

@@ -10,6 +10,7 @@ import '/src/views/common/Transactions.js';
 import '/src/views/common/PortfolioDetails.js';
 import '/src/views/common/PDFViewer.js';
 import '/src/views/common/RootTransactionHistory.js';
+import '/src/views/common/FundFacts.js';
 
 
 export class Routing {
@@ -25,7 +26,8 @@ export class Routing {
       '/dashboard': () => html`<dashboard-view></dashboard-view>`,
       '/pdf': () => html`<pdf-viewer></pdf-viewer>`,
       '/documents': () => html`<documents-view></documents-view>`,
-      '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`
+      '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`,
+      '/fund-facts': () => html`<fund-facts></fund-facts>`,
     };
 
     window.addEventListener('popstate', () => {

@@ -94,7 +94,7 @@ class LoginView extends ViewBase {
     this.isLoading = true;
 
     store.set('username', this.password);
-    localStorage.setItem("username", JSON.stringify(this.password));
+    localStorage.setItem("username", this.password);
 
     await this.loginUser(this.username, this.password);
     this.isLoading = false;
@@ -107,7 +107,7 @@ class LoginView extends ViewBase {
           <h2>Login</h2>
           <form @submit=${this.handleLogin}>
             <div class="form-group">
-              <label for="username">Nope Username</label>
+              <label for="username">Username</label>
               <input
                 type="text"
                 id="username"
