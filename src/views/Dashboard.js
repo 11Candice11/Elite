@@ -425,6 +425,7 @@ class Dashboard extends ViewBase {
     isLoading: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
+    testing: { type: String },
     excelSrc: { type: String },
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean },
@@ -453,6 +454,7 @@ class Dashboard extends ViewBase {
     this.excelSrc = ``;
     this.currentPage = 0;
     this.datesPerPage = 10;
+    this.testing = `test`;
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -539,7 +541,7 @@ class Dashboard extends ViewBase {
 
   updateOption(e, option) {
     const { type, checked, value } = e.target;
-    if(type === `text`) {
+    if (type === `text`) {
       this.reportOptions.currency = value;
     } else {
       this.reportOptions = {
@@ -650,11 +652,13 @@ class Dashboard extends ViewBase {
   }
 
   updatePortfolioRatings(portfolioId, period, value) {
+    this.testing = value;
     if (!this.portfolioRatings[portfolioId]) {
       this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
     }
     this.portfolioRatings[portfolioId][period] = value;
     store.set('portfolioRatings', this.portfolioRatings);
+    this.requestUpdate();
   }
 
   logout() {
@@ -744,7 +748,6 @@ class Dashboard extends ViewBase {
 
       // Extract ISIN reference from the Excel file
       const extractedIsin = row["ExportFile_TenforeId"]?.substring(5).trim();
-      console.log(`🔍 Extracted ISIN: ${extractedIsin}`);
 
       let matchingEntry = null;
 
@@ -761,15 +764,12 @@ class Dashboard extends ViewBase {
         return;
       }
 
-      console.log("✅ Found matching portfolio entry:", matchingEntry);
-
       const isinNumber = matchingEntry.isinNumber;
       this.portfolioRatings[isinNumber] = {
         1: oneYear,
         3: threeYears,
       };
-
-      console.log(`✅ Mapped ${isinNumber}: {1 Year: ${oneYear}, 3 Years: ${threeYears}}`);
+      console.log(this.portfolioRatings);
     });
 
     this.requestUpdate();
@@ -811,7 +811,7 @@ class Dashboard extends ViewBase {
     const start = this.currentPage * this.datesPerPage;
     return this.selectedDates.slice(start, start + this.datesPerPage);
   }
-  
+
   changePage(direction) {
     const maxPage = Math.ceil(this.selectedDates.length / this.datesPerPage) - 1;
     if (direction === "next" && this.currentPage < maxPage) {
@@ -960,8 +960,8 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
-                          <td>${this._renderInput(entry.instrumentName, 1)}</td>
-                          <td>${this._renderInput(entry.instrumentName, 3)}</td>
+                          <td>${this._renderInput(entry.isinNumber, 1)}</td>
+                          <td>${this._renderInput(entry.isinNumber, 3)}</td>
                         </tr>
                       `)}
                   </table>
@@ -1058,13 +1058,20 @@ class Dashboard extends ViewBase {
   }
 
   _renderInput(portfolioId, year) {
+    console.log(portfolioId, year);
     return html`
-      <input
-        type="text"
-        placeholder=""
-        .value="${this.portfolioRatings[portfolioId]?.[year] || ''}"
-        @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
-      />
+        <!-- <input
+            type="text"
+            placeholder=""
+            .value="${this.testing || ''}"
+            @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
+        /> -->
+        <input
+            type="text"
+            placeholder=""
+            .value="${this.portfolioRatings[portfolioId]?.[year] || ''}"
+            @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
+        />
     `;
   }
 
