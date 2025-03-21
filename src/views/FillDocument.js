@@ -278,7 +278,7 @@ export class FillDocument extends ViewBase {
     initialise() {
         this.clientInfo = store.get('clientInfo');
 
-        const idNumber = store.get('searchID');
+        const idNumber = localStorage.getItem("searchID");// store.get('searchID');
         const century = parseInt(idNumber.substring(0, 2)) < 22 ? "20" : "19";
         const dob = idNumber ? `${century}${idNumber.substring(0, 2)}/${idNumber.substring(2, 4)}/${idNumber.substring(4, 6)}` : "Unknown DOB";
 
@@ -321,7 +321,7 @@ export class FillDocument extends ViewBase {
         const pdfDoc = await PDFDocument.load(pdfData.slice(0)); // Ensure a fresh copy is passed
         const pages = pdfDoc.getPages();
 
-        const idNumber = store.get('searchID');
+        const idNumber = localStorage.getItem("searchID"); // store.get('searchID');
         const century = parseInt(idNumber.substring(0, 2)) < 22 ? "20" : "19";
         const dob = idNumber ? `${century}${idNumber.substring(0, 2)}/${idNumber.substring(2, 4)}/${idNumber.substring(4, 6)}` : "Unknown DOB";
 

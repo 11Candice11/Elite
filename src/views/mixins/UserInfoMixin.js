@@ -22,6 +22,7 @@ export const userInfoMixin = {
 
     async getClientInfo(idNumber, startDate = null, dates = []) {
         store.set('searchID', idNumber);
+        localStorage.setItem("searchID", JSON.stringify(idNumber));
 
         if (!startDate) {
             startDate = new Date();

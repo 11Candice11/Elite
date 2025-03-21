@@ -49,7 +49,7 @@ class Dashboard extends ViewBase {
   }
 
   .popup-content {
-    max-height: 300px;
+    max-height: 300px; /* Adjust as needed */
     overflow-y: auto;
     padding: 10px;
     border-radius: 5px;
@@ -402,7 +402,13 @@ class Dashboard extends ViewBase {
   font-weight: bold;
   transition: background-color 0.3s ease;
 }
-
+.date-list {
+  max-height: 250px; /* Adjust height to prevent overflow */
+  overflow-y: auto;  /* Enables scrolling */
+  padding: 0;
+  margin: 10px 0;
+  list-style-type: none; /* Removes bullets */
+}
 `;
 
   static properties = {
@@ -423,7 +429,9 @@ class Dashboard extends ViewBase {
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean },
     performanceData: { type: Object },
-    portfolioRatings: { type: Object }
+    portfolioRatings: { type: Object },
+    currentPage: { type: Number },
+    datesPerPage: { type: Number },
   };
 
   constructor() {
@@ -443,6 +451,8 @@ class Dashboard extends ViewBase {
     this.serviceUnavailable = false;
     this.portfolioRatings = {}; // One Year, Three Year
     this.excelSrc = ``;
+    this.currentPage = 0;
+    this.datesPerPage = 10;
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -626,7 +636,7 @@ class Dashboard extends ViewBase {
     const dates = store.get('selectedDates');
     if (dates === undefined || JSON.stringify(dates) != JSON.stringify(this.selectedDates)) {
       store.set('selectedDates', this.selectedDates);
-      const consultant = store.get('username');
+      const consultant = localStorage.getItem("username"); // store.get('username');
       try {
         await this.clientProfileService.addClientData(this.clientID, this.selectedDates, consultant);
       } catch (error) {
@@ -797,6 +807,21 @@ class Dashboard extends ViewBase {
     this.showDialog = false;
   }
 
+  getPaginatedDates() {
+    const start = this.currentPage * this.datesPerPage;
+    return this.selectedDates.slice(start, start + this.datesPerPage);
+  }
+  
+  changePage(direction) {
+    const maxPage = Math.ceil(this.selectedDates.length / this.datesPerPage) - 1;
+    if (direction === "next" && this.currentPage < maxPage) {
+      this.currentPage++;
+    } else if (direction === "prev" && this.currentPage > 0) {
+      this.currentPage--;
+    }
+    this.requestUpdate();
+  }
+
   acceptExcel() {
     this.showExcel = false;
 
@@ -856,19 +881,37 @@ class Dashboard extends ViewBase {
     return html`
       <div class="overlay" @click="${this.togglePopup}"></div>
       <div class="popup" @click="${(e) => e.stopPropagation()}">
-        <button @click="${() => this._getDates()}">Refresh</button>
         <h3>Select Dates</h3>
-        <input type="date" .value="${this.customDate}" @input="${(e) => this.customDate = e.target.value}" />
+        
+        <input type="date" .value="${this.customDate}" 
+          @input="${(e) => this.customDate = e.target.value}" />
         <button @click="${this.addCustomDate}">Add Date</button>
+        
         <div>
           <button @click="${() => this.handleDateSelection('Jan')}">Jan</button>
           <button @click="${() => this.handleDateSelection('Jan|Jun')}">Jan | Jun</button>
           <button @click="${() => this.handleDateSelection('Jan|Jun|Oct')}">Jan | Jun | Oct</button>
         </div>
+  
         <h4>Selected Dates:</h4>
-        <ul class="date-list"> 
-          ${this.selectedDates.map(date => html`<li>${date}</li>`)}
-        </ul>
+        <div class="popup-content">
+          <ul class="date-list">
+            ${this.getPaginatedDates().map(date => html`<li>${date}</li>`)}
+          </ul>
+        </div>
+  
+        ${Math.ceil(this.selectedDates.length / this.datesPerPage) > 1 ? html`
+          <div class="pagination-controls">
+            <button @click="${() => this.changePage('prev')}" ?disabled="${this.currentPage === 0}">
+              Previous
+            </button>
+            <span>Page ${this.currentPage + 1} of ${Math.ceil(this.selectedDates.length / this.datesPerPage)}</span>
+            <button @click="${() => this.changePage('next')}" ?disabled="${(this.currentPage + 1) * this.datesPerPage >= this.selectedDates.length}">
+              Next
+            </button>
+          </div>
+        ` : ''}
+  
         <button @click="${() => this.selectedDates = []}">Clear</button>
         <button @click="${this.handleNext}" ?disabled="${this.isLoading}">
           ${this.isLoading ? 'Processing...' : 'Next'}
