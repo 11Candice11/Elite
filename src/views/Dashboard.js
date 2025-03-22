@@ -665,14 +665,14 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
   }
 
-  updatePortfolioRatings(portfolioId, period, value) {
-    if (!this.portfolioRatings[portfolioId]) {
-      this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
-    }
-    this.portfolioRatings[portfolioId][period] = value;
-    store.set('portfolioRatings', this.portfolioRatings);
-    this.requestUpdate();
-  }
+  // updatePortfolioRatings(portfolioId, period, value) {
+  //   if (!this.portfolioRatings[portfolioId]) {
+  //     this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
+  //   }
+  //   this.portfolioRatings[portfolioId][period] = value;
+  //   store.set('portfolioRatings', this.portfolioRatings);
+  //   this.requestUpdate();
+  // }
 
   logout() {
     store.set("clientInfo", null);
@@ -992,6 +992,7 @@ class Dashboard extends ViewBase {
                       <th>Instrument Name</th>
                       <th>ISIN Number</th>
                       <th>MorningStar ID</th>
+                      <th>Six Months</th>
                       <th>One Year</th>
                       <th>Three years</th>
                     </tr>
@@ -1000,6 +1001,7 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
+                          <td>${this._renderInput(entry.isinNumber, 0.5)}</td>
                           <td>${this._renderInput(entry.isinNumber, 1)}</td>
                           <td>${this._renderInput(entry.isinNumber, 3)}</td>
                         </tr>

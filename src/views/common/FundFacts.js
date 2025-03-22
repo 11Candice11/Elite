@@ -94,6 +94,7 @@ class FundFacts extends ViewBase {
         super();
         this.isLoading = false;
         this.isLoadingUpload = false;
+        this.portfolioRatings = {};
 
         this.pdfProxyService = new PdfRetrievalService();
         Object.assign(FundFacts.prototype, ExcelMixin);
@@ -102,6 +103,7 @@ class FundFacts extends ViewBase {
     static properties = {
         isLoading: { type: Boolean },
         isLoadingUpload: { type: Boolean },
+        portfolioRatings: { type: Object },
     };
 
     // Navigate back to the Dashboard
@@ -135,14 +137,39 @@ class FundFacts extends ViewBase {
             const arrayBuffer = this.base64ToArrayBuffer(base64String);
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
-            const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            const worksheet = workbook.Sheets[sheetName];
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            let startRow = 0;
+        
+            for (let row = range.s.r; row <= range.e.r; row++) {
+              for (let col = range.s.c; col <= range.e.c; col++) {
+                const cellAddress = { r: row, c: col };
+                const cellRef = XLSX.utils.encode_cell(cellAddress);
+                const cell = worksheet[cellRef];
+                if (cell?.v === 'Text') {
+                  startRow = row;
+                  break;
+                }
+              }
+              if (startRow) break;
+            }
+        
+            const sheet = XLSX.utils.sheet_to_json(worksheet, { range: startRow });
+
+            const clientInfo = store.get("clientInfo");
+            const knownIsins = clientInfo?.detailModels
+              ?.flatMap(d => d.portfolioEntryTreeModels || [])
+              .map(entry => entry.isinNumber)
+              .filter(Boolean);
+
+            console.log("📦 ISINs from detailModels:", knownIsins);
 
             for (const row of sheet) {
-                const name = row["Name"] || row["Fund Fact Sheets"] || "Unknown";
-                let rawLink = row["Link"] || row["Links"] || "";
+                const isinFromExcel = row["Text"]?.trim();
+                console.log("📄 ISIN from Excel row:", isinFromExcel, "from row:", row);
 
+                let rawLink = row["Link"] || row["Links"] || "";
                 if (!rawLink) {
-                  // Try to find it in any property that contains a URL
                   for (const value of Object.values(row)) {
                     if (typeof value === "string" && value.includes("http")) {
                       rawLink = value;
@@ -152,60 +179,59 @@ class FundFacts extends ViewBase {
                 }
 
                 const links = rawLink
-                .split(',')
-                .map(link => {
-                  const match = link.match(/https?:\/\/[^\s]+/); // extract first http/https URL
-                  return match ? match[0] : null;
-                })
-                .filter(Boolean);
-                
+                  .split(',')
+                  .map(link => {
+                    const match = link.match(/https?:\/\/[^\s]+/); // extract first http/https URL
+                    return match ? match[0] : null;
+                  })
+                  .filter(Boolean);
+
                 for (const link of links) {
-                    try {
-                        const pdfBlob = await this.pdfProxyService.fetchPdf(link);
-                        const arrayBuffer = await pdfBlob.arrayBuffer();
-                        const pdfBytes = new Uint8Array(arrayBuffer);
-                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                  try {
+                    const pdfBlob = await this.pdfProxyService.fetchPdf(link);
+                    const arrayBuffer = await pdfBlob.arrayBuffer();
+                    const pdfBytes = new Uint8Array(arrayBuffer);
+                    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
-                        let fullText = '';
-                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                          const page = await pdf.getPage(pageNum);
-                          const textContent = await page.getTextContent();
-                          const pageText = textContent.items.map(item => item.str).join(' ');
-                          fullText += pageText + '\n';
-                        }
-
-                        // Try to extract the "1 Year" return value
-                        let oneYearValue = null;
-                        const match = fullText.match(/1 Year\s+([\d,.]+)/i);
-                        if (match) {
-                          oneYearValue = match[1];
-                          console.log(`📊 "${name}" - 1 Year Return: ${oneYearValue}`);
-                        } else {
-                          console.warn(`⚠️ "${name}" - Could not find '1 Year' return value.`);
-                        }
-                        
-                        // Extract "6 Months" return value
-                        const match6M = fullText.match(/6 Months\s+([\d,.]+)/i);
-                        if (match6M) {
-                          const sixMonthValue = match6M[1];
-                          console.log(`📊 "${name}" - 6 Months Return: ${sixMonthValue}`);
-                        } else {
-                          console.warn(`⚠️ "${name}" - Could not find '6 Months' return value.`);
-                        }
-
-                        // Extract "3 Years Annualised" return value
-                        const match3Y = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
-                        if (match3Y) {
-                          const threeYearValue = match3Y[1];
-                          console.log(`📊 "${name}" - 3 Years Annualised Return: ${threeYearValue}`);
-                        } else {
-                          console.warn(`⚠️ "${name}" - Could not find '3 Years Annualised' return value.`);
-                        }
-                    } catch (pdfErr) {
-                        console.error(`❌ Failed to fetch PDF for "${name}" from ${link}`, pdfErr);
+                    let fullText = '';
+                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                      const page = await pdf.getPage(pageNum);
+                      const textContent = await page.getTextContent();
+                      const pageText = textContent.items.map(item => item.str).join(' ');
+                      fullText += pageText + '\n';
                     }
+
+                    const oneYearMatch = fullText.match(/1 Year\s+([\d,.]+)/i);
+                    const oneYearValue = oneYearMatch ? oneYearMatch[1] : null;
+
+                    const sixMonthMatch = fullText.match(/6 Months\s+([\d,.]+)/i);
+                    const sixMonthValue = sixMonthMatch ? sixMonthMatch[1] : null;
+
+                    const threeYearMatch = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
+                    const threeYearValue = threeYearMatch ? threeYearMatch[1] : null;
+
+                    if (!this.portfolioRatings) this.portfolioRatings = {};
+                    if (!this.portfolioRatings[isinFromExcel]) this.portfolioRatings[isinFromExcel] = {};
+
+                    if (oneYearValue && oneYearValue !== "N/A") {
+                      this.portfolioRatings[isinFromExcel][1] = oneYearValue;
+                    }
+                    if (threeYearValue && threeYearValue !== "N/A") {
+                      this.portfolioRatings[isinFromExcel][3] = threeYearValue;
+                    }
+                    if (sixMonthValue && sixMonthValue !== "N/A") {
+                      this.portfolioRatings[isinFromExcel][0.5] = sixMonthValue;
+                    }
+
+                    console.log(`✅ Stored values for ISIN ${isinFromExcel} → 1Y: ${oneYearValue}, 3Y: ${threeYearValue}, 6M: ${sixMonthValue}`);
+                  } catch (error) {
+                    console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
+                  }
                 }
             }
+
+            store.set('portfolioRatings', this.portfolioRatings);
+            this.requestUpdate();
         } catch (err) {
             console.error("❌ Error reading Excel file:", err);
         } finally {
@@ -213,13 +239,41 @@ class FundFacts extends ViewBase {
         }
     }
 
+    updateTextFieldsWithExtractedData(ratingsMap) {
+        const clientInfo = store.get("clientInfo");
+        if (!clientInfo?.detailModels) return;
+
+        for (const detail of clientInfo.detailModels) {
+            for (const entry of detail.portfolioEntryTreeModels || []) {
+                const isin = entry.isinNumber;
+                const rating = ratingsMap[isin];
+
+                if (rating) {
+                    if (rating["1"]) {
+                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+                        this.portfolioRatings[isin][1] = rating["1"];
+                    }
+                    if (rating["3"]) {
+                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+                        this.portfolioRatings[isin][3] = rating["3"];
+                    }
+                    if (rating["6m"]) {
+                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+                        this.portfolioRatings[isin][0.5] = rating["6m"];
+                    }
+                }
+            }
+        }
+
+        store.set('portfolioRatings', this.portfolioRatings);
+        this.requestUpdate();
+    }
 
     // Called when "View Fund Fact Sheet" button is clicked
     async _viewFundFactSheet() {
         this.isLoading = true;
         const pdfUrl = "https://gllt.morningstar.com/awpurzgf31/snapshotpdf/default.aspx?SecurityToken=F00001GPT3]2]1]FOZAF$$ONS_2428&ClientFund=1&LanguageId=en-GB&CurrencyId=ZAR";
         try {
-            // Call the backend endpoint via your service method to fetch the PDF data
             const pdfBlob = await this.pdfProxyService.fetchPdf(pdfUrl);
             const arrayBuffer = await pdfBlob.arrayBuffer();
             const pdfBytes = new Uint8Array(arrayBuffer);
@@ -228,7 +282,6 @@ class FundFacts extends ViewBase {
             router.navigate('/pdf');
         } catch (error) {
             console.error("Failed to fetch PDF:", error);
-            // Handle error accordingly, e.g., show an alert to the user
         } finally {
             this.isLoading = false;
         }
@@ -237,13 +290,10 @@ class FundFacts extends ViewBase {
     // Called when "Add to Report" button is clicked
     _addToReport() {
         console.log("Add to Report clicked");
-        // Implement functionality here
     }
 
     _apply() {
         console.log("Apply Report clicked");
-        // Implement functionality here
-
     }
 
     render() {
@@ -271,10 +321,6 @@ class FundFacts extends ViewBase {
           <img class="icon" src="${viewImage}" alt="Fund Fact Sheet Icon" />
             ${this.isLoading ? 'Loading...' : 'View Fund Fact Sheet'}
         </button>
-        <!-- <button ?disabled=${true}  class="button disabled" @click="${this._addToReport}">
-          <img class="icon" src="${addImage}" alt="Add to Report Icon" />
-          Add to Report
-        </button> -->
         <button ?disabled=${false}  class="button" @click="${this._apply}">
           <img class="icon" src="${addImage}" alt="Add to Report Icon" />
           Apply
