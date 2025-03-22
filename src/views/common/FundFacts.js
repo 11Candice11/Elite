@@ -162,11 +162,8 @@ class FundFacts extends ViewBase {
               .map(entry => entry.isinNumber)
               .filter(Boolean);
 
-            console.log("📦 ISINs from detailModels:", knownIsins);
-
             for (const row of sheet) {
                 const isinFromExcel = row["Text"]?.trim();
-                console.log("📄 ISIN from Excel row:", isinFromExcel, "from row:", row);
 
                 let rawLink = row["Link"] || row["Links"] || "";
                 if (!rawLink) {
@@ -222,8 +219,6 @@ class FundFacts extends ViewBase {
                     if (sixMonthValue && sixMonthValue !== "N/A") {
                       this.portfolioRatings[isinFromExcel][0.5] = sixMonthValue;
                     }
-
-                    console.log(`✅ Stored values for ISIN ${isinFromExcel} → 1Y: ${oneYearValue}, 3Y: ${threeYearValue}, 6M: ${sixMonthValue}`);
                   } catch (error) {
                     console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
                   }
@@ -317,11 +312,11 @@ class FundFacts extends ViewBase {
           <img class="icon" src="${uploadingImage}" alt="Upload Icon" />
           ${this.isLoadingUpload ? 'Uploading...' : 'Upload Excel'}
         </button>
-        <button ?disabled=${false} class="button" @click="${this._viewFundFactSheet}">
+        <button ?disabled=${false} class="button disabled" @click="${this._viewFundFactSheet}">
           <img class="icon" src="${viewImage}" alt="Fund Fact Sheet Icon" />
             ${this.isLoading ? 'Loading...' : 'View Fund Fact Sheet'}
         </button>
-        <button ?disabled=${false}  class="button" @click="${this._apply}">
+        <button ?disabled=${false}  class="button disabled" @click="${this._apply}">
           <img class="icon" src="${addImage}" alt="Add to Report Icon" />
           Apply
         </button>

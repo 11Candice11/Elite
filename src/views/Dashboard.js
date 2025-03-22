@@ -768,8 +768,6 @@ class Dashboard extends ViewBase {
     this.requestUpdate();
   }
   extractPortfolioRatings(sheetData) {
-    console.log("🔍 Processing Excel Data...");
-
     sheetData.forEach((row) => {
       const oneYear = row["12 Month Return"] || "";
       const threeYears = row["36 Month Return (ann)"] || "";
@@ -812,7 +810,6 @@ class Dashboard extends ViewBase {
     if (ratings) {
       this.portfolioRatings = ratings;
       this.requestUpdate();
-      console.log("Dashboard text fields updated with:", ratings);
     } else {
       console.warn("No portfolioRatings found in store.");
     }
