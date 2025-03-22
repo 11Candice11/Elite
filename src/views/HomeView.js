@@ -419,7 +419,7 @@ li {
 
   constructor() {
     super();
-    this.searchID = localStorage.getItem("searchID"); // store.get('searchID') || '';
+    this.searchID = store.get("searchID"); // store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.profileMoved = false;
     this.isLoading = false;
@@ -497,7 +497,7 @@ li {
       this.isLoading = false;
       return;
     } else {
-      store.set('searchID', this.searchID);
+      store.set("searchID", this.searchID);
     }
 
     const existingClient = await this._checkExistingClient(this.searchID);
@@ -523,7 +523,7 @@ li {
 
   async generateReport() {
     var base64 = await this.generatePDF(this.clientInfo, this.clientID);
-    store.set('base64', base64);
+    store.set('base64', (base64));
     super.navigateToDocuments();
     // router.navigate('/pdf');
   }

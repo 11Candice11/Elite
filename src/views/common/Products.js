@@ -102,12 +102,12 @@ class Products extends ViewBase {
   }
 
   navigateToMoreInfo(portfolioEntryTreeModels) {
-    store.set('portfolioEntryTreeModels', portfolioEntryTreeModels); // Save data to store
+    store.set('portfolioEntryTreeModels', (portfolioEntryTreeModels)); // Save data to store
     router.navigate('/portfolio-details'); // Navigate to the detailed view
   }
 
   navigateToTransactionHistory(detail) {
-    store.set('rootValueDateModels', detail.rootValueDateModels);
+    store.set('rootValueDateModels', (detail.rootValueDateModels));
     // store.set('transactionData', [
     //   // Include the provided JSON data here or fetch it dynamically
     //   {

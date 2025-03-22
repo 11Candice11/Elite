@@ -161,7 +161,7 @@ class PDFViewer extends ViewBase {
   }
 
   back() {
-    store.set('base64', null);
+    store.set('base64', (null));
     const currRoute = store.get('currentRoute');
     if (currRoute) {
       router.navigate(`/${currRoute}`);

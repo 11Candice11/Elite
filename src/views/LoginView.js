@@ -76,12 +76,17 @@ class LoginView extends ViewBase {
     this.password = '';
     this.errorMessage = '';
     this.isLoading = false;
-    localStorage.setItem("username", null);
+    // store.set("username", JSON.stringify(null));
     this.clientProfileService = new ClientProfileService(); // Initialize service
     Object.assign(LoginView.prototype, userInfoMixin);
   }
 
-  
+  connectedCallback() {
+    super.connectedCallback();
+    localStorage.clear();
+    sessionStorage.clear();
+  }
+
   async handleLogin(e) {
     e.preventDefault();
     this.errorMessage = '';
@@ -94,7 +99,7 @@ class LoginView extends ViewBase {
     this.isLoading = true;
 
     store.set('username', this.password);
-    localStorage.setItem("username", this.password);
+    localStorage.setItem("username", JSON.stringify(this.password));
 
     await this.loginUser(this.username, this.password);
     this.isLoading = false;
@@ -128,8 +133,8 @@ class LoginView extends ViewBase {
             </div>
                   <!-- Loading Indicator -->
             ${this.errorMessage
-              ? html`<div class="form-group error">${this.errorMessage}</div>`
-              : ''}
+        ? html`<div class="form-group error">${this.errorMessage}</div>`
+        : ''}
             <button class="button" type="submit">${this.isLoading ? `Processing` : `Login`}</button>
           </form>
         </div>

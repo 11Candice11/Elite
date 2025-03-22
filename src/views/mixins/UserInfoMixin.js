@@ -21,8 +21,7 @@ export const userInfoMixin = {
     },
 
     async getClientInfo(idNumber, startDate = null, dates = []) {
-        store.set('searchID', idNumber);
-        localStorage.setItem("searchID", idNumber);
+        store.set("searchID", idNumber);
 
         if (!startDate) {
             startDate = new Date();
@@ -53,7 +52,7 @@ export const userInfoMixin = {
             } else if (response.entityModels[1].detailModels.length > 0) {
                 clientInfo = response.entityModels[1];
             }
-            store.set('clientInfo', clientInfo);
+            store.set("clientInfo", (clientInfo));
             return clientInfo;
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -124,7 +123,7 @@ export const userInfoMixin = {
                     detailModels: returnValue.detailModels || [],
                     idNumber: idNumber
                 };
-                store.set('clientInfo', clientInfo);
+                store.set("clientInfo", (clientInfo));
                 return clientInfo;
             } else {
                 const clientInfo = await this.getClientInfo(idNumber);

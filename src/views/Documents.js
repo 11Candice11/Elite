@@ -355,7 +355,7 @@ export class Documents extends ViewBase {
   }
 
   initialise() {
-    const storedClientInfo = store.get('clientInfo');
+    const storedClientInfo = store.gets('clientInfo');
     if (storedClientInfo && storedClientInfo.client) {
       const fullClientInfo = clientInfo.find(client => client.passportOrId === storedClientInfo.client.IDNumber);
       if (fullClientInfo) {

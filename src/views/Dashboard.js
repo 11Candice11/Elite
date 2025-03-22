@@ -9,6 +9,7 @@ import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 import * as XLSX from 'xlsx';
+import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 
 class Dashboard extends ViewBase {
   static styles = css`
@@ -410,6 +411,17 @@ class Dashboard extends ViewBase {
   margin: 10px 0;
   list-style-type: none; /* Removes bullets */
 }
+.fund-facts-btn {
+  position: absolute;
+  top: 10px;
+  right: 100px;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
 `;
 
   static properties = {
@@ -426,7 +438,6 @@ class Dashboard extends ViewBase {
     isLoading: { type: Boolean },
     expandedCards: { type: Object },
     transactionDateStart: { type: String },
-    testing: { type: String },
     excelSrc: { type: String },
     transactionDateEnd: { type: String },
     serviceUnavailable: { type: Boolean },
@@ -455,7 +466,6 @@ class Dashboard extends ViewBase {
     this.excelSrc = ``;
     this.currentPage = 0;
     this.datesPerPage = 10;
-    this.testing = `test`;
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -472,6 +482,7 @@ class Dashboard extends ViewBase {
     this.transactionDateEnd = new Date().toISOString();
     Object.assign(Dashboard.prototype, PdfMixin);
     Object.assign(Dashboard.prototype, userInfoMixin);
+    Object.assign(Dashboard.prototype, ExcelMixin);
   }
 
   async connectedCallback() {
@@ -484,7 +495,7 @@ class Dashboard extends ViewBase {
       this.clientInfo = storedClientInfo;
       this.searchCompleted = true;
       this.isLoading = false;
-      
+      this.updateTextfields();
       this.requestUpdate();
     }
   }
@@ -522,8 +533,8 @@ class Dashboard extends ViewBase {
       this.clientInfo = await this.getClientInfo(this.clientID);
 
       if (this.clientInfo) {
-        store.set('searchID', this.clientID);
-        store.set('clientInfo', this.clientInfo);
+        store.set("searchID", this.clientID);
+        store.set("clientInfo", this.clientInfo);
         this.searchCompleted = true;
         this.showPopup = true;
         this.selectedDates = await this._getDates();
@@ -654,21 +665,20 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
   }
 
-  updatePortfolioRatings(portfolioId, period, value) {
-    this.testing = value;
-    if (!this.portfolioRatings[portfolioId]) {
-      this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
-    }
-    this.portfolioRatings[portfolioId][period] = value;
-    store.set('portfolioRatings', this.portfolioRatings);
-    this.requestUpdate();
-  }
+  // updatePortfolioRatings(portfolioId, period, value) {
+  //   if (!this.portfolioRatings[portfolioId]) {
+  //     this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
+  //   }
+  //   this.portfolioRatings[portfolioId][period] = value;
+  //   store.set('portfolioRatings', this.portfolioRatings);
+  //   this.requestUpdate();
+  // }
 
   logout() {
-    store.set('clientInfo', null);
-    store.set('searchID', '');
+    store.set("clientInfo", null);
+    store.set("searchID", null);
     store.set('selectedDates', null);
-    store.set('username', '');
+    store.set("username", null);
     this.clientID = '';
     this.clientInfo = null;
     this.searchCompleted = false;
@@ -697,6 +707,7 @@ class Dashboard extends ViewBase {
     } else if (fileType === 'excel') {
       this.excelSrc = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64String}`;
       this.loadExcel(); // Call function to process Excel
+      this.populateDashboardFieldsFromExcel(); // New method to match fields by name
     }
   }
 
@@ -710,6 +721,7 @@ class Dashboard extends ViewBase {
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0]; // Get the first sheet
       const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      this.renderedSheetData = sheet; // Store for later field mapping
 
       if (sheet.length === 0) {
         console.error("❌ Excel file is empty.");
@@ -728,9 +740,34 @@ class Dashboard extends ViewBase {
     }
   }
 
-  extractPortfolioRatings(sheetData) {
-    console.log("🔍 Processing Excel Data...");
+  populateDashboardFieldsFromExcel() {
+    const sheetData = this.renderedSheetData;
+    if (!sheetData || sheetData.length === 0) return;
 
+    for (const row of sheetData) {
+      const name = row["Name"]?.trim();
+      const value = row["12 Month Return"] || row["1 Year"] || "";
+      const threeYear = row["36 Month Return (ann)"] || row["3 Years Annualised"] || "";
+
+      if (!name) continue;
+
+      // Find matching portfolio entry by Name
+      for (const detail of this.clientInfo.detailModels || []) {
+        if (!detail.portfolioEntryTreeModels) continue;
+
+        for (const entry of detail.portfolioEntryTreeModels) {
+          if (entry.instrumentName?.trim() === name) {
+            const isin = entry.isinNumber;
+            this.updatePortfolioRatings(isin, 1, value);
+            this.updatePortfolioRatings(isin, 3, threeYear);
+          }
+        }
+      }
+    }
+
+    this.requestUpdate();
+  }
+  extractPortfolioRatings(sheetData) {
     sheetData.forEach((row) => {
       const oneYear = row["12 Month Return"] || "";
       const threeYears = row["36 Month Return (ann)"] || "";
@@ -763,10 +800,19 @@ class Dashboard extends ViewBase {
         1: oneYear,
         3: threeYears,
       };
-      console.log(this.portfolioRatings);
     });
 
     this.requestUpdate();
+  }
+
+  updateTextfields() {
+    const ratings = store.get("portfolioRatings");
+    if (ratings) {
+      this.portfolioRatings = ratings;
+      this.requestUpdate();
+    } else {
+      console.warn("No portfolioRatings found in store.");
+    }
   }
 
   async generateReport(portfolio = null) {
@@ -904,7 +950,6 @@ class Dashboard extends ViewBase {
           </div>
         ` : ''}
   
-        <button @click="${() => this.selectedDates = []}">Clear</button>
         <button @click="${this.handleNext}" ?disabled="${this.isLoading}">
           ${this.isLoading ? 'Processing...' : 'Confirm'}
         </button>
@@ -925,7 +970,6 @@ class Dashboard extends ViewBase {
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
               <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
-              <button class="report-btn" @click="${() => this.fundFacts()}">Fund Fact Sheet</button>
               <button @click="${() => this.toggleExpand(index)}">
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
@@ -945,6 +989,7 @@ class Dashboard extends ViewBase {
                       <th>Instrument Name</th>
                       <th>ISIN Number</th>
                       <th>MorningStar ID</th>
+                      <th>Six Months</th>
                       <th>One Year</th>
                       <th>Three years</th>
                     </tr>
@@ -953,6 +998,7 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
+                          <td>${this._renderInput(entry.isinNumber, 0.5)}</td>
                           <td>${this._renderInput(entry.isinNumber, 1)}</td>
                           <td>${this._renderInput(entry.isinNumber, 3)}</td>
                         </tr>
@@ -1016,8 +1062,9 @@ class Dashboard extends ViewBase {
     ${this.showDialog ? this.renderDialog() : ''}
           <!-- Logout Button (Only Visible When Logged In) -->
           ${this.clientInfo ? html`
-        <button class="logout-button" @click="${this.logout}">Logout</button>
-      ` : ''}
+            <button class="fund-facts-btn" @click="${() => this.fundFacts()}">Upload Fund Fact Sheets</button>
+            <button class="logout-button" @click="${() => this.logout()}">Logout</button>
+          ` : ''}
       <!-- Search Bar -->
       <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
         <input
@@ -1051,14 +1098,7 @@ class Dashboard extends ViewBase {
   }
 
   _renderInput(portfolioId, year) {
-    console.log(portfolioId, year);
     return html`
-        <!-- <input
-            type="text"
-            placeholder=""
-            .value="${this.testing || ''}"
-            @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
-        /> -->
         <input
             type="text"
             placeholder=""
