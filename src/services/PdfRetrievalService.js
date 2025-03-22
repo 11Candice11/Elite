@@ -18,4 +18,28 @@ export class PdfRetrievalService extends Service {
             throw error;
         }
     }
+
+    async updatePortfolioRatings(isin, ratings) {
+        try {
+            const endpoint = `/ratings/update`;
+            const body = {
+                isin,
+                ratings  // e.g., { "1": "5.06", "3": "7.2", "0.5": "3.8" }
+            };
+            return await this.post(endpoint, body);
+        } catch (error) {
+            console.error('Failed to update portfolio ratings:', error);
+            throw error;
+        }
+    }
+
+    async getSavedRatings() {
+        try {
+            const endpoint = `/ratings/get`;
+            return await this.get(endpoint);
+        } catch (error) {
+            console.error('Failed to get saved ratings:', error);
+            throw error;
+        }
+    }
 }

@@ -300,14 +300,7 @@ class FundFacts extends ViewBase {
 
       <!-- Main content with three action buttons -->
       <div class="content">
-        <lottie-player
-            src="https://assets4.lottiefiles.com/packages/lf20_pwohahvd.json"
-            background="transparent"
-            speed="1"
-            style="width: 300px; height: 300px;"
-            loop
-            autoplay
-        ></lottie-player>
+        ${this.isLoadingUpload ? this._renderLoading() : this._renderLottie()}
         <button class="button" @click="${this._uploadExcel}">
           <img class="icon" src="${uploadingImage}" alt="Upload Icon" />
           ${this.isLoadingUpload ? 'Uploading...' : 'Upload Excel'}
@@ -322,6 +315,32 @@ class FundFacts extends ViewBase {
         </button>
       </div>
     `;
+    }
+
+    _renderLoading() {
+        return html`
+        <lottie-player
+            src="https://assets4.lottiefiles.com/packages/lf20_myejiggj.json"
+            background="transparent"
+            speed="1"
+            style="width: 300px; height: 300px;"
+            loop
+            autoplay
+        ></lottie-player>
+        `;
+    }
+
+    _renderLottie() {
+        return html`
+        <lottie-player
+            src="https://assets4.lottiefiles.com/packages/lf20_pwohahvd.json"
+            background="transparent"
+            speed="1"
+            style="width: 300px; height: 300px;"
+            loop
+            autoplay
+        ></lottie-player>
+        `;
     }
 }
 

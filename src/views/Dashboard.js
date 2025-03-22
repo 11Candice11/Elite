@@ -12,6 +12,36 @@ import * as XLSX from 'xlsx';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 
 class Dashboard extends ViewBase {
+  getRatingColor(lastUpdated) {
+    if (!lastUpdated) return 'black';
+    const updated = new Date(lastUpdated);
+    const now = new Date();
+    const daysDiff = Math.floor((now - updated) / (1000 * 60 * 60 * 24));
+    if (daysDiff === 0) return 'green';
+    if (daysDiff > 7) return 'red';
+    return 'black';
+  }
+  
+  async _handleUpdateRatings(portfolio) {
+    for (const entry of portfolio.portfolioEntryTreeModels) {
+      const isin = entry.isinNumber;
+      const ratings = this.portfolioRatings[isin];
+      const lastUpdated = new Date().toISOString();
+      if (ratings) {
+        await this.pdfProxyService.updatePortfolioRatings(isin, {
+          ratings,
+          lastUpdated,
+          instrumentName: entry.instrumentName,
+          clientId: this.clientID,
+        });
+        if (!ratings.meta) ratings.meta = {};
+        ratings.meta.lastUpdated = lastUpdated;
+      }
+    }
+    this.requestUpdate();
+    alert("✅ Ratings updated and saved!");
+    this.changedIsins.clear();
+  }
   static styles = css`
   :host {
     display: flex;
@@ -411,17 +441,37 @@ class Dashboard extends ViewBase {
   margin: 10px 0;
   list-style-type: none; /* Removes bullets */
 }
-.fund-facts-btn {
-  position: absolute;
-  top: 10px;
-  right: 100px;
-  color: white;
-  padding: 8px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
+  .fund-facts-btn {
+    position: absolute;
+    top: 10px;
+    right: 100px;
+    color: white;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0077b6;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    font-weight: bold;
+    z-index: 9999;
+    animation: fadeInOut 3s ease-in-out;
+  }
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    90% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  }
 `;
 
   static properties = {
@@ -466,6 +516,7 @@ class Dashboard extends ViewBase {
     this.excelSrc = ``;
     this.currentPage = 0;
     this.datesPerPage = 10;
+    this.toastMessage = '';
     this.reportOptions = {
       contributions: true,
       withdrawals: true,
@@ -493,6 +544,18 @@ class Dashboard extends ViewBase {
       this.clientID = store.get('searchID') ?? this.clientID;
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
+      try {
+        const savedRatings = await this.pdfProxyService.getSavedRatings();
+        if (savedRatings && typeof savedRatings === 'object') {
+          for (const [isin, data] of Object.entries(savedRatings)) {
+            this.portfolioRatings[isin] = data;
+          }
+          store.set('portfolioRatings', this.portfolioRatings);
+        }
+      } catch (e) {
+        console.warn("⚠️ Could not load saved ratings from backend:", e);
+      }
+      if (!this.portfolioRatings) this.portfolioRatings = {};
       this.searchCompleted = true;
       this.isLoading = false;
       this.updateTextfields();
@@ -970,9 +1033,13 @@ class Dashboard extends ViewBase {
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
               <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
-              <button @click="${() => this.toggleExpand(index)}">
+              <button @click=${() => this.toggleExpand(index)}>
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
+              ${this.expandedCards[index] &&
+                portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
+                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
+              ` : ''}
 
               ${this.expandedCards[index] ? html`
                 <div class="portfolio-info">
@@ -1094,17 +1161,24 @@ class Dashboard extends ViewBase {
            ${this.showExcel ? this.renderExcelDocument() : ``}
         </div>
       ` : ''}
+      ${this.toastMessage ? html`
+        <div class="toast">${this.toastMessage}</div>
+      ` : ''}
     `;
   }
 
   _renderInput(portfolioId, year) {
+    const value = this.portfolioRatings[portfolioId]?.[year] || '';
+    const updatedAt = this.portfolioRatings[portfolioId]?.meta?.lastUpdated;
+    const color = this.getRatingColor(updatedAt);
     return html`
-        <input
-            type="text"
-            placeholder=""
-            .value="${this.portfolioRatings[portfolioId]?.[year] || ''}"
-            @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
-        />
+      <input
+          type="text"
+          placeholder=""
+          style="color: ${color};"
+          .value="${value}"
+          @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
+      />
     `;
   }
 
