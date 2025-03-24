@@ -13,35 +13,48 @@ import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 
 class Dashboard extends ViewBase {
   getRatingColor(lastUpdated) {
-    if (!lastUpdated) return 'black';
+    if (!lastUpdated) return 'red';
     const updated = new Date(lastUpdated);
     const now = new Date();
-    const daysDiff = Math.floor((now - updated) / (1000 * 60 * 60 * 24));
-    if (daysDiff === 0) return 'green';
-    if (daysDiff > 7) return 'red';
-    return 'black';
+    const diffMs = now - updated;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours <= 1 ? 'green' : 'red';
   }
   
   async _handleUpdateRatings(portfolio) {
     for (const entry of portfolio.portfolioEntryTreeModels) {
       const isin = entry.isinNumber;
-      const ratings = this.portfolioRatings[isin];
-      const lastUpdated = new Date().toISOString();
-      if (ratings) {
-        await this.pdfProxyService.updatePortfolioRatings(isin, {
-          ratings,
-          lastUpdated,
-          instrumentName: entry.instrumentName,
-          clientId: this.clientID,
-        });
-        if (!ratings.meta) ratings.meta = {};
-        ratings.meta.lastUpdated = lastUpdated;
+      const ratings = {
+        0.5: this.portfolioRatings[isin]?.[0.5] || '',
+        1: this.portfolioRatings[isin]?.[1] || '',
+        3: this.portfolioRatings[isin]?.[3] || ''
+      };
+  
+      const payload = {
+        instrumentName: entry.instrumentName,
+        isinNumber: isin,
+        clientId: this.clientID,
+        ratings,
+        lastUpdated: new Date().toISOString()
+      };
+  
+      try {
+        await this.pdfProxyService.updatePortfolioRatings(isin, payload);
+  
+        // Save locally as well
+        if (!this.portfolioRatings[isin]) this.portfolioRatings[isin] = {};
+        this.portfolioRatings[isin].ratings = ratings;
+        this.portfolioRatings[isin].meta = { lastUpdated: payload.lastUpdated };
+      } catch (error) {
+        console.warn(`❌ Failed to update ratings for ${isin}`, error);
       }
     }
+  
     this.requestUpdate();
     alert("✅ Ratings updated and saved!");
     this.changedIsins.clear();
   }
+
   static styles = css`
   :host {
     display: flex;
@@ -511,6 +524,7 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
     this.showExcel = false;
     this.expandedCards = {};
+    this.changedIsins = new Set();
     this.serviceUnavailable = false;
     this.portfolioRatings = {}; // One Year, Three Year
     this.excelSrc = ``;
@@ -521,6 +535,7 @@ class Dashboard extends ViewBase {
       contributions: true,
       withdrawals: true,
       regularWithdrawals: true,
+      regularContributions: true,
       interactionHistory: true,
       includePercentage: false,
       irr: 7.0,
@@ -725,6 +740,20 @@ class Dashboard extends ViewBase {
     }
 
     this.showPopup = false;
+    
+    try {
+      const savedRatings = await this.pdfProxyService.getSavedRatings();
+      if (savedRatings && typeof savedRatings === 'object') {
+        for (const [isin, data] of Object.entries(savedRatings)) {
+          this.portfolioRatings[isin] = data;
+        }
+        store.set('portfolioRatings', this.portfolioRatings);
+      }
+    } catch (e) {
+      console.warn("⚠️ Could not load saved ratings from backend:", e);
+    }
+    this.requestUpdate();
+
     this.isLoading = false;
   }
 
@@ -1176,8 +1205,16 @@ class Dashboard extends ViewBase {
           type="text"
           placeholder=""
           style="color: ${color};"
+          title="${updatedAt ? `Last updated: ${new Date(updatedAt).toLocaleString()}` : 'No update info'}"
           .value="${value}"
-          @input="${(e) => this.updatePortfolioRatings(portfolioId, year, e.target.value)}"
+          @input="${(e) => {
+            this.updatePortfolioRatings(portfolioId, year, e.target.value);
+            this.changedIsins = this.changedIsins || new Set();
+            this.changedIsins.add(portfolioId);
+            
+            const key = portfolioId || `${year}-${Math.random()}`; // if you want to force uniqueness
+            this.changedIsins.add(key);
+          }}"
       />
     `;
   }
@@ -1191,6 +1228,7 @@ class Dashboard extends ViewBase {
             <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
             <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
             <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.regularContributions}" @change="${(e) => this.updateOption(e, 'regularContributions')}" /> Regular Contributions</label>
             <label><input type="checkbox" .checked="${this.reportOptions.interactionHistory}" @change="${(e) => this.updateOption(e, 'interactionHistory')}" /> Interaction History</label>
             <label><input ?disabled="${true}" type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
             <label>

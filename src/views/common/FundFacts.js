@@ -108,6 +108,9 @@ class FundFacts extends ViewBase {
 
     // Navigate back to the Dashboard
     _goBack() {
+        if (this.isLoadingUpload) 
+        return; 
+
         store.set('pdfSrc', (null));
         router.navigate('/dashboard');
     }
@@ -295,7 +298,7 @@ class FundFacts extends ViewBase {
         return html`
       <!-- Header with back button -->
       <div class="header">
-        <button class="back-button" @click="${this._goBack}">Back</button>
+        <button ?diabled="${this.isLoadingUpload}" class="back-button ${this.isLoadingUpload ? `disabled` : ``}" @click="${this._goBack}">Back</button>
       </div>
 
       <!-- Main content with three action buttons -->
@@ -305,11 +308,11 @@ class FundFacts extends ViewBase {
           <img class="icon" src="${uploadingImage}" alt="Upload Icon" />
           ${this.isLoadingUpload ? 'Uploading...' : 'Upload Excel'}
         </button>
-        <button ?disabled=${false} class="button disabled" @click="${this._viewFundFactSheet}">
+        <button ?disabled=${false} class="button" @click="${this._viewFundFactSheet}">
           <img class="icon" src="${viewImage}" alt="Fund Fact Sheet Icon" />
             ${this.isLoading ? 'Loading...' : 'View Fund Fact Sheet'}
         </button>
-        <button ?disabled=${false}  class="button disabled" @click="${this._apply}">
+        <button ?disabled=${false}  class="button" @click="${this._apply}">
           <img class="icon" src="${addImage}" alt="Add to Report Icon" />
           Apply
         </button>

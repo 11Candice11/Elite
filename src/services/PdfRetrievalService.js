@@ -3,10 +3,10 @@ import { Service } from '/src/services/Service.js';
 export class PdfRetrievalService extends Service {
     constructor() {
         // Uncomment the line below to use the production API
-        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1'); // Production API
-        
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net'); // Production API
+
         // Local development API endpoint
-        super('http://localhost:6200');
+        // super('http://localhost:6200');
     }
 
     async fetchPdf(pdfUrl) {
@@ -19,23 +19,30 @@ export class PdfRetrievalService extends Service {
         }
     }
 
-    async updatePortfolioRatings(isin, ratings) {
+    async updatePortfolioRatings(isinNumber, data) {
         try {
-            const endpoint = `/ratings/update`;
-            const body = {
-                isin,
-                ratings  // e.g., { "1": "5.06", "3": "7.2", "0.5": "3.8" }
-            };
-            return await this.post(endpoint, body);
+            const response = await fetch(`/api/ratings/${isinNumber}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to update ratings for ${isinNumber}`);
+            }
+
+            return await response.json();
         } catch (error) {
-            console.error('Failed to update portfolio ratings:', error);
+            console.error("❌ Error updating portfolio ratings:", error);
             throw error;
         }
     }
 
     async getSavedRatings() {
         try {
-            const endpoint = `/ratings/get`;
+            const endpoint = `/api/ratings`;
             return await this.get(endpoint);
         } catch (error) {
             console.error('Failed to get saved ratings:', error);
