@@ -8,10 +8,10 @@ import { Service } from '/src/services/Service.js';
 export class ClientProfileService extends Service {
     constructor() {
         // Uncomment the line below to use the production API
-        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1'); // Production API
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net/api/elite/v1'); // Production API
         
         // Local development API endpoint
-        super('http://localhost:6200/api/elite/v1');
+        // super('http://localhost:6200/api/elite/v1');
     }
 
     /**

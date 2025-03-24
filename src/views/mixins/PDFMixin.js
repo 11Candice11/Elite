@@ -54,6 +54,28 @@ export const PdfMixin = {
     doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 62);
     doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
     doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
+    doc.text(`IRR (%): ${this.reportOptions.irr ?? 'N/A'}`, 10, 86);
+
+    if (this.reportOptions.regularContributions) {
+      let latestContribution = null;
+      selectedDetails.detailModels.forEach((portfolio) => {
+        portfolio.transactionModels
+          .filter(t => t.transactionType.toLowerCase().includes("contribution"))
+          .forEach(t => {
+            const date = new Date(t.transactionDate);
+            if (!latestContribution || date > new Date(latestContribution.transactionDate)) {
+              latestContribution = t;
+            }
+          });
+      });
+
+      if (latestContribution) {
+        const amountFormatted = formatAmount(latestContribution.convertedAmount, this.reportOptions.currency);
+        doc.text(`Last Contribution: ${amountFormatted} on ${latestContribution.transactionDate.split("T")[0]}`, 10, 94);
+      } else {
+        doc.text("Last Contribution: N/A", 10, 94);
+      }
+    }
 
     doc.setFontSize(14);
     doc.text(new Date().toISOString().split("T")[0].replace(/-/g, "/"), 260, 20, { align: "right" });
