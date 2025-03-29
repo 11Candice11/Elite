@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { html, css } from 'lit';
 import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { PdfRetrievalService } from '/src/services/PdfRetrievalService.js';
@@ -519,23 +519,32 @@ class Dashboard extends ViewBase {
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       try {
-        const savedRatings = await this.pdfProxyService.getRatingsByClient(this.clientID);
-          if (savedRatings && typeof savedRatings === 'object') {
-              const newRatings = {};
-              for (const [isin, data] of Object.entries(savedRatings)) {
-                const key = data.Key ?? isin;
-                newRatings[key] = {
-                  ...data,
-                  Rating6Months: data.Rating6Months ?? data.rating6Months ?? '',
-                  Rating1Year: data.Rating1Year ?? data.rating1Year ?? '',
-                  Rating3Years: data.Rating3Years ?? data.rating3Years ?? ''
-                };
-              }
-              this.portfolioRatings = { ...newRatings };
-              store.set('portfolioRatings', this.portfolioRatings);
+        let savedRatings = store.get('portfolioRatings');
+        
+        if (!savedRatings || Object.keys(savedRatings).length === 0) {
+          try {
+            const fetchedRatings = await this.pdfProxyService.getRatingsByClient(this.clientID);
+    
+            const newRatings = {};
+            for (const [key, data] of Object.entries(fetchedRatings)) {
+              newRatings[key] = {
+                ...data,
+                Rating6Months: data.Rating6Months ?? data.rating6Months ?? '',
+                Rating1Year: data.Rating1Year ?? data.rating1Year ?? '',
+                Rating3Years: data.Rating3Years ?? data.rating3Years ?? ''
+              };
+            }
+            this.portfolioRatings = { ...newRatings };
+            store.set('portfolioRatings', this.portfolioRatings);
+          } catch (e) {
+            console.warn("⚠️ Could not load saved ratings from backend, keeping local store values:", e);
+            this.portfolioRatings = { ...store.get('portfolioRatings') };
           }
+        } else {
+          this.portfolioRatings = { ...savedRatings };
+        }
       } catch (e) {
-        console.warn("⚠️ Could not load saved ratings from backend:", e);
+        console.warn("Unexpected error while loading portfolio ratings:", e);
       }
       if (!this.portfolioRatings) this.portfolioRatings = {};
       this.searchCompleted = true;
@@ -577,9 +586,9 @@ class Dashboard extends ViewBase {
       const isin = entry.isinNumber || 'N/A';
       const key = `${entry.instrumentName}::${isin}`;
       const currentRatings = this.portfolioRatings[key] || {};
-      const Rating6Months = currentRatings.Rating6Months.toString() || '';
-      const Rating1Year = currentRatings.Rating1Year.toString() || '';
-      const Rating3Years = currentRatings.Rating3Years.toString() || '';
+      const Rating6Months = `${currentRatings.Rating6Months}` || '';
+      const Rating1Year = `${currentRatings.Rating1Year}` || '';
+      const Rating3Years = `${currentRatings.Rating3Years}` || '';
 
       const payload = {
         Key: key,
@@ -935,10 +944,13 @@ class Dashboard extends ViewBase {
       }
 
       const key = `${matchingEntry.instrumentName}::${matchingEntry.isinNumber || 'N/A'}`;
-      this.updatePortfolioRatings(key, 1, oneYear);
-      this.updatePortfolioRatings(key, 3, threeYears);
+      const ratingObj = this.portfolioRatings[key] || {};
+      ratingObj.Rating1Year = oneYear;
+      ratingObj.Rating3Years = threeYears;
+      this.portfolioRatings[key] = ratingObj;
     });
 
+    store.set('portfolioRatings', this.portfolioRatings);
     this.requestUpdate();
   }
 
@@ -1250,11 +1262,15 @@ class Dashboard extends ViewBase {
   }
 
   _renderInput(portfolioId, year) {
+    console.log("🔎 Render input for:", portfolioId);
+    console.log("🟨 Available keys:", Object.keys(this.portfolioRatings));
+    console.log("🎯 Rating object:", this.portfolioRatings[portfolioId]);
     const rating = this.portfolioRatings[portfolioId];
     let value = '';
     if (year === 0.5) value = rating?.Rating6Months || '';
     else if (year === 1) value = rating?.Rating1Year || '';
     else if (year === 3) value = rating?.Rating3Years || '';
+    console.log(`📌 Value for year ${year}:`, value);
     const updatedAt = this.portfolioRatings[portfolioId]?.lastUpdated;
     const color = this.getRatingColor(updatedAt);
     return html`
@@ -1268,7 +1284,7 @@ class Dashboard extends ViewBase {
         this.updatePortfolioRatings(portfolioId, year, e.target.value);
         this.changedIsins = this.changedIsins || new Set();
         this.changedIsins.add(portfolioId);
-
+ 
         const key = portfolioId || `${year}-${Math.random()}`; // if you want to force uniqueness
         this.changedIsins.add(key);
       }}"

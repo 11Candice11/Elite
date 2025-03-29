@@ -118,6 +118,7 @@ class FundFacts extends ViewBase {
     // Called when "Upload Excel" button is clicked
     async _uploadExcel() {
         this.isLoadingUpload = true;
+        this.portfolioRatings = store.get('portfolioRatings') || {};
 
         const file = await new Promise((resolve) => {
             const input = document.createElement('input');
@@ -159,14 +160,10 @@ class FundFacts extends ViewBase {
 
             const sheet = XLSX.utils.sheet_to_json(worksheet, { range: startRow });
 
-            const clientInfo = store.get("clientInfo");
-            const knownIsins = clientInfo?.detailModels
-                ?.flatMap(d => d.portfolioEntryTreeModels || [])
-                .map(entry => entry.isinNumber)
-                .filter(Boolean);
-
             for (const row of sheet) {
                 const isinFromExcel = row["Text"]?.trim();
+                console.log("🔍 Checking ISIN from Excel:", isinFromExcel);
+                console.log("🧩 Portfolio keys:", Object.keys(this.portfolioRatings));
 
                 let rawLink = row["Link"] || row["Links"] || "";
                 if (!rawLink) {
@@ -210,24 +207,64 @@ class FundFacts extends ViewBase {
                         const threeYearMatch = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
                         const threeYearValue = threeYearMatch ? threeYearMatch[1] : null;
 
-                        const ratingObj = this.portfolioRatings[isinFromExcel];
+                        const key = Object.keys(this.portfolioRatings).find(k => k.endsWith(`::${isinFromExcel}`));
+                        if (!key) continue;
+
+                        const ratingObj = this.portfolioRatings[key] || {};
+
+                        console.log("📄 Extracted from PDF:", {
+                          ISIN: isinFromExcel,
+                          key,
+                          oneYearValue,
+                          threeYearValue,
+                          sixMonthValue
+                        });
+
+                        console.log("📊 Extracted values:", {
+                          oneYearValue,
+                          threeYearValue,
+                          sixMonthValue
+                        });
 
                         if (oneYearValue && oneYearValue !== "N/A" && oneYearValue.trim() !== "") {
                             ratingObj.Rating1Year = oneYearValue;
+                        } else if (!ratingObj.Rating1Year) {
+                            ratingObj.Rating1Year = ratingObj.Rating1Year || '';
                         }
+
                         if (threeYearValue && threeYearValue !== "N/A" && threeYearValue.trim() !== "") {
                             ratingObj.Rating3Years = threeYearValue;
+                        } else if (!ratingObj.Rating3Years) {
+                            ratingObj.Rating3Years = ratingObj.Rating3Years || '';
                         }
+
                         if (sixMonthValue && sixMonthValue !== "N/A" && sixMonthValue.trim() !== "") {
                             ratingObj.Rating6Months = sixMonthValue;
+                        } else if (!ratingObj.Rating6Months) {
+                            ratingObj.Rating6Months = ratingObj.Rating6Months || '';
                         }
-                        this.portfolioRatings[isinFromExcel] = ratingObj;
+
+                        const existingRatings = this.portfolioRatings[key] || {};
+                        this.portfolioRatings[key] = {
+                          ...existingRatings,
+                          Rating6Months: (ratingObj.Rating6Months && ratingObj.Rating6Months.trim() !== '') ? ratingObj.Rating6Months : existingRatings.Rating6Months,
+                          Rating1Year: (ratingObj.Rating1Year && ratingObj.Rating1Year.trim() !== '') ? ratingObj.Rating1Year : existingRatings.Rating1Year,
+                          Rating3Years: (ratingObj.Rating3Years && ratingObj.Rating3Years.trim() !== '') ? ratingObj.Rating3Years : existingRatings.Rating3Years
+                        };
+
+                        console.log("📦 Final rating saved:", {
+                          key,
+                          data: this.portfolioRatings[key]
+                        });
+
+                        this.requestUpdate();
                     } catch (error) {
                         console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
                     }
                 }
             }
 
+            console.log("🗃 Storing portfolioRatings to store:", this.portfolioRatings);
             store.set('portfolioRatings', this.portfolioRatings);
             this.requestUpdate();
         } catch (err) {
