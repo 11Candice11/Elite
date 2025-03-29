@@ -577,9 +577,9 @@ class Dashboard extends ViewBase {
       const isin = entry.isinNumber || 'N/A';
       const key = `${entry.instrumentName}::${isin}`;
       const currentRatings = this.portfolioRatings[key] || {};
-      const Rating6Months = currentRatings.Rating6Months || '';
-      const Rating1Year = currentRatings.Rating1Year || '';
-      const Rating3Years = currentRatings.Rating3Years || '';
+      const Rating6Months = currentRatings.Rating6Months.toString() || '';
+      const Rating1Year = currentRatings.Rating1Year.toString() || '';
+      const Rating3Years = currentRatings.Rating3Years.toString() || '';
 
       const payload = {
         Key: key,
@@ -1110,7 +1110,9 @@ class Dashboard extends ViewBase {
               <button @click=${() => this.toggleExpand(index)}>
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
-              <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
+              ${this.expandedCards[index] ? html`
+                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
+              ` : ''}
               <!-- ${this.expandedCards[index] &&
             portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
                 <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>

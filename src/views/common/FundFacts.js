@@ -108,8 +108,8 @@ class FundFacts extends ViewBase {
 
     // Navigate back to the Dashboard
     _goBack() {
-        if (this.isLoadingUpload) 
-        return; 
+        if (this.isLoadingUpload)
+            return;
 
         store.set('pdfSrc', (null));
         router.navigate('/dashboard');
@@ -143,88 +143,88 @@ class FundFacts extends ViewBase {
             const worksheet = workbook.Sheets[sheetName];
             const range = XLSX.utils.decode_range(worksheet['!ref']);
             let startRow = 0;
-        
+
             for (let row = range.s.r; row <= range.e.r; row++) {
-              for (let col = range.s.c; col <= range.e.c; col++) {
-                const cellAddress = { r: row, c: col };
-                const cellRef = XLSX.utils.encode_cell(cellAddress);
-                const cell = worksheet[cellRef];
-                if (cell?.v === 'Text') {
-                  startRow = row;
-                  break;
+                for (let col = range.s.c; col <= range.e.c; col++) {
+                    const cellAddress = { r: row, c: col };
+                    const cellRef = XLSX.utils.encode_cell(cellAddress);
+                    const cell = worksheet[cellRef];
+                    if (cell?.v === 'Text') {
+                        startRow = row;
+                        break;
+                    }
                 }
-              }
-              if (startRow) break;
+                if (startRow) break;
             }
-        
+
             const sheet = XLSX.utils.sheet_to_json(worksheet, { range: startRow });
 
             const clientInfo = store.get("clientInfo");
             const knownIsins = clientInfo?.detailModels
-              ?.flatMap(d => d.portfolioEntryTreeModels || [])
-              .map(entry => entry.isinNumber)
-              .filter(Boolean);
+                ?.flatMap(d => d.portfolioEntryTreeModels || [])
+                .map(entry => entry.isinNumber)
+                .filter(Boolean);
 
             for (const row of sheet) {
                 const isinFromExcel = row["Text"]?.trim();
 
                 let rawLink = row["Link"] || row["Links"] || "";
                 if (!rawLink) {
-                  for (const value of Object.values(row)) {
-                    if (typeof value === "string" && value.includes("http")) {
-                      rawLink = value;
-                      break;
+                    for (const value of Object.values(row)) {
+                        if (typeof value === "string" && value.includes("http")) {
+                            rawLink = value;
+                            break;
+                        }
                     }
-                  }
                 }
 
                 const links = rawLink
-                  .split(',')
-                  .map(link => {
-                    const match = link.match(/https?:\/\/[^\s]+/); // extract first http/https URL
-                    return match ? match[0] : null;
-                  })
-                  .filter(Boolean);
+                    .split(',')
+                    .map(link => {
+                        const match = link.match(/https?:\/\/[^\s]+/); // extract first http/https URL
+                        return match ? match[0] : null;
+                    })
+                    .filter(Boolean);
 
                 for (const link of links) {
-                  try {
-                    const pdfBlob = await this.pdfProxyService.fetchPdf(link);
-                    const arrayBuffer = await pdfBlob.arrayBuffer();
-                    const pdfBytes = new Uint8Array(arrayBuffer);
-                    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                    try {
+                        const pdfBlob = await this.pdfProxyService.fetchPdf(link);
+                        const arrayBuffer = await pdfBlob.arrayBuffer();
+                        const pdfBytes = new Uint8Array(arrayBuffer);
+                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
-                    let fullText = '';
-                    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                      const page = await pdf.getPage(pageNum);
-                      const textContent = await page.getTextContent();
-                      const pageText = textContent.items.map(item => item.str).join(' ');
-                      fullText += pageText + '\n';
+                        let fullText = '';
+                        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                            const page = await pdf.getPage(pageNum);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + '\n';
+                        }
+
+                        const oneYearMatch = fullText.match(/1 Year\s+([\d,.]+)/i);
+                        const oneYearValue = oneYearMatch ? oneYearMatch[1] : null;
+
+                        const sixMonthMatch = fullText.match(/6 Months\s+([\d,.]+)/i);
+                        const sixMonthValue = sixMonthMatch ? sixMonthMatch[1] : null;
+
+                        const threeYearMatch = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
+                        const threeYearValue = threeYearMatch ? threeYearMatch[1] : null;
+
+                        const ratingObj = this.portfolioRatings[isinFromExcel];
+
+                        if (oneYearValue && oneYearValue !== "N/A" && oneYearValue.trim() !== "") {
+                            ratingObj.Rating1Year = oneYearValue;
+                        }
+                        if (threeYearValue && threeYearValue !== "N/A" && threeYearValue.trim() !== "") {
+                            ratingObj.Rating3Years = threeYearValue;
+                        }
+                        if (sixMonthValue && sixMonthValue !== "N/A" && sixMonthValue.trim() !== "") {
+                            ratingObj.Rating6Months = sixMonthValue;
+                        }
+                        this.portfolioRatings[isinFromExcel] = ratingObj;
+                    } catch (error) {
+                        console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
                     }
-
-                    const oneYearMatch = fullText.match(/1 Year\s+([\d,.]+)/i);
-                    const oneYearValue = oneYearMatch ? oneYearMatch[1] : null;
-
-                    const sixMonthMatch = fullText.match(/6 Months\s+([\d,.]+)/i);
-                    const sixMonthValue = sixMonthMatch ? sixMonthMatch[1] : null;
-
-                    const threeYearMatch = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
-                    const threeYearValue = threeYearMatch ? threeYearMatch[1] : null;
-
-                    if (!this.portfolioRatings) this.portfolioRatings = {};
-                    if (!this.portfolioRatings[isinFromExcel]) this.portfolioRatings[isinFromExcel] = {};
-
-                    if (oneYearValue && oneYearValue !== "N/A") {
-                      this.portfolioRatings[isinFromExcel][1] = oneYearValue;
-                    }
-                    if (threeYearValue && threeYearValue !== "N/A") {
-                      this.portfolioRatings[isinFromExcel][3] = threeYearValue;
-                    }
-                    if (sixMonthValue && sixMonthValue !== "N/A") {
-                      this.portfolioRatings[isinFromExcel][0.5] = sixMonthValue;
-                    }
-                  } catch (error) {
-                    console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
-                  }
                 }
             }
 
@@ -237,35 +237,35 @@ class FundFacts extends ViewBase {
         }
     }
 
-    updateTextFieldsWithExtractedData(ratingsMap) {
-        const clientInfo = store.get("clientInfo");
-        if (!clientInfo?.detailModels) return;
+    // updateTextFieldsWithExtractedData(ratingsMap) {
+    //     const clientInfo = store.get("clientInfo");
+    //     if (!clientInfo?.detailModels) return;
 
-        for (const detail of clientInfo.detailModels) {
-            for (const entry of detail.portfolioEntryTreeModels || []) {
-                const isin = entry.isinNumber;
-                const rating = ratingsMap[isin];
+    //     for (const detail of clientInfo.detailModels) {
+    //         for (const entry of detail.portfolioEntryTreeModels || []) {
+    //             const isin = entry.isinNumber;
+    //             const rating = ratingsMap[isin];
 
-                if (rating) {
-                    if (rating["1"]) {
-                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-                        this.portfolioRatings[isin][1] = rating["1"];
-                    }
-                    if (rating["3"]) {
-                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-                        this.portfolioRatings[isin][3] = rating["3"];
-                    }
-                    if (rating["6m"]) {
-                        this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-                        this.portfolioRatings[isin][0.5] = rating["6m"];
-                    }
-                }
-            }
-        }
+    //             if (rating) {
+    //                 if (rating["1"]) {
+    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+    //                     this.portfolioRatings[isin][1] = rating["1"];
+    //                 }
+    //                 if (rating["3"]) {
+    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+    //                     this.portfolioRatings[isin][3] = rating["3"];
+    //                 }
+    //                 if (rating["6m"]) {
+    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
+    //                     this.portfolioRatings[isin][0.5] = rating["6m"];
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        store.set('portfolioRatings', this.portfolioRatings);
-        this.requestUpdate();
-    }
+    //     store.set('portfolioRatings', this.portfolioRatings);
+    //     this.requestUpdate();
+    // }
 
     // Called when "View Fund Fact Sheet" button is clicked
     async _viewFundFactSheet() {
