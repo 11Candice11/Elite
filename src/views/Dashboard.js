@@ -12,50 +12,9 @@ import * as XLSX from 'xlsx';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 
 class Dashboard extends ViewBase {
-  getRatingColor(lastUpdated) {
-    if (!lastUpdated) return 'red';
-    const updated = new Date(lastUpdated);
-    const now = new Date();
-    const diffMs = now - updated;
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return diffHours <= 1 ? 'green' : 'red';
-  }
-  
-  async _handleUpdateRatings(portfolio) {
-    for (const entry of portfolio.portfolioEntryTreeModels) {
-      const isin = entry.isinNumber;
-      const ratings = {
-        0.5: this.portfolioRatings[isin]?.[0.5] || '',
-        1: this.portfolioRatings[isin]?.[1] || '',
-        3: this.portfolioRatings[isin]?.[3] || ''
-      };
-  
-      const payload = {
-        instrumentName: entry.instrumentName,
-        isinNumber: isin,
-        clientId: this.clientID,
-        ratings,
-        lastUpdated: new Date().toISOString()
-      };
-  
-      try {
-        await this.pdfProxyService.updatePortfolioRatings(isin, payload);
-  
-        // Save locally as well
-        if (!this.portfolioRatings[isin]) this.portfolioRatings[isin] = {};
-        this.portfolioRatings[isin].ratings = ratings;
-        this.portfolioRatings[isin].meta = { lastUpdated: payload.lastUpdated };
-      } catch (error) {
-        console.warn(`❌ Failed to update ratings for ${isin}`, error);
-      }
-    }
-  
-    this.requestUpdate();
-    alert("✅ Ratings updated and saved!");
-    this.changedIsins.clear();
-  }
-
-  static styles = css`
+  static styles = [
+    super.styles,
+    css`
   :host {
     display: flex;
     flex-direction: column;
@@ -485,7 +444,7 @@ class Dashboard extends ViewBase {
     90% { opacity: 1; }
     100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
   }
-`;
+    `];
 
   static properties = {
     clientID: { type: String },
@@ -556,17 +515,25 @@ class Dashboard extends ViewBase {
     const storedClientInfo = store.get('clientInfo');
     if (storedClientInfo) {
       this.isLoading = true;
-      this.clientID = store.get('searchID') ?? this.clientID;
+      this.clientID = store.get('searchID') ?? this.clientID ?? ``;
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
       try {
-        const savedRatings = await this.pdfProxyService.getSavedRatings();
-        if (savedRatings && typeof savedRatings === 'object') {
-          for (const [isin, data] of Object.entries(savedRatings)) {
-            this.portfolioRatings[isin] = data;
+        const savedRatings = await this.pdfProxyService.getRatingsByClient(this.clientID);
+          if (savedRatings && typeof savedRatings === 'object') {
+              const newRatings = {};
+              for (const [isin, data] of Object.entries(savedRatings)) {
+                const key = data.Key ?? isin;
+                newRatings[key] = {
+                  ...data,
+                  Rating6Months: data.Rating6Months ?? data.rating6Months ?? '',
+                  Rating1Year: data.Rating1Year ?? data.rating1Year ?? '',
+                  Rating3Years: data.Rating3Years ?? data.rating3Years ?? ''
+                };
+              }
+              this.portfolioRatings = { ...newRatings };
+              store.set('portfolioRatings', this.portfolioRatings);
           }
-          store.set('portfolioRatings', this.portfolioRatings);
-        }
       } catch (e) {
         console.warn("⚠️ Could not load saved ratings from backend:", e);
       }
@@ -596,6 +563,58 @@ class Dashboard extends ViewBase {
     // router.navigate('/transactions');
   }
 
+  getRatingColor(lastUpdated) {
+    if (!lastUpdated) return 'red';
+    const updated = new Date(lastUpdated);
+    const now = new Date();
+    const diffMs = now - updated;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    return diffHours <= 1 ? 'green' : 'red';
+  }
+
+  async _handleUpdateRatings(portfolio) {
+    for (const entry of portfolio.portfolioEntryTreeModels) {
+      const isin = entry.isinNumber || 'N/A';
+      const key = `${entry.instrumentName}::${isin}`;
+      const currentRatings = this.portfolioRatings[key] || {};
+      const Rating6Months = currentRatings.Rating6Months || '';
+      const Rating1Year = currentRatings.Rating1Year || '';
+      const Rating3Years = currentRatings.Rating3Years || '';
+
+      const payload = {
+        Key: key,
+        IsinNumber: isin,
+        InstrumentName: entry.instrumentName,
+        ClientId: this.clientID,
+        LastUpdated: new Date().toISOString(),
+        Rating6Months,
+        Rating1Year,
+        Rating3Years
+      };
+
+      try {
+        await this.pdfProxyService.updatePortfolioRatings(key, payload);
+
+        // Save locally as well
+        this.portfolioRatings[key] = {
+          Key: key,
+          InstrumentName: entry.instrumentName,
+          ClientId: this.clientID,
+          LastUpdated: payload.LastUpdated,
+          Rating6Months: payload.Rating6Months,
+          Rating1Year: payload.Rating1Year,
+          Rating3Years: payload.Rating3Years
+        };
+      } catch (error) {
+        console.warn(`❌ Failed to update ratings for ${isin}`, error);
+      }
+    }
+
+    this.requestUpdate();
+    alert("✅ Ratings updated and saved!");
+    this.changedIsins.clear();
+  }
+  
   async searchClient() {
     if (!this.clientID.trim()) return;
 
@@ -740,13 +759,21 @@ class Dashboard extends ViewBase {
     }
 
     this.showPopup = false;
-    
+
     try {
       const savedRatings = await this.pdfProxyService.getSavedRatings();
       if (savedRatings && typeof savedRatings === 'object') {
+        const newRatings = {};
         for (const [isin, data] of Object.entries(savedRatings)) {
-          this.portfolioRatings[isin] = data;
+          const key = data.Key ?? isin;
+          newRatings[key] = {
+            ...data,
+            Rating6Months: data.Rating6Months ?? data.rating6Months ?? '',
+            Rating1Year: data.Rating1Year ?? data.rating1Year ?? '',
+            Rating3Years: data.Rating3Years ?? data.rating3Years ?? ''
+          };
         }
+        this.portfolioRatings = { ...newRatings };
         store.set('portfolioRatings', this.portfolioRatings);
       }
     } catch (e) {
@@ -757,14 +784,32 @@ class Dashboard extends ViewBase {
     this.isLoading = false;
   }
 
-  // updatePortfolioRatings(portfolioId, period, value) {
-  //   if (!this.portfolioRatings[portfolioId]) {
-  //     this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
-  //   }
-  //   this.portfolioRatings[portfolioId][period] = value;
-  //   store.set('portfolioRatings', this.portfolioRatings);
-  //   this.requestUpdate();
-  // }
+  updatePortfolioRatings(portfolioId, period, value) {
+    if (!this.portfolioRatings) this.portfolioRatings = {};
+  
+    const existing = this.portfolioRatings[portfolioId] || {
+      Rating6Months: '',
+      Rating1Year: '',
+      Rating3Years: '',
+      Key: portfolioId,
+      InstrumentName: '',  // you can fill this properly if needed
+      IsinNumber: '',
+      ClientID: this.clientID,
+      LastUpdated: new Date().toISOString()
+    };
+  
+    // Update correct rating field
+    if (period === 0.5) existing.Rating6Months = value;
+    else if (period === 1) existing.Rating1Year = value;
+    else if (period === 3) existing.Rating3Years = value;
+  
+    existing.LastUpdated = new Date().toISOString();
+  
+    this.portfolioRatings[portfolioId] = { ...existing };
+    
+    store.set('portfolioRatings', this.portfolioRatings);
+    this.requestUpdate();
+  }
 
   logout() {
     store.set("clientInfo", null);
@@ -850,8 +895,9 @@ class Dashboard extends ViewBase {
         for (const entry of detail.portfolioEntryTreeModels) {
           if (entry.instrumentName?.trim() === name) {
             const isin = entry.isinNumber;
-            this.updatePortfolioRatings(isin, 1, value);
-            this.updatePortfolioRatings(isin, 3, threeYear);
+            const key = `${entry.instrumentName}::${isin || 'N/A'}`;
+            this.updatePortfolioRatings(key, 1, value);
+            this.updatePortfolioRatings(key, 3, threeYear);
           }
         }
       }
@@ -859,6 +905,7 @@ class Dashboard extends ViewBase {
 
     this.requestUpdate();
   }
+
   extractPortfolioRatings(sheetData) {
     sheetData.forEach((row) => {
       const oneYear = row["12 Month Return"] || "";
@@ -887,11 +934,9 @@ class Dashboard extends ViewBase {
         return;
       }
 
-      const isinNumber = matchingEntry.isinNumber;
-      this.portfolioRatings[isinNumber] = {
-        1: oneYear,
-        3: threeYears,
-      };
+      const key = `${matchingEntry.instrumentName}::${matchingEntry.isinNumber || 'N/A'}`;
+      this.updatePortfolioRatings(key, 1, oneYear);
+      this.updatePortfolioRatings(key, 3, threeYears);
     });
 
     this.requestUpdate();
@@ -1065,10 +1110,11 @@ class Dashboard extends ViewBase {
               <button @click=${() => this.toggleExpand(index)}>
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
-              ${this.expandedCards[index] &&
-                portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
+              <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
+              <!-- ${this.expandedCards[index] &&
+            portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
                 <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
-              ` : ''}
+              ` : ''} -->
 
               ${this.expandedCards[index] ? html`
                 <div class="portfolio-info">
@@ -1094,9 +1140,14 @@ class Dashboard extends ViewBase {
                           <td>${entry.instrumentName}</td>
                           <td>${entry.isinNumber || 'N/A'}</td>
                           <td>${entry.morningStarId || 'N/A'}</td>
-                          <td>${this._renderInput(entry.isinNumber, 0.5)}</td>
-                          <td>${this._renderInput(entry.isinNumber, 1)}</td>
-                          <td>${this._renderInput(entry.isinNumber, 3)}</td>
+                          ${(() => {
+                            const key = `${entry.instrumentName}::${entry.isinNumber || 'N/A'}`;
+                            return html`
+                              <td>${this._renderInput(key, 0.5)}</td>
+                              <td>${this._renderInput(key, 1)}</td>
+                              <td>${this._renderInput(key, 3)}</td>
+                            `;
+                          })()}
                         </tr>
                       `)}
                   </table>
@@ -1197,8 +1248,12 @@ class Dashboard extends ViewBase {
   }
 
   _renderInput(portfolioId, year) {
-    const value = this.portfolioRatings[portfolioId]?.[year] || '';
-    const updatedAt = this.portfolioRatings[portfolioId]?.meta?.lastUpdated;
+    const rating = this.portfolioRatings[portfolioId];
+    let value = '';
+    if (year === 0.5) value = rating?.Rating6Months || '';
+    else if (year === 1) value = rating?.Rating1Year || '';
+    else if (year === 3) value = rating?.Rating3Years || '';
+    const updatedAt = this.portfolioRatings[portfolioId]?.lastUpdated;
     const color = this.getRatingColor(updatedAt);
     return html`
       <input
@@ -1206,15 +1261,15 @@ class Dashboard extends ViewBase {
           placeholder=""
           style="color: ${color};"
           title="${updatedAt ? `Last updated: ${new Date(updatedAt).toLocaleString()}` : 'No update info'}"
-          .value="${value}"
+          value="${value}"
           @input="${(e) => {
-            this.updatePortfolioRatings(portfolioId, year, e.target.value);
-            this.changedIsins = this.changedIsins || new Set();
-            this.changedIsins.add(portfolioId);
-            
-            const key = portfolioId || `${year}-${Math.random()}`; // if you want to force uniqueness
-            this.changedIsins.add(key);
-          }}"
+        this.updatePortfolioRatings(portfolioId, year, e.target.value);
+        this.changedIsins = this.changedIsins || new Set();
+        this.changedIsins.add(portfolioId);
+
+        const key = portfolioId || `${year}-${Math.random()}`; // if you want to force uniqueness
+        this.changedIsins.add(key);
+      }}"
       />
     `;
   }

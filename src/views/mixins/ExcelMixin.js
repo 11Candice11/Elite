@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { store } from '/src/store/EliteStore.js';
 
 /**
  * ExcelMixin
@@ -101,14 +102,33 @@ export const ExcelMixin = {
         // By default, return the raw sheet data.
         return sheetData;
     },
-    updatePortfolioRatings(portfolioId, period, value) {
-        if (!this.portfolioRatings[portfolioId]) {
-            this.portfolioRatings[portfolioId] = {}; // Initialize if it doesn't exist
-        }
-        this.portfolioRatings[portfolioId][period] = value;
-        store.set('portfolioRatings', this.portfolioRatings);
-        this.requestUpdate();
-    },
+    
+    // updatePortfolioRatings(portfolioId, period, value) {
+    //     if (!this.portfolioRatings[portfolioId]) {
+    //       this.portfolioRatings[portfolioId] = {
+    //         Key: portfolioId,
+    //         IsinNumber: portfolioId.split('::')[1] || 'N/A',
+    //         InstrumentName: portfolioId.split('::')[0] || '',
+    //         ClientId: this.clientID,
+    //         LastUpdated: new Date().toISOString(),
+    //         Rating6Months: '',
+    //         Rating1Year: '',
+    //         Rating3Years: ''
+    //       };
+    //     }
+      
+    //     if (period === 0.5) {
+    //       this.portfolioRatings[portfolioId].Rating6Months = value;
+    //     } else if (period === 1) {
+    //       this.portfolioRatings[portfolioId].Rating1Year = value;
+    //     } else if (period === 3) {
+    //       this.portfolioRatings[portfolioId].Rating3Years = value;
+    //     }
+      
+    //     this.portfolioRatings[portfolioId].LastUpdated = new Date().toISOString();
+    //     store.set('portfolioRatings', this.portfolioRatings);
+    //     this.requestUpdate();
+    //   }
 };
 
 //   async _uploadExcel() {

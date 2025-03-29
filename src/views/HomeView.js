@@ -10,7 +10,7 @@ import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 
 class HomeView extends ViewBase {
   static styles = [
-    ViewBase.styles,
+    super.styles,
     css`
 /* Global Styles */
 body {

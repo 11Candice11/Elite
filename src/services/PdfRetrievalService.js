@@ -20,25 +20,46 @@ export class PdfRetrievalService extends Service {
     }
 
     async updatePortfolioRatings(isinNumber, data) {
-        try {
-            const response = await fetch(`/api/ratings/${isinNumber}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to update ratings for ${isinNumber}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error("❌ Error updating portfolio ratings:", error);
-            throw error;
-        }
+        return await this.post('/api/ratings', { Key: isinNumber, ...data });
     }
+
+    async getRatingsByClient(clientId) {
+        return await this.get(`/api/ratings/${clientId}`);
+    }
+
+    // async updatePortfolioRatings(isinNumber, data) {
+    //     try {
+    //         const response = await fetch(`/api/ratings`, {
+    //             method: 'POST',
+    //             body: JSON.stringify({ key: isinNumber, ...data }),
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             },
+    //         });
+
+    //         if (!response.ok) {
+    //             throw new Error(`Failed to update ratings for ${isinNumber}`);
+    //         }
+
+    //         return await response.json();
+    //     } catch (error) {
+    //         console.error("❌ Error updating portfolio ratings:", error);
+    //         throw error;
+    //     }
+    // }
+
+    // async getRatingsByClient(clientId) {
+    //     try {
+    //         const response = await fetch(`/api/ratings/${clientId}`);
+    //         if (!response.ok) {
+    //             throw new Error(`Failed to fetch ratings for client ${clientId}`);
+    //         }
+    //         return await response.json();
+    //     } catch (error) {
+    //         console.error("❌ Error fetching client ratings:", error);
+    //         return {}; // fallback
+    //     }
+    // }
 
     async getSavedRatings() {
         try {
