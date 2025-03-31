@@ -347,11 +347,6 @@ export class Documents extends ViewBase {
 
   connectedCallback() {
     super.connectedCallback();
-    // const storedClientInfo = store.get('clientInfo');
-    // if (storedClientInfo) {
-    //   this.clientInfo = storedClientInfo.client;
-    //   console.log(this.clientInfo);
-    // }
   }
 
   initialise() {
@@ -360,7 +355,6 @@ export class Documents extends ViewBase {
       const fullClientInfo = clientInfo.find(client => client.passportOrId === storedClientInfo.client.IDNumber);
       if (fullClientInfo) {
         this.clientInfo = fullClientInfo;
-        console.log(this.clientInfo);
       } else {
         console.error('Client not found in ClientInfo.js');
       }

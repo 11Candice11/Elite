@@ -414,9 +414,9 @@ class Dashboard extends ViewBase {
   list-style-type: none; /* Removes bullets */
 }
   .fund-facts-btn {
-    position: absolute;
-    top: 10px;
-    right: 100px;
+    // position: absolute;
+    // top: 10px;
+    // right: 100px;
     color: white;
     padding: 8px 15px;
     border: none;
@@ -496,7 +496,7 @@ class Dashboard extends ViewBase {
       regularWithdrawals: true,
       regularContributions: true,
       interactionHistory: true,
-      includePercentage: false,
+      includePercentage: true,
       irr: 7.0,
       currency: "ZAR"
     };
@@ -523,8 +523,7 @@ class Dashboard extends ViewBase {
         
         if (!savedRatings || Object.keys(savedRatings).length === 0) {
           try {
-            const fetchedRatings = await this.pdfProxyService.getRatingsByClient(this.clientID);
-    
+            const fetchedRatings = await this.pdfProxyService.getAllRatings();    
             const newRatings = {};
             for (const [key, data] of Object.entries(fetchedRatings)) {
               newRatings[key] = {
@@ -560,16 +559,26 @@ class Dashboard extends ViewBase {
       (d) => d.instrumentName === this.selectedPortfolio.instrumentName
     );
     store.set('rootValueDateModels', detail?.rootValueDateModels || []);
-    store.set('selectedInstrumentName', this.selectedPortfolio);
+    store.set('selectedPortfolio', this.selectedPortfolio);
     super.navigateToRootTransactions();
     // router.navigate('/transaction-history');
   }
 
   navigateToTransactions(portfolio) {
     this.selectedPortfolio = portfolio;
-    store.set('selectedInstrumentName', portfolio);
+    store.set('selectedPortfolio', portfolio);
     super.navigateToTransactions()
     // router.navigate('/transactions');
+  }
+
+  navigateToStats(portfolio) {
+    this.selectedPortfolio = portfolio;
+    const detail = this.clientInfo.detailModels.find(
+      (d) => d.instrumentName === this.selectedPortfolio.instrumentName
+    );
+    store.set('rootValueDateModels', detail?.rootValueDateModels || []);
+    store.set('selectedPortfolio', this.selectedPortfolio);
+    super.navigateToStats();
   }
 
   getRatingColor(lastUpdated) {
@@ -586,9 +595,9 @@ class Dashboard extends ViewBase {
       const isin = entry.isinNumber || 'N/A';
       const key = `${entry.instrumentName}::${isin}`;
       const currentRatings = this.portfolioRatings[key] || {};
-      const Rating6Months = `${currentRatings.Rating6Months}` || '';
-      const Rating1Year = `${currentRatings.Rating1Year}` || '';
-      const Rating3Years = `${currentRatings.Rating3Years}` || '';
+      const Rating6Months = currentRatings.Rating6Months ?? "0";
+      const Rating1Year = currentRatings.Rating1Year ?? "0";
+      const Rating3Years = currentRatings.Rating3Years ?? "0";
 
       const payload = {
         Key: key,
@@ -808,9 +817,9 @@ class Dashboard extends ViewBase {
     };
   
     // Update correct rating field
-    if (period === 0.5) existing.Rating6Months = value;
-    else if (period === 1) existing.Rating1Year = value;
-    else if (period === 3) existing.Rating3Years = value;
+    if (period === 0.5) existing.Rating6Months = value || "0";
+    else if (period === 1) existing.Rating1Year = value || "0";
+    else if (period === 3) existing.Rating3Years = value || "0";
   
     existing.LastUpdated = new Date().toISOString();
   
@@ -1119,6 +1128,7 @@ class Dashboard extends ViewBase {
               <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
               <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
               <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
+              <button @click="${() => this.navigateToStats(portfolio)}">View Stats</button>
               <button @click=${() => this.toggleExpand(index)}>
                 ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
               </button>
@@ -1195,6 +1205,7 @@ class Dashboard extends ViewBase {
         <button class="upload-button" @click="${() => this.shadowRoot.getElementById('excelUpload').click()}">
           Upload Excel
         </button>
+        <button class="fund-facts-btn" @click="${() => this.fundFacts()}">Upload Fund Facts</button>
       </div>
     </div>
     `;
@@ -1223,7 +1234,6 @@ class Dashboard extends ViewBase {
     ${this.showDialog ? this.renderDialog() : ''}
           <!-- Logout Button (Only Visible When Logged In) -->
           ${this.clientInfo ? html`
-            <button class="fund-facts-btn" @click="${() => this.fundFacts()}">Upload Fund Fact Sheets</button>
             <button class="logout-button" @click="${() => this.logout()}">Logout</button>
           ` : ''}
       <!-- Search Bar -->
@@ -1262,15 +1272,11 @@ class Dashboard extends ViewBase {
   }
 
   _renderInput(portfolioId, year) {
-    console.log("🔎 Render input for:", portfolioId);
-    console.log("🟨 Available keys:", Object.keys(this.portfolioRatings));
-    console.log("🎯 Rating object:", this.portfolioRatings[portfolioId]);
     const rating = this.portfolioRatings[portfolioId];
     let value = '';
     if (year === 0.5) value = rating?.Rating6Months || '';
     else if (year === 1) value = rating?.Rating1Year || '';
     else if (year === 3) value = rating?.Rating3Years || '';
-    console.log(`📌 Value for year ${year}:`, value);
     const updatedAt = this.portfolioRatings[portfolioId]?.lastUpdated;
     const color = this.getRatingColor(updatedAt);
     return html`
@@ -1303,7 +1309,7 @@ class Dashboard extends ViewBase {
             <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
             <label><input type="checkbox" .checked="${this.reportOptions.regularContributions}" @change="${(e) => this.updateOption(e, 'regularContributions')}" /> Regular Contributions</label>
             <label><input type="checkbox" .checked="${this.reportOptions.interactionHistory}" @change="${(e) => this.updateOption(e, 'interactionHistory')}" /> Interaction History</label>
-            <label><input ?disabled="${true}" type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
             <label>
               IRR (%):
               <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />

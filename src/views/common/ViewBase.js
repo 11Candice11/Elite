@@ -56,6 +56,11 @@ export class ViewBase extends LitElement {
     router.navigate('/login');
   }
 
+  navigateToStats() {
+    store.set('currentRoute', 'stats');
+    router.navigate('/stats');
+  }
+
   formatDateToISO(date) {
     return `${date.toISOString().split('T')[0]}T00:00:00+02:00`;
   }
