@@ -496,7 +496,7 @@ class Dashboard extends ViewBase {
       regularWithdrawals: true,
       regularContributions: true,
       interactionHistory: true,
-      includePercentage: false,
+      includePercentage: true,
       irr: 7.0,
       currency: "ZAR"
     };
@@ -1309,7 +1309,7 @@ class Dashboard extends ViewBase {
             <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
             <label><input type="checkbox" .checked="${this.reportOptions.regularContributions}" @change="${(e) => this.updateOption(e, 'regularContributions')}" /> Regular Contributions</label>
             <label><input type="checkbox" .checked="${this.reportOptions.interactionHistory}" @change="${(e) => this.updateOption(e, 'interactionHistory')}" /> Interaction History</label>
-            <label><input ?disabled="${true}" type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
+            <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
             <label>
               IRR (%):
               <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />

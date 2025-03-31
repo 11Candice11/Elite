@@ -91,8 +91,8 @@ export const PdfMixin = {
       const hasRegularWithdrawals = this.reportOptions.regularWithdrawals && (portfolio.regularWithdrawalAmount > 0 || portfolio.regularWithdrawalPercentage > 0);
       const hasInteractionHistory = this.reportOptions.interactionHistory && portfolio.rootValueDateModels.some(interaction => interaction.valueModels.length > 0);
 
-      if (!hasContributions && !hasWithdrawals && !hasRegularWithdrawals && !hasInteractionHistory) {
-        return; // Skip this portfolio if it has no relevant data
+      if (!hasContributions && !hasWithdrawals && !hasRegularWithdrawals && !hasInteractionHistory && !this.reportOptions.includePercentage) {
+        return; // Skip this portfolio if it has no relevant data and performance table is not requested
       }
 
       if (index !== 0) doc.addPage(); // New page for each portfolio
@@ -324,22 +324,42 @@ export const PdfMixin = {
       }
 
       if (this.reportOptions.includePercentage) {
-
-        doc.text("Performances", 10, startY + 20);
-
-        const portfolioRatings = store.get("portfolioRatings");
-
-        doc.autoTable({
-          head: [["Instrument Name", "ISIN Number", "MorningStar ID", "One Year", "Three Years"]],
-          body: [
-            [portfolio.instrumentName, portfolio.isinNumber || "N/A",
-            portfolio.morningStarID || "N/A",
-            portfolioRatings?.oneYear || " ",  // Retrieve stored value
-            portfolioRatings?.threeYears || " "]
-          ],
-          startY: startY + 30,
-          ...tableOptions
+        const ratings = store.get('portfolioRatings') || {};
+ 
+        const fundRows = portfolio.portfolioEntryTreeModels.map(entry => {
+          const key = `${entry.instrumentName}::${entry.isinNumber || 'N/A'}`;
+          const rating = ratings[key] || {};
+ 
+          const sixMonths = rating.Rating6Months?.toString().trim() || 'N/A';
+          const oneYear = rating.Rating1Year?.toString().trim() || 'N/A';
+          const threeYears = rating.Rating3Years?.toString().trim() || 'N/A';
+ 
+          return [
+            entry.instrumentName || 'N/A',
+            sixMonths.endsWith('%') ? sixMonths : `${sixMonths} %`,
+            oneYear.endsWith('%') ? oneYear : `${oneYear} %`,
+            threeYears.endsWith('%') ? threeYears : `${threeYears} %`
+          ];
         });
+ 
+        if (fundRows.length > 0) {
+          const estimatedTableHeight = fundRows.length * 10 + 20;
+          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            startY = 30;
+          }
+ 
+          doc.text("PORTFOLIO PERFORMANCES", 10, startY + 10);
+ 
+          doc.autoTable({
+            head: [["FUND NAME", "6 MONTHS", "ANNUAL HISTORY", "LAST 3 YEARS"]],
+            body: fundRows,
+            startY: startY + 20,
+            ...tableOptions
+          });
+ 
+          startY = doc.lastAutoTable.finalY;
+        }
       }
     });
 

@@ -2,9 +2,12 @@ import { ViewBase } from './ViewBase.js';
 import { html, css } from 'lit';
 import { store } from '/src/store/EliteStore.js';
 import Chart from 'chart.js/auto';
+import { AnalystNotesEngine } from '/src/utils/AnalystNotesEngine.js';
 
 export class StatsView extends ViewBase {
-  static styles = css`
+  static styles = [
+    super.styles,
+    css`
     .container {
       align-items: center;
     }
@@ -61,7 +64,7 @@ export class StatsView extends ViewBase {
       padding: 0.5rem;
       border-bottom: 1px solid #ccc;
     }
-  `;
+  `];
 
   static properties = {
     isLoading: { type: Boolean },
@@ -330,9 +333,38 @@ export class StatsView extends ViewBase {
         `;
       }
     }
+
+    const percentChange = this.detail?.rootValueDateModels?.length > 1
+      ? (() => {
+          const sorted = [...this.detail.rootValueDateModels].sort((a, b) =>
+            new Date(a.convertedValueDate) - new Date(b.convertedValueDate)
+          );
+          const latest = sorted.at(-1)?.totalConvertedAmount || 0;
+          const prev = sorted.at(-2)?.totalConvertedAmount || 0;
+          return prev ? ((latest - prev) / prev) * 100 : null;
+        })()
+      : null;
+
+    const topHoldingPct = (() => {
+      const latest = this.detail?.rootValueDateModels?.at(-1);
+      return latest?.valueModels?.length
+        ? Math.max(...latest.valueModels.map(vm => vm.portfolioSharePercentage || 0))
+        : 0;
+    })();
+
+    const analystNotes = AnalystNotesEngine.generateNotes({
+      percentGrowth: percentChange ?? 0,
+      topHoldingPct: topHoldingPct ?? 0,
+      yearsInvested: (() => {
+        const now = new Date();
+        const inception = new Date(this.detail?.inceptionDate);
+        return (now - inception) / (1000 * 60 * 60 * 24 * 365);
+      })()
+    });
+
     return html`
       <div class="container">
-        <button @click="${() => history.back()}">← Back</button>
+        <button @click="${() => history.back()}">Back</button>
         <div class="dashboard-grid">
           <!-- Row 1 -->
           <div class="card" style="grid-column: span 1;">
@@ -349,23 +381,21 @@ export class StatsView extends ViewBase {
             <div class="title">Asset Returns</div>
             <canvas id="barChart"></canvas>
           </div>
-          <div class="card" style="grid-column: span 1;">
+          <!-- <div class="card" style="grid-column: span 1;">
             <div class="title">Asset Allocation</div>
             <canvas id="pieChart"></canvas>
-          </div>
+          </div> -->
           <div class="card" style="grid-column: span 1;">
             <div class="title">Asset Allocation (Donut)</div>
             <canvas id="donutChart"></canvas>
           </div>
 
           <!-- Scribble Notes -->
-          <div class="card" style="grid-column: span 2;">
+          <div class="card" style="grid-column: 2 / span 2;">
             <div class="title">📓 Analyst Notes</div>
-            <p style="font-style: italic; color: #555; line-height: 1.5;">
-              Remember: Portfolio heavily weighted in equity—good growth but higher volatility. <br>
-              Client’s investment horizon supports this aggressive allocation. <br>
-              Review in Q3 to consider rebalancing if market shifts persist.
-            </p>
+            ${analystNotes.map(note => html`
+              <p style="font-style: italic; color: #555;">${note}</p>
+            `)}
           </div>
         </div>
       </div>
