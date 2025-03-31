@@ -194,7 +194,6 @@ export const userInfoMixin = {
     
         try {
             const response = await this.clientProfileService.addClient(formattedClientData);
-            console.log("✅ Client data successfully stored:", response);
         } catch (error) {
             console.error("❌ Failed to store client data:", error);
         }

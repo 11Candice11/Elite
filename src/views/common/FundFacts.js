@@ -162,9 +162,6 @@ class FundFacts extends ViewBase {
 
             for (const row of sheet) {
                 const isinFromExcel = row["Text"]?.trim();
-                console.log("🔍 Checking ISIN from Excel:", isinFromExcel);
-                console.log("🧩 Portfolio keys:", Object.keys(this.portfolioRatings));
-
                 let rawLink = row["Link"] || row["Links"] || "";
                 if (!rawLink) {
                     for (const value of Object.values(row)) {
@@ -212,20 +209,6 @@ class FundFacts extends ViewBase {
 
                         const ratingObj = this.portfolioRatings[key] || {};
 
-                        console.log("📄 Extracted from PDF:", {
-                          ISIN: isinFromExcel,
-                          key,
-                          oneYearValue,
-                          threeYearValue,
-                          sixMonthValue
-                        });
-
-                        console.log("📊 Extracted values:", {
-                          oneYearValue,
-                          threeYearValue,
-                          sixMonthValue
-                        });
-
                         if (oneYearValue && oneYearValue !== "N/A" && oneYearValue.trim() !== "") {
                             ratingObj.Rating1Year = oneYearValue;
                         } else if (!ratingObj.Rating1Year) {
@@ -252,11 +235,6 @@ class FundFacts extends ViewBase {
                           Rating3Years: (ratingObj.Rating3Years && ratingObj.Rating3Years.trim() !== '') ? ratingObj.Rating3Years : existingRatings.Rating3Years
                         };
 
-                        console.log("📦 Final rating saved:", {
-                          key,
-                          data: this.portfolioRatings[key]
-                        });
-
                         this.requestUpdate();
                     } catch (error) {
                         console.error(`❌ Failed to process PDF for ISIN ${isinFromExcel}:`, error);
@@ -264,7 +242,6 @@ class FundFacts extends ViewBase {
                 }
             }
 
-            console.log("🗃 Storing portfolioRatings to store:", this.portfolioRatings);
             store.set('portfolioRatings', this.portfolioRatings);
             this.requestUpdate();
         } catch (err) {

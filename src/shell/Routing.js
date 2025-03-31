@@ -11,6 +11,7 @@ import '/src/views/common/PortfolioDetails.js';
 import '/src/views/common/PDFViewer.js';
 import '/src/views/common/RootTransactionHistory.js';
 import '/src/views/common/FundFacts.js';
+import '/src/views/common/StatsView.js';
 
 
 export class Routing {
@@ -28,6 +29,7 @@ export class Routing {
       '/documents': () => html`<documents-view></documents-view>`,
       '/transaction-history': () => html`<root-transaction-history></root-transaction-history>`,
       '/fund-facts': () => html`<fund-facts></fund-facts>`,
+      '/stats': () => html`<stats-view></stats-view>`
     };
 
     window.addEventListener('popstate', () => {
