@@ -3,10 +3,10 @@ import { Service } from '/src/services/Service.js';
 export class PdfRetrievalService extends Service {
     constructor() {
         // Uncomment the line below to use the production API
-        // super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net'); // Production API
+        super('https://elite-e9d0awa6hfgsfhav.southafricanorth-01.azurewebsites.net'); // Production API
 
         // Local development API endpoint
-        super('http://localhost:6200');
+        // super('http://localhost:6200');
     }
 
     async fetchPdf(pdfUrl) {
