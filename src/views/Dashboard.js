@@ -11,6 +11,12 @@ import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 import * as XLSX from 'xlsx';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 import * as fuzzball from 'fuzzball'; // You must install this with npm install fuzzball
+import transactionHistory from '/src/images/TransactionHistory.svg';
+import interactionHistory from '/src/images/InteractionHistory.svg';
+import generateReport from '/src/images/GenerateReport.svg';
+import stats from '/src/images/Stats.svg';
+import moreInfo from '/src/images/MoreInfo.svg';
+import updateIcon from '/src/images/Update.svg';
 
 class Dashboard extends ViewBase {
   static styles = [
@@ -27,7 +33,28 @@ class Dashboard extends ViewBase {
     justify-content: center;
     transition: all 0.5s ease-in-out;
   }
-
+  .update-button {
+    background: #32c48d; /* Match the green tone of existing buttons */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.3s ease;
+  }
+  
+  .update-button:hover {
+    background: #21867a;
+  }
+  
+  .update-button .icon {
+    width: 24px;
+    height: 24px;
+  }
   .overlay {
     position: fixed;
     top: 0;
@@ -149,6 +176,18 @@ class Dashboard extends ViewBase {
     display: flex;
   }
 
+  .portfolio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .portfolio-actions button {
+    flex: 1 1 150px;
+    max-width: 160px;
+  }
+
   .portfolio-container {
     flex: 1;
     display: flex;
@@ -157,30 +196,71 @@ class Dashboard extends ViewBase {
   }
 
   .portfolio-card {
-    background: #ffffff;
-    border: 1px solid #dcdcdc;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: white;
+    border: 2px solid #0077b6; /* Blue border */
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
   }
-
+  
+  .portfolio-card:hover {
+    background-color: #f0faff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15); /* Darker on hover */
+  }
+  
   .portfolio-card h3 {
-    color: #0077b6;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 22px;
+    color: rgb(0, 50, 100); /* Dark blue from your color scheme */
   }
 
-  button {
+  .portfolio-card button {
     background: #0077b6;
     color: white;
-    padding: 8px 15px;
+    padding: 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     cursor: pointer;
-    margin: 5px 0;
+    font-weight: bold;
+    width: 160px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: background 0.3s ease;
   }
-
-  button:hover {
+  
+  .portfolio-card button:hover {
     background: #005f8a;
   }
+  
+  .portfolio-card .icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+  }
+
+  // button {
+  //   background: #0077b6;
+  //   color: white;
+  //   padding: 8px 15px;
+  //   border: none;
+  //   border-radius: 5px;
+  //   cursor: pointer;
+  //   margin: 5px 0;
+  // }
+
+  // button:hover {
+  //   background: #005f8a;
+  // }
 
   .logout-button {
     position: absolute;
@@ -220,7 +300,7 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 420px;
+    height: 440px;
     text-align: center;
   }
 
@@ -415,15 +495,7 @@ class Dashboard extends ViewBase {
   list-style-type: none; /* Removes bullets */
 }
   .fund-facts-btn {
-    // position: absolute;
-    // top: 10px;
-    // right: 100px;
-    color: white;
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s ease;
+  margin-top: 25px;
   }
   .toast {
     position: fixed;
@@ -1051,15 +1123,6 @@ class Dashboard extends ViewBase {
 
   acceptExcel() {
     this.showExcel = false;
-
-    // TODO
-    // add logic to read from Excel
-
-    // check if logic already exists
-    // I think it does. this should just save the value
-
-    // const oneYear = this.getFromExcel(`oneYear`);
-    // const threeYears = this.getFromExcel(`threeYears`);
   }
 
   async renderExcel(sheetData) {
@@ -1157,20 +1220,34 @@ class Dashboard extends ViewBase {
         ? this.clientInfo.detailModels.map((portfolio, index) => html`
             <div class="portfolio-card">
               <h3>${portfolio.instrumentName}</h3>
-              <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-              <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
-              <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
-              <button @click="${() => this.navigateToStats(portfolio)}">View Stats</button>
-              <button @click=${() => this.toggleExpand(index)}>
-                ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
-              </button>
-              ${this.expandedCards[index] ? html`
-                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
-              ` : ''}
-              <!-- ${this.expandedCards[index] &&
-            portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
-                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
-              ` : ''} -->
+              <div class="portfolio-actions">
+                <button @click="${() => this.navigateToTransactions(portfolio)}">
+                  <img class="icon" src="${transactionHistory}" />
+                  Transaction History
+                </button>
+                <button @click="${() => this.navigateToRootTransactions(portfolio)}">
+                  <img class="icon" src="${interactionHistory}" />
+                  Interaction History
+                </button>
+                <button @click="${() => this.generateReport(portfolio)}">
+                  <img class="icon" src="${generateReport}" />
+                  Generate Report
+                </button>
+                <button @click="${() => this.navigateToStats(portfolio)}">
+                  <img class="icon" src="${stats}" />
+                  View Stats
+                </button>
+                <button @click=${() => this.toggleExpand(index)}>
+                  <img class="icon" src="${moreInfo}" />
+                  ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
+                </button>
+                ${this.expandedCards[index] ? html`
+                    <button @click=${() => this._handleUpdateRatings(portfolio)} class="update-button">
+                      <img src="${updateIcon}" class="icon" />
+                      Update
+                    </button>
+                  ` : ''}
+              </div>
 
               ${this.expandedCards[index] ? html`
                 <div class="portfolio-info">
