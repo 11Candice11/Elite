@@ -3,13 +3,14 @@ import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { PdfRetrievalService } from '/src/services/PdfRetrievalService.js';
 import user from '/src/images/user.png';
-import logo from '/src/images/page-Logo-full.png';  // Ensure the logo path is correct
+import logo from '/src/images/page-Logo-full.png'; 
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
 import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 import * as XLSX from 'xlsx';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
+import * as fuzzball from 'fuzzball'; // You must install this with npm install fuzzball
 
 class Dashboard extends ViewBase {
   static styles = [
@@ -595,9 +596,9 @@ class Dashboard extends ViewBase {
       const isin = entry.isinNumber || 'N/A';
       const key = `${entry.instrumentName}::${isin}`;
       const currentRatings = this.portfolioRatings[key] || {};
-      const Rating6Months = currentRatings.Rating6Months ?? "0";
-      const Rating1Year = currentRatings.Rating1Year ?? "0";
-      const Rating3Years = currentRatings.Rating3Years ?? "0";
+      const Rating6Months = currentRatings.Rating6Months.toString() ?? "0";
+      const Rating1Year = currentRatings.Rating1Year.toString() ?? "0";
+      const Rating3Years = currentRatings.Rating3Years.toString() ?? "0";
 
       const payload = {
         Key: key,
@@ -925,40 +926,49 @@ class Dashboard extends ViewBase {
   }
 
   extractPortfolioRatings(sheetData) {
-    sheetData.forEach((row) => {
-      const oneYear = row["12 Month Return"] || "";
-      const threeYears = row["36 Month Return (ann)"] || "";
+    const portfolioRatings = this.portfolioRatings || {};
+    const allEntries = this.clientInfo?.detailModels?.flatMap(d => d.portfolioEntryTreeModels || []) || [];
 
-      if (!this.clientInfo || !this.clientInfo.detailModels || this.clientInfo.detailModels.length === 0) {
-        console.error("❌ detailModels is missing or empty:", this.clientInfo.detailModels);
-        return;
+    sheetData.forEach(row => {
+      const oneYear = row["12 Month Return"] || row["1 Year"] || "";
+      const threeYears = row["36 Month Return (ann)"] || row["3 Years Annualised"] || "";
+      const extractedIsin = row["ExportFile_TenforeId"]?.substring(5)?.trim();
+      const rowName = (row["Legal Name"] || row["Name"] || "").trim();
+
+      let matchedEntry = null;
+
+      // Try to match by ISIN first
+      if (extractedIsin) {
+        matchedEntry = allEntries.find(e => e.isinNumber === extractedIsin);
       }
 
-      // Extract ISIN reference from the Excel file
-      const extractedIsin = row["ExportFile_TenforeId"]?.substring(5).trim();
-
-      let matchingEntry = null;
-
-      // Iterate through all detailModels and find matching portfolio entry
-      for (const detail of this.clientInfo.detailModels) {
-        if (detail.portfolioEntryTreeModels && detail.portfolioEntryTreeModels.length > 0) {
-          matchingEntry = detail.portfolioEntryTreeModels.find(entry => entry.isinNumber === extractedIsin);
-          if (matchingEntry) break; // Stop searching once a match is found
+      // If ISIN not matched, fallback to fuzzy matching by name
+      if (!matchedEntry && rowName) {
+        let bestScore = 0;
+        for (const entry of allEntries) {
+          const score = fuzzball.token_set_ratio(entry.instrumentName.toLowerCase(), rowName.toLowerCase());
+          if (score > bestScore && score > 80) {
+            bestScore = score;
+            matchedEntry = entry;
+          }
         }
       }
 
-      if (!matchingEntry) {
-        console.warn(`⚠️ No matching ISIN found for extracted reference: ${extractedIsin}`);
-        return;
+      if (matchedEntry) {
+        const key = `${matchedEntry.instrumentName}::${matchedEntry.isinNumber || 'N/A'}`;
+        portfolioRatings[key] = {
+          ...(portfolioRatings[key] || {}),
+          Rating1Year: oneYear,
+          Rating3Years: threeYears,
+          InstrumentName: matchedEntry.instrumentName,
+          IsinNumber: matchedEntry.isinNumber,
+          Key: key,
+          LastUpdated: new Date().toISOString()
+        };
       }
-
-      const key = `${matchingEntry.instrumentName}::${matchingEntry.isinNumber || 'N/A'}`;
-      const ratingObj = this.portfolioRatings[key] || {};
-      ratingObj.Rating1Year = oneYear;
-      ratingObj.Rating3Years = threeYears;
-      this.portfolioRatings[key] = ratingObj;
     });
 
+    this.portfolioRatings = portfolioRatings;
     store.set('portfolioRatings', this.portfolioRatings);
     this.requestUpdate();
   }
@@ -1119,7 +1129,7 @@ class Dashboard extends ViewBase {
     return html`
       <div class="portfolio-container">
         <div class="watermark">
-            <img src="${logo}" alt="Morebo Watermark" />
+            <img src="${logo}"/>
         </div>
         ${this.clientInfo.detailModels?.length
         ? this.clientInfo.detailModels.map((portfolio, index) => html`

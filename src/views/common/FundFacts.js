@@ -10,6 +10,7 @@ import * as XLSX from 'xlsx';
 import '@lottiefiles/lottie-player';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js';
+import * as fuzzball from 'fuzzball';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.15.349/pdf.worker.min.js';
@@ -180,6 +181,23 @@ class FundFacts extends ViewBase {
                     })
                     .filter(Boolean);
 
+                const key = Object.keys(this.portfolioRatings).find(k => k.endsWith(`::${isinFromExcel}`));
+                let fallbackKey = null;
+                if (!key && row["Name"]) {
+                    const fundName = row["Name"].trim().toLowerCase();
+                    let bestScore = 0;
+                    for (const k of Object.keys(this.portfolioRatings)) {
+                        const namePart = k.split("::")[0].trim().toLowerCase();
+                        const score = fuzzball.token_set_ratio(fundName, namePart);
+                        if (score > bestScore && score > 80) {
+                            bestScore = score;
+                            fallbackKey = k;
+                        }
+                    }
+                }
+                const finalKey = key || fallbackKey;
+                if (!finalKey) continue;
+
                 for (const link of links) {
                     try {
                         const pdfBlob = await this.pdfProxyService.fetchPdf(link);
@@ -204,10 +222,7 @@ class FundFacts extends ViewBase {
                         const threeYearMatch = fullText.match(/3 Years Annualised\s+([\d,.]+)/i);
                         const threeYearValue = threeYearMatch ? threeYearMatch[1] : null;
 
-                        const key = Object.keys(this.portfolioRatings).find(k => k.endsWith(`::${isinFromExcel}`));
-                        if (!key) continue;
-
-                        const ratingObj = this.portfolioRatings[key] || {};
+                        const ratingObj = this.portfolioRatings[finalKey] || {};
 
                         if (oneYearValue && oneYearValue !== "N/A" && oneYearValue.trim() !== "") {
                             ratingObj.Rating1Year = oneYearValue;
@@ -227,8 +242,8 @@ class FundFacts extends ViewBase {
                             ratingObj.Rating6Months = ratingObj.Rating6Months || '';
                         }
 
-                        const existingRatings = this.portfolioRatings[key] || {};
-                        this.portfolioRatings[key] = {
+                        const existingRatings = this.portfolioRatings[finalKey] || {};
+                        this.portfolioRatings[finalKey] = {
                           ...existingRatings,
                           Rating6Months: (ratingObj.Rating6Months && ratingObj.Rating6Months.trim() !== '') ? ratingObj.Rating6Months : existingRatings.Rating6Months,
                           Rating1Year: (ratingObj.Rating1Year && ratingObj.Rating1Year.trim() !== '') ? ratingObj.Rating1Year : existingRatings.Rating1Year,

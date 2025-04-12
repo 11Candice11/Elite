@@ -48,12 +48,12 @@ export const PdfMixin = {
     doc.text("Morebo Wealth Client Feedback Report", 10, 20);
     doc.setFontSize(12);
     doc.text(`${selectedDetails.title} ${selectedDetails.firstNames} ${selectedDetails.surname}`, 10, 30);
-    doc.text(`Policy Number: ${selectedDetails.policyNumber || "N/A"}`, 10, 38);
+    // doc.text(`Policy Number: ${selectedDetails.policyNumber || "N/A"}`, 10, 38);
     doc.text(`ID Number: ${clientId}`, 10, 46);
     doc.text(`DOB: ${dob}`, 10, 54);
     doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 62);
-    doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
-    doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
+    // doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
+    // doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
     doc.text(`IRR (%): ${this.reportOptions.irr ?? 'N/A'}`, 10, 86);
 
     if (this.reportOptions.regularContributions) {
@@ -97,7 +97,7 @@ export const PdfMixin = {
 
       if (index !== 0) doc.addPage(); // New page for each portfolio
       doc.setFontSize(12);
-      doc.text(portfolio.instrumentName, 10, 20);
+      doc.text(`${portfolio.instrumentName} ${portfolio.referenceNumber}`, 10, 20);
       let startY = 30;
 
       if (this.reportOptions.contributions) {
@@ -146,9 +146,17 @@ export const PdfMixin = {
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
             body: contributions.concat([
-              ["", "TOTAL:", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR")]
+              ["", "TOTAL:", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR"), "", "TOTAL_ROW"]
             ]),
             startY: startY + 5,
+            columnStyles: {
+              5: { cellWidth: 0, fontSize: 0, textColor: 255, fillColor: [255, 255, 255] }
+            },
+            didParseCell: function (data) {
+              if (data.cell.raw === "TOTAL_ROW") {
+                data.cell.styles.fontStyle = "bold";
+              }
+            },
             ...tableOptions
           });
           startY = doc.lastAutoTable.finalY;
@@ -369,3 +377,4 @@ export const PdfMixin = {
     return btoa(unescape(encodeURIComponent(binaryString)));
   }
 };
+ 

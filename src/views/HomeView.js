@@ -66,7 +66,7 @@ h2{
   padding: 50px 20px;
   text-align: center;
   overflow: hidden; /* Hide any overflow from watermark */
-  height: 700px;
+  height: 800px;
 }
 
 /* Watermark Styling */
@@ -414,12 +414,13 @@ li {
     showDialog: { type: Boolean },
     showDetailModelsDialog: { type: Boolean },
     selectedDetailModel: { type: Object },
-    isLoading: { type: Boolean }
+    isLoading: { type: Boolean },
+    topClients: { type: Array },
   };
 
   constructor() {
     super();
-    this.searchID = store.get("searchID"); // store.get('searchID') || '';
+    this.searchID = store.get("searchID") || ``; // store.get('searchID') || '';
     this.clientInfo = store.get('clientInfo') || {};
     this.profileMoved = false;
     this.isLoading = false;
@@ -429,6 +430,7 @@ li {
     this.showDialog = false;
     // this.showDetailModelsDialog = false;
     this.selectedDetailModel = null;
+    this.topClients = [];
 
     this.reportOptions = {
       contributions: true,
@@ -445,32 +447,21 @@ li {
       groupFunds: true,
     };
     this.clientProfileService = new ClientProfileService();
-    this.initClientInfo();
+    this.fetchTopClients();
     Object.assign(HomeView.prototype, PdfMixin);
     Object.assign(HomeView.prototype, userInfoMixin);
   }
 
-  initClientInfo() {
-    const entity = store.get('clientInfo');
-    if (!entity) {
-      return;
-    }
-    this.clientInfo = {
-      firstNames: entity.firstNames || 'N/A',
-      surname: entity.surname || 'N/A',
-      registeredName: entity.registeredName || 'N/A',
-      title: entity.title || 'N/A',
-      nickname: entity.nickname || 'N/A',
-      advisorName: entity.advisorName || 'N/A',
-      email: entity.email || 'N/A',
-      cellPhoneNumber: entity.cellPhoneNumber || 'N/A',
-      detailModels: entity.detailModels || [],
-      idNumber: this.searchID
-    };
-  }
+  async fetchTopClients() {
+    const consultantId = localStorage.getItem("username")?.replaceAll('"', '').trim();
+    if (!consultantId) return;
 
-  handleFrequencyChange(event) {
-    this.appointmentFrequency = parseInt(event.target.value, 10);
+    try {
+      const clients = await this.clientProfileService.getClientsByConsultant(consultantId);
+      this.topClients = clients.slice(0, 5); // Get top 10
+    } catch (error) {
+      console.error("Failed to fetch clients by consultant:", error);
+    }
   }
 
   calculateAppointments() {
@@ -491,69 +482,28 @@ li {
   async fetchData() {
     this.isVisible = false;
     this.isLoading = true;
-
-    const searched = store.get('searchID') === this.searchID;
-    if (searched) {
-      this.isLoading = false;
-      return;
-    } else {
-      store.set("searchID", this.searchID);
-    }
-
+  
+    this.clientInfo = {}; // Clear previous client info
+    store.set('clientInfo', null); // Clear stored client
+  
     const existingClient = await this._checkExistingClient(this.searchID);
-
+  
     if (existingClient?.firstNames) {
-      this.clientInfo = existingClient;
-    } 
-    // else {
-    //   this.clientInfo = await this.getClientInfo(this.searchID, this.transactionDateStart);
-    // }
-    
+      this.clientInfo = { ...existingClient };
+      store.set('clientInfo', this.clientInfo);
+      store.set('searchID', this.searchID);
+    } else {
+      this.clientInfo = {};
+      store.set('clientInfo', null);
+    }
+  
     this.isVisible = true;
     this.isLoading = false;
-  }
-
-  updateOption(e, option) {
-    const { type, checked, value } = e.target;
-    this.reportOptions = {
-      ...this.reportOptions,
-      [option]: type === 'checkbox' ? checked : parseFloat(value),
-    };
-  }
-
-  async generateReport() {
-    var base64 = await this.generatePDF(this.clientInfo, this.clientID);
-    store.set('base64', (base64));
-    super.navigateToDocuments();
-    // router.navigate('/pdf');
+    this.requestUpdate();
   }
 
   moveProfileCard() {
     this.profileMoved = true;
-  }
-
-  renderDialog() {
-    return html`
-      <div class="dialog-overlay">
-        <div class="dialog-content">
-          <h3>📊 Generate Report</h3>
-          <div class="dialog-options">
-            <label><input type="checkbox" .checked="${this.reportOptions.contributions}" @change="${(e) => this.updateOption(e, 'contributions')}" /> Contributions</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.withdrawals}" @change="${(e) => this.updateOption(e, 'withdrawals')}" /> Withdrawals</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.regularWithdrawals}" @change="${(e) => this.updateOption(e, 'regularWithdrawals')}" /> Regular Withdrawals</label>
-            <label><input type="checkbox" .checked="${this.reportOptions.includePercentage}" @change="${(e) => this.updateOption(e, 'includePercentage')}" /> Include Percentage</label>
-            <label>
-              IRR (%):
-              <input type="number" value="${this.reportOptions.irr}" step="0.1" @input="${(e) => this.updateOption(e, 'irr')}" />
-            </label>
-          </div>
-          <div class="dialog-actions">
-            <button class="cancel-btn" @click="${() => (this.showDialog = false)}">Cancel</button>
-            <button class="generate-btn" @click="${this.generateReport}">Generate Report</button>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
   render() {
@@ -563,7 +513,6 @@ li {
           <h1>Morebo</h1>
         </header>
         <!-- ${this.showDetailModelsDialog ? this.renderDetailModelsDialog() : ''} -->
-        ${this.showDialog ? this.renderDialog() : ''}
         <div class="hero">
           <div class="watermark">
             <img src="${logo}" alt="Morebo Watermark" />
@@ -579,45 +528,20 @@ li {
             <button class="button" @click="${() => this.fetchData()}">${this.isLoading ? 'Processing...' : 'Search'}
             </button>
           </div>
-          <div class="filter-buttons">
-  <label>
-    <input
-      type="radio"
-      name="appointment-frequency"
-      value="1"
-      @change="${this.handleFrequencyChange}"
-    />
-    1 Month
-  </label>
-  <label>
-    <input
-      type="radio"
-      name="appointment-frequency"
-      value="3"
-      @change="${this.handleFrequencyChange}"
-    />
-    3 Months
-  </label>
-  <label>
-    <input
-      type="radio"
-      name="appointment-frequency"
-      value="6"
-      checked
-      @change="${this.handleFrequencyChange}"
-    />
-    6 Months
-  </label>
-  <label>
-    <input
-      type="radio"
-      name="appointment-frequency"
-      value="12"
-      @change="${this.handleFrequencyChange}"
-    />
-    12 Months
-  </label>
-</div>
+          ${this.topClients.length > 0 ? html`
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 30px;">
+              ${this.topClients.map(client => html`
+                  <div style="text-align: center; cursor: pointer;" @click=${async () => {
+                    this.searchID = client.idNumber;
+                    await this.fetchData();
+                  }}>
+                  <img src="${user}" alt="User Icon" style="width: 60px; height: 60px; border-radius: 50%; background: white; padding: 5px;" />
+                  <div style="margin-top: 8px; font-weight: bold;">${client.firstNames} ${client.surname}</div>
+                  <div style="font-size: 12px; color: #333;">${client.idNumber}</div>
+                </div>
+              `)}
+            </div>
+          ` : ''}
           ${this.clientInfo && this.clientInfo.firstNames
         ? html`${this.renderClientCard()}`
         : html``}

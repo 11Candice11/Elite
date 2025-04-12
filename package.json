@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "fs-extra": "^11.2.0",
+    "fuzzball": "^2.2.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "lit": "^3.2.1",
