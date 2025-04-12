@@ -108,35 +108,57 @@ export const userInfoMixin = {
 
         // TODO
         // Do service call to get client info
+        let clientInfo = null;
         try {
             const returnValue = await this.clientProfileService.getClient(idNumber);
-            if (returnValue) {
-                const clientInfo = {
-                    firstNames: returnValue.firstNames || 'N/A',
-                    surname: returnValue.surname || 'N/A',
-                    registeredName: returnValue.registeredName || 'N/A',
-                    title: returnValue.title || 'N/A',
-                    nickname: returnValue.nickname || 'N/A',
-                    advisorName: returnValue.advisorName || 'N/A',
-                    email: returnValue.email || 'N/A',
-                    cellPhoneNumber: returnValue.cellPhoneNumber || 'N/A',
-                    detailModels: returnValue.detailModels || [],
-                    idNumber: idNumber
+            if (Array.isArray(returnValue) && returnValue.length > 0) {
+                const client = returnValue[0];
+                clientInfo = {
+                  firstNames: client.firstNames || 'N/A',
+                  surname: client.surname || 'N/A',
+                  registeredName: client.registeredName || 'N/A',
+                  title: client.title || 'N/A',
+                  nickname: client.nickname || 'N/A',
+                  advisorName: client.advisorName || 'N/A',
+                  email: client.email || 'N/A',
+                  cellPhoneNumber: client.cellPhoneNumber || 'N/A',
+                  detailModels: client.detailModels || [],
+                  idNumber: client.idNumber || idNumber
                 };
-                store.set("clientInfo", (clientInfo));
-                return clientInfo;
             } else {
-                const clientInfo = await this.getClientInfo(idNumber);
-                // this.storeToDB(clientInfo);
-                return clientInfo;    
+                clientInfo = await this.getClientInfo(idNumber);
             }
         } catch (error) {
             // TODO
             // Add service call to add info to DB
-            const clientInfo = await this.getClientInfo(idNumber);
+            clientInfo = await this.getClientInfo(idNumber);
             // this.storeToDB(clientInfo);
+        } finally {
+            if (clientInfo && clientInfo.firstNames) {
+                this.setClientInfo(clientInfo, idNumber);
+            }
             return clientInfo;
         }
+    },
+
+    async setClientInfo(clientInfo, idNumber) {
+        store.set('clientInfo', clientInfo);
+        this.clientInfo = clientInfo;
+
+        const requestModel = {
+            IDNumber: idNumber,
+            FirstNames: clientInfo.firstNames || "N/A",
+            Surname: clientInfo.surname || "N/A",
+            RegisteredName: clientInfo.registeredName || "N/A",
+            Title: clientInfo.title || "N/A",
+            Nickname: clientInfo.nickname || "",
+            AdvisorName: clientInfo.advisorName || "N/A",
+            Email: clientInfo.email || "N/A",
+            CellPhoneNumber: clientInfo.cellPhoneNumber || "N/A",
+            ConsultantIDNumber: localStorage.getItem("username")?.replaceAll('"', '').trim() || "N/A"
+        };
+
+        const returnValue = await this.clientProfileService.addClient(requestModel);
     },
 
     async storeToDB(clientInfo) {
@@ -144,7 +166,7 @@ export const userInfoMixin = {
             console.error("No client information found to store.");
             return;
         }
-    
+
         const formattedClientData = {
             EntityModels: [
                 {
@@ -191,7 +213,7 @@ export const userInfoMixin = {
                 }
             ]
         };
-    
+
         try {
             const response = await this.clientProfileService.addClient(formattedClientData);
         } catch (error) {

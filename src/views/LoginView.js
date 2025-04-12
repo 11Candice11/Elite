@@ -3,16 +3,33 @@ import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { ViewBase } from './common/ViewBase.js';
+import background from '/src/images/LoginBackground.jpg';
+
 class LoginView extends ViewBase {
   static styles = css`
     .login-container {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
-      background-color: #f4f4f9;
+      overflow: hidden;
     }
+
+    .login-background {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+    }
+
+    .login-background img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.9;
+    }
+
     .login-box {
       background: #ffffff;
       padding: 30px;
@@ -76,7 +93,6 @@ class LoginView extends ViewBase {
     this.password = '';
     this.errorMessage = '';
     this.isLoading = false;
-    // store.set("username", JSON.stringify(null));
     this.clientProfileService = new ClientProfileService(); // Initialize service
     Object.assign(LoginView.prototype, userInfoMixin);
   }
@@ -108,6 +124,9 @@ class LoginView extends ViewBase {
   render() {
     return html`
       <div class="login-container">
+        <div class="login-background">
+          <img src="${background}" />
+        </div>
         <div class="login-box">
           <h2>Login</h2>
           <form @submit=${this.handleLogin}>
@@ -131,7 +150,6 @@ class LoginView extends ViewBase {
                 placeholder="Enter your password"
               />
             </div>
-                  <!-- Loading Indicator -->
             ${this.errorMessage
         ? html`<div class="form-group error">${this.errorMessage}</div>`
         : ''}

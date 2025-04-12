@@ -56,7 +56,7 @@ export class ClientProfileService extends Service {
      */
     async createUser(username, email, password) {
         try {
-            const endpoint = '/sve-client';
+            const endpoint = '/save-client';
             const body = { username, email, password };
             return await this.post(endpoint, body);
         } catch (error) {
@@ -109,17 +109,17 @@ export class ClientProfileService extends Service {
         }
     }
 
-    /**
+    /*
      * Retrieves all clients assigned to a specific consultant.
      * @param {string} consultantIDNumber - The consultant's ID number.
      * @returns {Promise<Array>} An array of clients.
      */
-    async getClientsByConsultant(consultantIDNumber) {
+    async getClientsByConsultant(ConsultantIDNumber) {
         try {
-            const endpoint = `/clients-by-consultant/${encodeURIComponent(consultantIDNumber)}`;
-            return await this.get(endpoint);
+            const endpoint = `/get-clients`;
+            return await this.post(endpoint, { ConsultantIDNumber });
         } catch (error) {
-            console.error(`Failed to fetch clients for consultant: ${consultantIDNumber}`, error);
+            console.error(`Failed to fetch clients for consultant: ${ConsultantIDNumber}`, error);
             throw error;
         }
     }
@@ -146,7 +146,7 @@ export class ClientProfileService extends Service {
      */
     async addClient(clientData) {
         try {
-            const endpoint = '/add-client';
+            const endpoint = '/clients';
             return await this.post(endpoint, clientData);
         } catch (error) {
             console.error('Failed to add new client:', error);
