@@ -1,26 +1,7 @@
-<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#A1F2C0" />
-      <stop offset="100%" stop-color="#3CBF9B" />
-    </linearGradient>
-  </defs>
-  <circle cx="50" cy="50" r="45" fill="url(#greenGradient)" />
-  <g fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Document shape -->
-    <path d="M30 30h28v10h10v30H30z" />
-    <polyline points="58,30 58,40 68,40" />
-
-    <!-- Text lines on document -->
-    <line x1="35" y1="45" x2="55" y2="45" />
-    <line x1="35" y1="50" x2="60" y2="50" />
-    <line x1="35" y1="55" x2="60" y2="55" />
-    <line x1="35" y1="60" x2="45" y2="60" />
-
-    <!-- Clock circle -->
-    <circle cx="68" cy="55" r="10" />
-    <!-- Clock hands -->
-    <line x1="68" y1="55" x2="68" y2="50" />
-    <line x1="68" y1="55" x2="72" y2="58" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none">
+  <rect x="4" y="3" width="16" height="18" rx="2" stroke="rgb(215, 180, 120)" stroke-width="2"/>
+  <line x1="8" y1="7" x2="16" y2="7" stroke="rgb(215, 180, 120)" stroke-width="2"/>
+  <line x1="8" y1="11" x2="16" y2="11" stroke="rgb(215, 180, 120)" stroke-width="2"/>
+  <line x1="8" y1="15" x2="12" y2="15" stroke="rgb(215, 180, 120)" stroke-width="2"/>
+  <path d="M17 21v-2m0 0h-2m2 0h2" stroke="rgb(215, 180, 120)" stroke-width="2" stroke-linecap="round"/>
 </svg>

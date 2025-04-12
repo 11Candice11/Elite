@@ -1,22 +1,5 @@
-<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="greenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#A1F2C0" />
-      <stop offset="100%" stop-color="#3CBF9B" />
-    </linearGradient>
-  </defs>
-
-  <!-- Gradient circle background -->
-  <circle cx="50" cy="50" r="45" fill="url(#greenGradient)" />
-
-  <!-- Document with info icon -->
-  <g fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Document shape -->
-    <rect x="30" y="30" width="40" height="40" rx="4" />
-
-    <!-- Info icon -->
-    <circle cx="50" cy="50" r="5" />
-    <line x1="50" y1="55" x2="50" y2="58" />
-    <circle cx="50" cy="46" r="1.5" fill="#ffffff" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="64" height="64" fill="none">
+  <rect x="4" y="3" width="16" height="18" rx="2" stroke="rgb(215, 180, 120)" stroke-width="2"/>
+  <circle cx="12" cy="10" r="1" fill="rgb(215, 180, 120)" />
+  <line x1="12" y1="12" x2="12" y2="16" stroke="rgb(215, 180, 120)" stroke-width="2" stroke-linecap="round"/>
 </svg>

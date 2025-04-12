@@ -3,7 +3,7 @@ import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { PdfRetrievalService } from '/src/services/PdfRetrievalService.js';
 import user from '/src/images/user.png';
-import logo from '/src/images/page-Logo-full.png'; 
+import logo from '/src/images/Page-lighter.png'; 
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
@@ -32,6 +32,41 @@ class Dashboard extends ViewBase {
     align-items: center;
     justify-content: center;
     transition: all 0.5s ease-in-out;
+  }
+  
+  .top-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: rgb(50, 100, 150);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box; /* Add this */
+    overflow-x: hidden;      /* Prevent content overflow */
+  }
+  
+  .top-banner img {
+    height: 40px;
+    border-radius: 50%; /* Makes the logo circular */
+  }
+  
+  .top-banner .logout-button {
+    position: static;
+    background: #ff4d4d;
+    border-radius: 6px;
+    padding: 8px 15px;
+    font-weight: bold;
+  }
+  
+  .top-banner .logout-button:hover {
+    background: #cc0000;
   }
   .update-button {
     background: #32c48d; /* Match the green tone of existing buttons */
@@ -113,46 +148,48 @@ class Dashboard extends ViewBase {
     left: 50%;
     transform: translate(-50%, -50%);
     transition: all 0.5s ease-in-out;
+    border-radius: 50px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
-
-  /* Moves search bar to top left */
+  
   .search-container.moved {
-    position: fixed;
-    top: 10px;
-    left: 10px;
+    position: static;
     transform: none;
-    background: #0077b6;
-    padding: 10px;
-    border-radius: 5px;
+    background: none;
+    padding: 0;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    box-shadow: none;
   }
-
+  
   .search-container input {
-    padding: 10px;
-    border-radius: 5px;
+    padding: 12px 20px;
     border: 1px solid #ccc;
-    width: 300px;
-    text-align: center;
+    width: 360px;
+    border-radius: 50px 0 0 50px;
     font-size: 16px;
+    border-right: none;
+    outline: none;
   }
-
-  .search-container.moved input {
-    background: white;
-    color: black;
-  }
-
+  
   .search-container button {
-    margin-left: 10px;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    background: #005f8a;
+    padding: 12px 20px;
+    background: black;
     color: white;
+    border: none;
+    border-radius: 0 50px 50px 0;
     cursor: pointer;
-    transition: background 0.3s ease;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-
+  
   .search-container button:hover {
-    background: #004b70;
+    background: #333;
   }
 
   .loading {
@@ -202,7 +239,7 @@ class Dashboard extends ViewBase {
     margin-bottom: 30px;
     padding: 20px;
     background-color: white;
-    border: 2px solid #0077b6; /* Blue border */
+    border: 1px solid #ccc; /* Blue border */
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -285,17 +322,18 @@ class Dashboard extends ViewBase {
     margin-top: 20px;
   }
     /* Client Card Animation */
-  .client-card {
-    background: rgb(215, 180, 120);
-    border-radius: 8px;
-    max-width: 420px;
-    margin: 20px auto;
-    padding: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transform: translateY(-50px);
-    opacity: 0;
-    transition: all 0.6s ease;
-  }
+    .client-card {
+      background: rgb(200, 200, 200); /* unify with grey */
+      border-radius: 8px;
+      max-width: 420px;
+      margin: 20px auto;
+      padding: 8px;
+      border: 2px solid rgb(215, 180, 120); /* gold border */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transform: translateY(-50px);
+      opacity: 0;
+      transition: all 0.6s ease;
+    }
 
   .client-card.visible {
     transform: translateY(0);
@@ -327,6 +365,7 @@ class Dashboard extends ViewBase {
   color: black;
   background-color: rgb(200, 200, 200);
   border-radius: 0 0 8px 8px;
+  text-align: left; /* <-- align text left */
 }
 
 .client-card-content p {
@@ -340,9 +379,13 @@ class Dashboard extends ViewBase {
 .client-card-actions {
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
   padding: 15px;
-  background-color: rgb(140, 120, 80);
+  background-color: rgb(200, 200, 200); /* same as content */
+  border-top: 1px solid #ccc;
   border-radius: 0 0 8px 8px;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 .client-card-actions button {
@@ -1341,20 +1384,31 @@ class Dashboard extends ViewBase {
     return html`
     ${this.showPopup ? this.renderPopup() : ''}
     ${this.showDialog ? this.renderDialog() : ''}
-          <!-- Logout Button (Only Visible When Logged In) -->
-          ${this.clientInfo ? html`
-            <button class="logout-button" @click="${() => this.logout()}">Logout</button>
-          ` : ''}
-      <!-- Search Bar -->
-      <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
-        <input
-          type="text"
-          placeholder="Enter Clients ID"
-          .value="${this.clientID}"
-          @input="${(e) => (this.clientID = e.target.value)}"
-        />
-        <button @click="${this.searchClient}">Search</button>
-      </div>
+      ${this.searchCompleted ? html`
+        <div class="top-banner visible">
+          <img src="${logo}" alt="Logo" />
+          <div class="search-container moved">
+            <input
+              type="text"
+              placeholder="Enter Clients ID"
+              .value="${this.clientID}"
+              @input="${(e) => (this.clientID = e.target.value)}"
+            />
+            <button @click="${this.searchClient}">Search</button>
+          </div>
+          <button class="logout-button" @click="${() => this.logout()}">Logout</button>
+        </div>
+      ` : html`
+        <div class="search-container">
+          <input
+            type="text"
+            placeholder="Enter Clients ID"
+            .value="${this.clientID}"
+            @input="${(e) => (this.clientID = e.target.value)}"
+          />
+          <button @click="${this.searchClient}">Search</button>
+        </div>
+      `}
   
       <!-- Loading Indicator -->
       ${this.isLoading ? html`<div class="loading">Loading...</div>` : ''}

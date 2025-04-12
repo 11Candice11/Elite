@@ -106,8 +106,8 @@ class Transactions extends ViewBase {
   loadTransactions() {
     const clientInfo = store.get('clientInfo');
     const selectedInstrumentName = store.get('selectedPortfolio');
-    const rawTransactions = selectedInstrumentName?.detailModels?.[0]?.transactionModels || [];
-
+    const rawTransactions = selectedInstrumentName?.transactionModels || [];
+    
     // Group transactions by date and sum amounts
     const groupedTransactions = rawTransactions.reduce((acc, transaction) => {
       const dateKey = new Date(transaction.transactionDate).toLocaleDateString();
