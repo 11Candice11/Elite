@@ -291,8 +291,11 @@ export const PdfMixin = {
         if (interactionHistory.length > 0) {
           doc.setFontSize(12);
           startY += 10; // SPACE BETWEEN HEADER AND TABLE
+          const renderedDates = new Set();
           interactionHistory.forEach((interaction) => {
-            if (!interaction.valueModels || interaction.valueModels.length === 0) return;
+            const dateStr = interaction.valueModels[0].valueDate?.split("T")[0];
+            if (!dateStr || renderedDates.has(dateStr)) return;
+            renderedDates.add(dateStr);
             const interactionData = interaction.valueModels.map(entry => {
               const matchedPortfolio = portfolio.portfolioEntryTreeModels.find(e => e.portfolioEntryId === entry.portfolioEntryId);
               const amount = entry.exchangeRate !== 0 ? entry.convertedAmount / entry.exchangeRate : 0;
