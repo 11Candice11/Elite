@@ -220,7 +220,7 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 400px;
+    height: 420px;
     text-align: center;
   }
 
