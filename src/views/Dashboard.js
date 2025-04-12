@@ -596,9 +596,9 @@ class Dashboard extends ViewBase {
       const isin = entry.isinNumber || 'N/A';
       const key = `${entry.instrumentName}::${isin}`;
       const currentRatings = this.portfolioRatings[key] || {};
-      const Rating6Months = currentRatings.Rating6Months.toString() ?? "0";
-      const Rating1Year = currentRatings.Rating1Year.toString() ?? "0";
-      const Rating3Years = currentRatings.Rating3Years.toString() ?? "0";
+      const Rating6Months = currentRatings.Rating6Months?.toString() ?? "0";
+      const Rating1Year = currentRatings.Rating1Year?.toString() ?? "0";
+      const Rating3Years = currentRatings.Rating3Years?.toString() ?? "0";
 
       const payload = {
         Key: key,

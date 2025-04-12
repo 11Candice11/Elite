@@ -49,12 +49,12 @@ export const PdfMixin = {
     doc.setFontSize(12);
     doc.text(`${selectedDetails.title} ${selectedDetails.firstNames} ${selectedDetails.surname}`, 10, 30);
     // doc.text(`Policy Number: ${selectedDetails.policyNumber || "N/A"}`, 10, 38);
-    doc.text(`ID Number: ${clientId}`, 10, 46);
-    doc.text(`DOB: ${dob}`, 10, 54);
-    doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 62);
+    doc.text(`ID Number: ${clientId}`, 10, 38);
+    doc.text(`DOB: ${dob}`, 10, 46);
+    doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 54);
     // doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
     // doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
-    doc.text(`IRR (%): ${this.reportOptions.irr ?? 'N/A'}`, 10, 86);
+    doc.text(`IRR (%): ${this.reportOptions.irr ?? 'N/A'}`, 10, 62);
 
     if (this.reportOptions.regularContributions) {
       let latestContribution = null;
@@ -71,7 +71,7 @@ export const PdfMixin = {
 
       if (latestContribution) {
         const amountFormatted = formatAmount(latestContribution.convertedAmount, this.reportOptions.currency);
-        doc.text(`Last Contribution: ${amountFormatted} on ${latestContribution.transactionDate.split("T")[0]}`, 10, 94);
+        doc.text(`Last Contribution: ${amountFormatted} on ${latestContribution.transactionDate.split("T")[0]}`, 10, 70);
       } else {
         doc.text("Last Contribution: N/A", 10, 94);
       }
@@ -146,14 +146,15 @@ export const PdfMixin = {
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
             body: contributions.concat([
-              ["", "TOTAL:", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR"), "", "TOTAL_ROW"]
+              ["Total", "", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR"), ""]
             ]),
             startY: startY + 5,
             columnStyles: {
               5: { cellWidth: 0, fontSize: 0, textColor: 255, fillColor: [255, 255, 255] }
             },
             didParseCell: function (data) {
-              if (data.cell.raw === "TOTAL_ROW") {
+              const isLastRow = data.row.index === data.table.body.length - 1;
+              if (isLastRow) {
                 data.cell.styles.fontStyle = "bold";
               }
             },
@@ -222,8 +223,14 @@ export const PdfMixin = {
           doc.text("Withdrawals", 10, startY + 10);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
-            body: withdrawals.concat([["", "TOTAL:", formatAmount(totalWithdrawals, "ZAR")]]),
+            body: withdrawals.concat([["Total", "", formatAmount(totalWithdrawals, "ZAR"), "", ""]]),
             startY: startY + 15,
+            didParseCell: function (data) {
+              const isLastRow = data.row.index === data.table.body.length - 1;
+              if (isLastRow) {
+                data.cell.styles.fontStyle = "bold";
+              }
+            },
             ...tableOptions
           });
           startY = doc.lastAutoTable.finalY;
@@ -252,7 +259,7 @@ export const PdfMixin = {
           // Add total row if there's data
           if (regularWithdrawalsBody.length > 0) {
             const totalAmount = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
-            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR"), ""]);
+            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR"), "", "TOTAL_ROW"]);
           }
 
           if (regularWithdrawalsBody.length > 0) {
@@ -265,6 +272,12 @@ export const PdfMixin = {
               head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"]],
               body: regularWithdrawalsBody,
               startY: startY + 15,
+              didParseCell: function (data) {
+                if (data.cell.raw === "TOTAL_ROW" ||
+                    (data.row.index === data.table.body.length - 1 && data.cell.text[0]?.toLowerCase().includes("total"))) {
+                  data.cell.styles.fontStyle = "bold";
+                }
+              },
               ...tableOptions
             });
             startY = doc.lastAutoTable.finalY;
@@ -314,15 +327,21 @@ export const PdfMixin = {
               // Add totals row
               interactionData.push([
                 "Total",
-                formatAmount(totalValue || 0, this.reportOptions.currency), // Ensure it's always a valid number
-                formatAmount(totalRandValue || 0, "ZAR"), // Ensure it's always a valid number
-                // !isNaN(totalPortfolioShare) ? totalPortfolioShare.toFixed(2) : "0.00"
+                formatAmount(totalValue || 0, this.reportOptions.currency),
+                formatAmount(totalRandValue || 0, "ZAR"),
+                totalPortfolioShare.toFixed(2)
               ]);
 
               doc.autoTable({
                 head: [["Investment Funds", "Amount", "Rand Value", "% Share per Portfolio"]],
                 body: interactionData,
                 startY: startY + 15,
+                didParseCell: function (data) {
+                  const isLastRow = data.row.index === data.table.body.length - 1;
+                  if (isLastRow) {
+                    data.cell.styles.fontStyle = "bold";
+                  }
+                },
                 ...tableOptions
               });
               startY = doc.lastAutoTable.finalY;
@@ -334,21 +353,34 @@ export const PdfMixin = {
       if (this.reportOptions.includePercentage) {
         const ratings = store.get('portfolioRatings') || {};
  
-        const fundRows = portfolio.portfolioEntryTreeModels.map(entry => {
-          const key = `${entry.instrumentName}::${entry.isinNumber || 'N/A'}`;
-          const rating = ratings[key] || {};
+        const lastInteraction = [...portfolio.rootValueDateModels].reverse().find(i => i.valueModels.length > 0);
+        const includedIds = lastInteraction?.valueModels.map(vm => vm.portfolioEntryId) || [];
  
-          const sixMonths = rating.Rating6Months?.toString().trim() || 'N/A';
-          const oneYear = rating.Rating1Year?.toString().trim() || 'N/A';
-          const threeYears = rating.Rating3Years?.toString().trim() || 'N/A';
+        const fundRows = portfolio.portfolioEntryTreeModels
+          .filter(entry => includedIds.includes(entry.portfolioEntryId))
+          .map(entry => {
+            const key = `${entry.instrumentName}::${entry.isinNumber || 'N/A'}`;
+            const rating = ratings[key] || {};
  
-          return [
-            entry.instrumentName || 'N/A',
-            sixMonths.endsWith('%') ? sixMonths : `${sixMonths} %`,
-            oneYear.endsWith('%') ? oneYear : `${oneYear} %`,
-            threeYears.endsWith('%') ? threeYears : `${threeYears} %`
-          ];
-        });
+            const sixMonthsRaw = rating.Rating6Months?.toString().trim();
+            const oneYearRaw = rating.Rating1Year?.toString().trim();
+            const threeYearsRaw = rating.Rating3Years?.toString().trim();
+ 
+            const sixMonths = sixMonthsRaw && sixMonthsRaw !== 'N/A' ? `${sixMonthsRaw} %` : '0 %';
+            const oneYear = oneYearRaw && oneYearRaw !== 'N/A' ? `${oneYearRaw} %` : '0 %';
+            const threeYears = threeYearsRaw && threeYearsRaw !== 'N/A' ? `${threeYearsRaw} %` : '0 %';
+ 
+            // Skip rows where all values are 0 %
+            if (sixMonths === '0 %' && oneYear === '0 %' && threeYears === '0 %') return null;
+ 
+            return [
+              entry.instrumentName || 'N/A',
+              sixMonths,
+              oneYear,
+              threeYears
+            ];
+          })
+          .filter(Boolean); // Remove null rows
  
         if (fundRows.length > 0) {
           const estimatedTableHeight = fundRows.length * 10 + 20;
