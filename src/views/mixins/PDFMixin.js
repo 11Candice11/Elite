@@ -143,10 +143,14 @@ export const PdfMixin = {
             startY = 30; // Reset position for new page
           }
           doc.text("Contributions", 10, startY);
+          const allInZAR = contributions.every(row => row[2].startsWith("R"));
+          const totalLabelAmount = allInZAR
+            ? formatAmount(totalContributionsRand, "ZAR")
+            : formatAmount(totalContributions, this.reportOptions.currency);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
             body: contributions.concat([
-              ["Total", "", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR"), ""]
+              ["Total", "", totalLabelAmount, formatAmount(totalContributionsRand, "ZAR"), ""]
             ]),
             startY: startY + 5,
             columnStyles: {
@@ -221,9 +225,13 @@ export const PdfMixin = {
             startY = 30; // Reset position for new page
           }
           doc.text("Withdrawals", 10, startY + 10);
+          const allWithdrawalsInZAR = withdrawals.every(row => row[2].startsWith("R"));
+          const totalWithdrawalsLabelAmount = allWithdrawalsInZAR
+            ? formatAmount(totalWithdrawals, "ZAR")
+            : formatAmount(totalWithdrawals, this.reportOptions.currency);
           doc.autoTable({
             head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
-            body: withdrawals.concat([["Total", "", formatAmount(totalWithdrawals, "ZAR"), "", ""]]),
+            body: withdrawals.concat([["Total", "", totalWithdrawalsLabelAmount, "", ""]]),
             startY: startY + 15,
             didParseCell: function (data) {
               const isLastRow = data.row.index === data.table.body.length - 1;
@@ -259,10 +267,13 @@ export const PdfMixin = {
           // Add total row if there's data
           if (regularWithdrawalsBody.length > 0) {
             const totalAmount = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
-            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR"), "", "TOTAL_ROW"]);
-          }
-
-          if (regularWithdrawalsBody.length > 0) {
+            const allRegularInZAR = true; // Currently assumed to always be ZAR-based
+            const totalRegularWithdrawals = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
+            const totalRegularLabelAmount = allRegularInZAR
+              ? formatAmount(totalRegularWithdrawals, "ZAR")
+              : formatAmount(totalRegularWithdrawals, this.reportOptions.currency);
+            regularWithdrawalsBody.push(["Total:", totalRegularLabelAmount, "", "TOTAL_ROW"]);
+            
             const estimatedTableHeight = regularWithdrawalsBody.length * 10 + 20; // Estimate row height
             if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
               doc.addPage(); // Move the header and table together
@@ -326,11 +337,15 @@ export const PdfMixin = {
               const totalPortfolioShare = interactionData
                 .filter(row => !isNaN(parseFloat(row[3]))) // Ensure valid numbers
                 .reduce((sum, row) => sum + parseFloat(row[3] || 0), 0);
+              const allInteractionInZAR = interactionData.every(row => row[1].startsWith("R"));
+              const totalInteractionLabelAmount = allInteractionInZAR
+                ? formatAmount(totalRandValue || 0, "ZAR")
+                : formatAmount(totalValue || 0, this.reportOptions.currency);
 
               // Add totals row
               interactionData.push([
                 "Total",
-                formatAmount(totalValue || 0, this.reportOptions.currency),
+                totalInteractionLabelAmount,
                 formatAmount(totalRandValue || 0, "ZAR"),
                 totalPortfolioShare.toFixed(2)
               ]);

@@ -120,6 +120,7 @@ class FundFacts extends ViewBase {
     async _uploadExcel() {
         this.isLoadingUpload = true;
         this.portfolioRatings = store.get('portfolioRatings') || {};
+        const pdfArray = [];
 
         const file = await new Promise((resolve) => {
             const input = document.createElement('input');
@@ -181,9 +182,16 @@ class FundFacts extends ViewBase {
                     })
                     .filter(Boolean);
 
-                const key = Object.keys(this.portfolioRatings).find(k => k.endsWith(`::${isinFromExcel}`));
-                let fallbackKey = null;
-                if (!key && row["Name"]) {
+                let finalKey = null;
+                
+                if (isinFromExcel) {
+                    const cleanIsin = isinFromExcel.trim().toUpperCase();
+                    finalKey = Object.keys(this.portfolioRatings).find(k =>
+                        k.split("::")[1]?.toUpperCase() === cleanIsin
+                    );
+                }
+                
+                if (!finalKey && row["Name"]) {
                     const fundName = row["Name"].trim().toLowerCase();
                     let bestScore = 0;
                     for (const k of Object.keys(this.portfolioRatings)) {
@@ -191,11 +199,10 @@ class FundFacts extends ViewBase {
                         const score = fuzzball.token_set_ratio(fundName, namePart);
                         if (score > bestScore && score > 80) {
                             bestScore = score;
-                            fallbackKey = k;
+                            finalKey = k;
                         }
                     }
                 }
-                const finalKey = key || fallbackKey;
                 if (!finalKey) continue;
 
                 for (const link of links) {
@@ -203,6 +210,8 @@ class FundFacts extends ViewBase {
                         const pdfBlob = await this.pdfProxyService.fetchPdf(link);
                         const arrayBuffer = await pdfBlob.arrayBuffer();
                         const pdfBytes = new Uint8Array(arrayBuffer);
+                        pdfArray.push(pdfBytes);
+
                         const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
 
                         let fullText = '';
@@ -245,9 +254,9 @@ class FundFacts extends ViewBase {
                         const existingRatings = this.portfolioRatings[finalKey] || {};
                         this.portfolioRatings[finalKey] = {
                           ...existingRatings,
-                          Rating6Months: (ratingObj.Rating6Months && ratingObj.Rating6Months.trim() !== '') ? ratingObj.Rating6Months : existingRatings.Rating6Months,
-                          Rating1Year: (ratingObj.Rating1Year && ratingObj.Rating1Year.trim() !== '') ? ratingObj.Rating1Year : existingRatings.Rating1Year,
-                          Rating3Years: (ratingObj.Rating3Years && ratingObj.Rating3Years.trim() !== '') ? ratingObj.Rating3Years : existingRatings.Rating3Years
+                          Rating6Months: ratingObj.Rating6Months?.trim() || existingRatings.Rating6Months || '',
+                          Rating1Year: ratingObj.Rating1Year?.trim() || existingRatings.Rating1Year || '',
+                          Rating3Years: ratingObj.Rating3Years?.trim() || existingRatings.Rating3Years || '',
                         };
 
                         this.requestUpdate();
@@ -258,6 +267,7 @@ class FundFacts extends ViewBase {
             }
 
             store.set('portfolioRatings', this.portfolioRatings);
+            store.set('pdfArray', pdfArray);
             this.requestUpdate();
         } catch (err) {
             console.error("❌ Error reading Excel file:", err);
@@ -337,14 +347,14 @@ class FundFacts extends ViewBase {
           <img class="icon" src="${uploadingImage}" alt="Upload Icon" />
           ${this.isLoadingUpload ? 'Uploading...' : 'Upload Excel'}
         </button>
-        <button ?disabled=${false} class="button" @click="${this._viewFundFactSheet}">
+        <!-- <button ?disabled=${false} class="button" @click="${this._viewFundFactSheet}">
           <img class="icon" src="${viewImage}" alt="Fund Fact Sheet Icon" />
             ${this.isLoading ? 'Loading...' : 'View Fund Fact Sheet'}
-        </button>
-        <button ?disabled=${false}  class="button" @click="${this._apply}">
+        </button> -->
+        <!-- <button ?disabled=${false}  class="button" @click="${this._apply}">
           <img class="icon" src="${addImage}" alt="Add to Report Icon" />
           Apply
-        </button>
+        </button> -->
       </div>
     `;
     }
