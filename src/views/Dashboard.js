@@ -220,7 +220,7 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 400px;
+    height: 420px;
     text-align: center;
   }
 
@@ -862,6 +862,8 @@ class Dashboard extends ViewBase {
       this.generateReport(); // Call function to load PDF
     } else if (fileType === 'excel') {
       this.excelSrc = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64String}`;
+      console.log("📂 File upload triggered:", file.name);
+      console.log("📦 Base64 prepared for:", fileType);
       this.loadExcel(); // Call function to process Excel
       this.populateDashboardFieldsFromExcel(); // New method to match fields by name
     }
@@ -870,6 +872,7 @@ class Dashboard extends ViewBase {
 
   async loadExcel() {
     try {
+      console.log("🔄 Starting loadExcel(), current excelSrc:", this.excelSrc?.substring(0, 50) + "...");
       // Convert Base64 to ArrayBuffer
       const arrayBuffer = this.base64ToArrayBuffer(this.excelSrc.split(",")[1]);
 
@@ -877,6 +880,8 @@ class Dashboard extends ViewBase {
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0]; // Get the first sheet
       const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      console.log("📑 Parsed Excel sheet with rows:", sheet.length);
+      console.table(sheet);
       this.renderedSheetData = sheet; // Store for later field mapping
 
       if (sheet.length === 0) {
@@ -897,6 +902,7 @@ class Dashboard extends ViewBase {
   }
 
   populateDashboardFieldsFromExcel() {
+    console.log("🧠 Populating dashboard fields from Excel data...");
     const sheetData = this.renderedSheetData;
     if (!sheetData || sheetData.length === 0) return;
 
@@ -912,11 +918,25 @@ class Dashboard extends ViewBase {
         if (!detail.portfolioEntryTreeModels) continue;
 
         for (const entry of detail.portfolioEntryTreeModels) {
-          if (entry.instrumentName?.trim() === name) {
-            const isin = entry.isinNumber;
-            const key = `${entry.instrumentName}::${isin || 'N/A'}`;
-            this.updatePortfolioRatings(key, 1, value);
-            this.updatePortfolioRatings(key, 3, threeYear);
+          if (entry.instrumentName && name) {
+            const excelName = name.toLowerCase();
+            const entryName = entry.instrumentName.trim().toLowerCase();
+            const exactMatch = entryName === excelName;
+ 
+            let fuzzyMatch = false;
+            let score = 0;
+            if (!exactMatch) {
+              score = fuzzball.token_set_ratio(entryName, excelName);
+              fuzzyMatch = score > 85;
+            }
+ 
+            if (exactMatch || fuzzyMatch) {
+              console.log(`✅ Matched '${name}' → ${entry.instrumentName} (score: ${fuzzyMatch ? score : '100'})`);
+              const isin = entry.isinNumber;
+              const key = `${entry.instrumentName}::${isin || 'N/A'}`;
+              this.updatePortfolioRatings(key, 1, value);
+              this.updatePortfolioRatings(key, 3, threeYear);
+            }
           }
         }
       }
@@ -956,10 +976,11 @@ class Dashboard extends ViewBase {
 
       if (matchedEntry) {
         const key = `${matchedEntry.instrumentName}::${matchedEntry.isinNumber || 'N/A'}`;
+        const existing = portfolioRatings[key] || {};
         portfolioRatings[key] = {
-          ...(portfolioRatings[key] || {}),
-          Rating1Year: oneYear,
-          Rating3Years: threeYears,
+          ...existing,
+          Rating1Year: typeof oneYear === 'string' ? oneYear.trim() : oneYear?.toString() || existing.Rating1Year || '',
+          Rating3Years: typeof threeYears === 'string' ? threeYears.trim() : threeYears?.toString() || existing.Rating3Years || '',
           InstrumentName: matchedEntry.instrumentName,
           IsinNumber: matchedEntry.isinNumber,
           Key: key,
@@ -1118,6 +1139,7 @@ class Dashboard extends ViewBase {
           </div>
         ` : ''}
   
+        <button @click="${() => this.selectedDates = []}">Clear Dates</button>
         <button @click="${this.handleNext}" ?disabled="${this.isLoading}">
           ${this.isLoading ? 'Processing...' : 'Confirm'}
         </button>

@@ -24,7 +24,15 @@ export const PdfMixin = {
     };
 
     const formatAmount = (amount, currencyCode, exchangeRate) => {
-      const symbol = exchangeRate === 1 ? "R" : (currencySymbols[currencyCode] || currencyCode || "");
+      let symbol;
+      if (exchangeRate === 1 || currencyCode === "ZAR") {
+        symbol = "R";
+      } else {
+        symbol = currencySymbols[currencyCode];
+        if (!symbol) {
+          symbol = currencySymbols[this.reportOptions.currency] || this.reportOptions.currency || "";
+        }
+      }
       return `${symbol} ${parseFloat(amount).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
     };
 
@@ -101,7 +109,7 @@ export const PdfMixin = {
       let startY = 30;
 
       if (this.reportOptions.contributions) {
-        // Contributions
+        // ====== Contributions Section ======
         const contributionsMap = {};
         portfolio.transactionModels
           .filter(t => t.transactionType.toLowerCase().includes("contribution"))
@@ -137,35 +145,45 @@ export const PdfMixin = {
         const totalContributionsRand = contributions.reduce((sum, t) => sum + parseFloat(t[3].replace(/[^0-9.-]+/g, "")), 0);
 
         if (contributions.length > 0) {
-          const estimatedTableHeight = contributions.length * 10 + 20; // Estimate row height
-          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
-            doc.addPage(); // Move the header and table together
-            startY = 30; // Reset position for new page
-          }
-          doc.text("Contributions", 10, startY);
+          // Removed standalone Contributions header block
+          const allInZAR = contributions.every(row => row[2].startsWith("R"));
+          const totalLabelAmount = allInZAR
+            ? formatAmount(totalContributionsRand, "ZAR")
+            : formatAmount(totalContributions, this.reportOptions.currency);
+          const contributionsBody = [
+            [{ content: "CONTRIBUTIONS", colSpan: 5, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
+            ["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
+            ...contributions.map(row => row.slice(0, 5)),
+            ["TOTAL", "", totalLabelAmount, formatAmount(totalContributionsRand, "ZAR"), ""]
+          ];
+          
           doc.autoTable({
-            head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
-            body: contributions.concat([
-              ["Total", "", formatAmount(totalContributions, this.reportOptions.currency), formatAmount(totalContributionsRand, "ZAR"), ""]
-            ]),
-            startY: startY + 5,
-            columnStyles: {
-              5: { cellWidth: 0, fontSize: 0, textColor: 255, fillColor: [255, 255, 255] }
+            body: contributionsBody,
+            startY: startY,
+            theme: 'plain',
+            styles: {
+              fontSize: 9,
+              halign: 'center',
+              cellPadding: { top: 1.5, bottom: 1.5 },
+              lineWidth: 0
             },
             didParseCell: function (data) {
-              const isLastRow = data.row.index === data.table.body.length - 1;
-              if (isLastRow) {
+              const isHeaderRow = data.row.index === 1;
+              const cellText = data.row.raw?.[0];
+              const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+              if (isHeaderRow || isTotalRow) {
+                data.cell.styles.fillColor = [230, 230, 230];
                 data.cell.styles.fontStyle = "bold";
               }
-            },
-            ...tableOptions
+            }
           });
           startY = doc.lastAutoTable.finalY;
         }
       }
 
       if (this.reportOptions.withdrawals) {
-        // Withdrawals
+
+        // ====== Withdrawals Section ======
         const withdrawalsMap = {};
         portfolio.transactionModels.filter(t => {
           return t.transactionType.toLowerCase().includes("withdrawal") && !t.transactionType.toLowerCase().includes("regular")
@@ -215,70 +233,103 @@ export const PdfMixin = {
           .reduce((sum, t) => sum + t.convertedAmount, 0);
 
         if (withdrawals.length > 0) {
-          const estimatedTableHeight = withdrawals.length * 10 + 20; // Estimate row height
-          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
-            doc.addPage(); // Move the header and table together
-            startY = 30; // Reset position for new page
+          const requiredHeight = 30 + 2 * 10;
+          if (startY + requiredHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            startY = 30;
           }
-          doc.text("Withdrawals", 10, startY + 10);
+          startY += 6;
+          doc.setFontSize(11);
+          // Withdrawals section
+          const allWithdrawalsInZAR = withdrawals.every(row => row[2].startsWith("R"));
+          const totalWithdrawalsLabelAmount = allWithdrawalsInZAR
+            ? formatAmount(totalWithdrawals, "ZAR")
+            : formatAmount(totalWithdrawals, this.reportOptions.currency);
+          const withdrawalsBody = [
+            [{ content: "WITHDRAWALS", colSpan: 5, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
+            ["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
+            ...withdrawals.map(row => row.slice(0, 5)),
+            ["TOTAL", "", totalWithdrawalsLabelAmount, "", ""]
+          ];
+
           doc.autoTable({
-            head: [["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"]],
-            body: withdrawals.concat([["Total", "", formatAmount(totalWithdrawals, "ZAR"), "", ""]]),
-            startY: startY + 15,
+            body: withdrawalsBody,
+            startY,
+            theme: 'plain',
+            styles: {
+              fontSize: 9,
+              halign: 'center',
+              cellPadding: { top: 1.5, bottom: 1.5 },
+              lineWidth: 0
+            },
             didParseCell: function (data) {
-              const isLastRow = data.row.index === data.table.body.length - 1;
-              if (isLastRow) {
+              const cellText = data.row.raw?.[0];
+              const isHeaderRow = data.row.index === 1;
+              const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+              if (isHeaderRow || isTotalRow) {
+                data.cell.styles.fillColor = [230, 230, 230];
                 data.cell.styles.fontStyle = "bold";
               }
-            },
-            ...tableOptions
+            }
           });
           startY = doc.lastAutoTable.finalY;
         }
       }
 
       if (this.reportOptions.regularWithdrawals) {
-        // Regular Withdrawals Summary
+
+        // ====== Regular Withdrawals Section ======
         const hasValidRegularWithdrawals =
           (portfolio.regularWithdrawalAmount && portfolio.regularWithdrawalAmount > 0) ||
           (portfolio.regularWithdrawalPercentage && portfolio.regularWithdrawalPercentage > 0)
 
         if (hasValidRegularWithdrawals) {
-          const estimatedTableHeight = 30; // Estimate row height
-          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
-            doc.addPage(); // Move the header and table together
-            startY = 30; // Reset position for new page
-          }
-          doc.text("Regular Withdrawals", 10, startY + 10);
-
           const regularWithdrawalsBody = [
             portfolio.regularWithdrawalAmount > 0 ? ["Regular Withdrawal", formatAmount(portfolio.regularWithdrawalAmount, "ZAR"), `${portfolio.regularWithdrawalPercentage.toFixed(2)} %`, formatAmount(totalWithdrawalsSinceInception, "ZAR")] : null,
             totalWithdrawals !== 0 ? ["Withdrawal Since Inception:", formatAmount(totalWithdrawals, "ZAR"), "", formatAmount(totalWithdrawalsSinceInception, "ZAR")] : null
           ].filter(row => row !== null); // Remove null entries
 
-          // Add total row if there's data
+          const requiredHeight = 30 + (regularWithdrawalsBody.length + 1) * 10;
+          if (startY + requiredHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            startY = 30;
+          }
+          startY += 6;
+          doc.setFontSize(11);
           if (regularWithdrawalsBody.length > 0) {
             const totalAmount = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
-            regularWithdrawalsBody.push(["Total:", formatAmount(totalAmount, "ZAR"), "", "TOTAL_ROW"]);
-          }
+            const allRegularInZAR = true; // Currently assumed to always be ZAR-based
+            const totalRegularWithdrawals = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
+            const totalRegularLabelAmount = allRegularInZAR
+              ? formatAmount(totalRegularWithdrawals, "ZAR")
+              : formatAmount(totalRegularWithdrawals, this.reportOptions.currency);
+            regularWithdrawalsBody.push(["Total:", totalRegularLabelAmount, "", "TOTAL_ROW"]);
+            
+            const regularWithdrawalsBodyWithHeader = [
+              [{ content: "REGULAR WITHDRAWALS", colSpan: 4, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
+              ["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"],
+              ...regularWithdrawalsBody
+            ];
 
-          if (regularWithdrawalsBody.length > 0) {
-            const estimatedTableHeight = regularWithdrawalsBody.length * 10 + 20; // Estimate row height
-            if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
-              doc.addPage(); // Move the header and table together
-              startY = 30; // Reset position for new page
-            }
             doc.autoTable({
-              head: [["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"]],
-              body: regularWithdrawalsBody,
-              startY: startY + 15,
+              body: regularWithdrawalsBodyWithHeader,
+              startY,
+              theme: 'plain',
+              styles: {
+                fontSize: 9,
+                halign: 'center',
+                cellPadding: { top: 1.5, bottom: 1.5 },
+                lineWidth: 0
+              },
               didParseCell: function (data) {
-                if (data.cell.raw === "TOTAL_ROW" ||
-                    (data.row.index === data.table.body.length - 1 && data.cell.text[0]?.toLowerCase().includes("total"))) {
+                const cellText = data.row.raw?.[0];
+                const isHeaderRow = data.row.index === 1;
+                const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+                if (isHeaderRow || isTotalRow || data.cell.raw === "TOTAL_ROW") {
+                  data.cell.styles.fillColor = [230, 230, 230];
                   data.cell.styles.fontStyle = "bold";
                 }
-              },
-              ...tableOptions
+              }
             });
             startY = doc.lastAutoTable.finalY;
           }
@@ -286,7 +337,11 @@ export const PdfMixin = {
       }
 
       if (this.reportOptions.interactionHistory) {
-        // Interaction History
+        // Avoid empty space if no previous sections rendered anything
+        if (startY === 30) {
+          startY = 20;
+        }
+        // ====== Interaction History Section ======
         const interactionHistory = portfolio.rootValueDateModels.filter(interaction => interaction.valueModels.length > 0);
         if (interactionHistory.length > 0) {
           doc.setFontSize(12);
@@ -309,12 +364,15 @@ export const PdfMixin = {
 
             if (interactionData.length > 0) {
               const interactionDate = interaction.valueModels[0].valueDate || "Unknown Date";
-              const estimatedTableHeight = interactionData.length * 10 + 20; // Estimate row height
-              if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
-                doc.addPage(); // Move the header and table together
-                startY = 30; // Reset position for new page
+              const requiredHeight = 30 + (interactionData.length + 1) * 10;
+              if (startY + requiredHeight > doc.internal.pageSize.height - 20) {
+                doc.addPage();
+                startY = 30;
               }
-              doc.text(`${formatDate(interactionDate)}`, 10, startY + 10); // SPACE BETWEEN HEADER AND PREVIOUS TABLE
+              const formattedDateRow = [{ content: formatDate(interactionDate), colSpan: 4, styles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: "center", fontStyle: "bold" } }];
+              interactionData.unshift(formattedDateRow);
+              const headerRow = ["Investment Funds", "Amount", "Rand Value", "% Share per Portfolio"];
+              interactionData.splice(1, 0, headerRow);
 
               // Calculate totals
               const totalRandValue = interaction.valueModels
@@ -326,33 +384,56 @@ export const PdfMixin = {
               const totalPortfolioShare = interactionData
                 .filter(row => !isNaN(parseFloat(row[3]))) // Ensure valid numbers
                 .reduce((sum, row) => sum + parseFloat(row[3] || 0), 0);
+              const allInteractionInZAR = interactionData
+                .filter(row => Array.isArray(row) && row.length > 1 && row[1] !== "Amount")
+                .every(row => typeof row[1] === "string" && row[1].startsWith("R"));
+              const totalInteractionLabelAmount = allInteractionInZAR
+                ? formatAmount(totalRandValue || 0, "ZAR")
+                : formatAmount(totalValue || 0, this.reportOptions.currency);
 
               // Add totals row
               interactionData.push([
                 "Total",
-                formatAmount(totalValue || 0, this.reportOptions.currency),
+                allInteractionInZAR
+                  ? formatAmount(totalRandValue || 0, "ZAR")
+                  : formatAmount(totalValue || 0, this.reportOptions.currency),
                 formatAmount(totalRandValue || 0, "ZAR"),
                 totalPortfolioShare.toFixed(2)
               ]);
 
               doc.autoTable({
-                head: [["Investment Funds", "Amount", "Rand Value", "% Share per Portfolio"]],
                 body: interactionData,
-                startY: startY + 15,
+                startY,
+                theme: 'plain',
+                styles: {
+                  fontSize: 9,
+                  halign: 'center',
+                  cellPadding: { top: 1.5, bottom: 1.5 },
+                  lineWidth: 0
+                },
                 didParseCell: function (data) {
-                  const isLastRow = data.row.index === data.table.body.length - 1;
-                  if (isLastRow) {
+                  const cellText = data.row.raw?.[0];
+                  const isDateRow = data.row.index === 0 && data.row.raw?.length === 1;
+                  const isHeaderRow = data.row.index === 1;
+                  const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+                  if (isDateRow) {
+                    data.cell.styles.fillColor = [230, 230, 230];
+                    data.cell.styles.fontStyle = "bold";
+                    data.cell.styles.textColor = [0, 0, 0];
+                  }
+                  if (isHeaderRow || isTotalRow) {
+                    data.cell.styles.fillColor = [200, 200, 200];
                     data.cell.styles.fontStyle = "bold";
                   }
-                },
-                ...tableOptions
+                }
               });
-              startY = doc.lastAutoTable.finalY;
+              startY = doc.lastAutoTable.finalY + 10; // Add space between interaction history tables
             }
           });
         }
       }
 
+      // ====== Portfolio Performance Section ======
       if (this.reportOptions.includePercentage) {
         const ratings = store.get('portfolioRatings') || {};
  
@@ -385,23 +466,40 @@ export const PdfMixin = {
           })
           .filter(Boolean); // Remove null rows
  
+        startY += 10; // Add space before portfolio performance section
         if (fundRows.length > 0) {
-          const estimatedTableHeight = fundRows.length * 10 + 20;
-          if (startY + estimatedTableHeight > doc.internal.pageSize.height - 20) {
+          const requiredHeight = 30 + (fundRows.length + 1) * 10; // Rough estimate of header + 1 row
+          if (startY + requiredHeight > doc.internal.pageSize.height - 20) {
             doc.addPage();
             startY = 30;
           }
- 
-          doc.text("PORTFOLIO PERFORMANCES", 10, startY + 10);
- 
+          startY += 6;
+          doc.setFontSize(11);
+          const performanceHeader = [{ content: "PORTFOLIO PERFORMANCES", colSpan: 4, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }];
+          fundRows.unshift(performanceHeader);
+          fundRows.splice(1, 0, ["Investment Fund", "6 Months", "One Year", "Three Years"]);
+
           doc.autoTable({
-            head: [["FUND NAME", "6 MONTHS", "ANNUAL HISTORY", "LAST 3 YEARS"]],
             body: fundRows,
-            startY: startY + 20,
-            ...tableOptions
+            startY,
+            theme: 'plain',
+            styles: {
+              fontSize: 9,
+              halign: 'center',
+              cellPadding: { top: 1.5, bottom: 1.5 },
+              lineWidth: 0
+            },
+            didParseCell: function (data) {
+              const cellText = data.row.raw?.[0];
+              const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+              if (data.row.index === 1 || isTotalRow) {
+                data.cell.styles.fillColor = [230, 230, 230];
+                data.cell.styles.fontStyle = "bold";
+              }
+            }
           });
- 
-          startY = doc.lastAutoTable.finalY;
+
+          startY = doc.lastAutoTable.finalY + 10;
         }
       }
     });
