@@ -3,7 +3,7 @@ import { router } from '/src/shell/Routing.js'
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { PdfRetrievalService } from '/src/services/PdfRetrievalService.js';
 import user from '/src/images/user.png';
-import logo from '/src/images/page-Logo-full.png'; 
+import logo from '/src/images/Page-lighter.png'; 
 import { userInfoMixin } from '/src/views/mixins/UserInfoMixin.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
@@ -11,6 +11,12 @@ import { PdfMixin } from '/src/views/mixins/PDFMixin.js';
 import * as XLSX from 'xlsx';
 import { ExcelMixin } from '/src/views/mixins/ExcelMixin.js';
 import * as fuzzball from 'fuzzball'; // You must install this with npm install fuzzball
+import transactionHistory from '/src/images/TransactionHistory.svg';
+import interactionHistory from '/src/images/InteractionHistory.svg';
+import generateReport from '/src/images/GenerateReport.svg';
+import stats from '/src/images/Stats.svg';
+import moreInfo from '/src/images/MoreInfo.svg';
+import updateIcon from '/src/images/Update.svg';
 
 class Dashboard extends ViewBase {
   static styles = [
@@ -27,7 +33,63 @@ class Dashboard extends ViewBase {
     justify-content: center;
     transition: all 0.5s ease-in-out;
   }
-
+  
+  .top-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 70px;
+    background: rgb(50, 100, 150);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box; /* Add this */
+    overflow-x: hidden;      /* Prevent content overflow */
+  }
+  
+  .top-banner img {
+    height: 40px;
+    border-radius: 50%; /* Makes the logo circular */
+  }
+  
+  .top-banner .logout-button {
+    position: static;
+    background: #ff4d4d;
+    border-radius: 6px;
+    padding: 8px 15px;
+    font-weight: bold;
+  }
+  
+  .top-banner .logout-button:hover {
+    background: #cc0000;
+  }
+  .update-button {
+    background: #32c48d; /* Match the green tone of existing buttons */
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.3s ease;
+  }
+  
+  .update-button:hover {
+    background: #21867a;
+  }
+  
+  .update-button .icon {
+    width: 24px;
+    height: 24px;
+  }
   .overlay {
     position: fixed;
     top: 0;
@@ -86,46 +148,48 @@ class Dashboard extends ViewBase {
     left: 50%;
     transform: translate(-50%, -50%);
     transition: all 0.5s ease-in-out;
+    border-radius: 50px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   }
-
-  /* Moves search bar to top left */
+  
   .search-container.moved {
-    position: fixed;
-    top: 10px;
-    left: 10px;
+    position: static;
     transform: none;
-    background: #0077b6;
-    padding: 10px;
-    border-radius: 5px;
+    background: none;
+    padding: 0;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    box-shadow: none;
   }
-
+  
   .search-container input {
-    padding: 10px;
-    border-radius: 5px;
+    padding: 12px 20px;
     border: 1px solid #ccc;
-    width: 300px;
-    text-align: center;
+    width: 360px;
+    border-radius: 50px 0 0 50px;
     font-size: 16px;
+    border-right: none;
+    outline: none;
   }
-
-  .search-container.moved input {
-    background: white;
-    color: black;
-  }
-
+  
   .search-container button {
-    margin-left: 10px;
-    padding: 10px 15px;
-    border: none;
-    border-radius: 5px;
-    background: #005f8a;
+    padding: 12px 20px;
+    background: black;
     color: white;
+    border: none;
+    border-radius: 0 50px 50px 0;
     cursor: pointer;
-    transition: background 0.3s ease;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-
+  
   .search-container button:hover {
-    background: #004b70;
+    background: #333;
   }
 
   .loading {
@@ -149,6 +213,18 @@ class Dashboard extends ViewBase {
     display: flex;
   }
 
+  .portfolio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .portfolio-actions button {
+    flex: 1 1 150px;
+    max-width: 160px;
+  }
+
   .portfolio-container {
     flex: 1;
     display: flex;
@@ -157,30 +233,71 @@ class Dashboard extends ViewBase {
   }
 
   .portfolio-card {
-    background: #ffffff;
-    border: 1px solid #dcdcdc;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: white;
+    border: 1px solid #ccc; /* Blue border */
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
   }
-
+  
+  .portfolio-card:hover {
+    background-color: #f0faff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15); /* Darker on hover */
+  }
+  
   .portfolio-card h3 {
-    color: #0077b6;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 22px;
+    color: rgb(0, 50, 100); /* Dark blue from your color scheme */
   }
 
-  button {
+  .portfolio-card button {
     background: #0077b6;
     color: white;
-    padding: 8px 15px;
+    padding: 20px;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     cursor: pointer;
-    margin: 5px 0;
+    font-weight: bold;
+    width: 160px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: background 0.3s ease;
   }
-
-  button:hover {
+  
+  .portfolio-card button:hover {
     background: #005f8a;
   }
+  
+  .portfolio-card .icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 10px;
+  }
+
+  // button {
+  //   background: #0077b6;
+  //   color: white;
+  //   padding: 8px 15px;
+  //   border: none;
+  //   border-radius: 5px;
+  //   cursor: pointer;
+  //   margin: 5px 0;
+  // }
+
+  // button:hover {
+  //   background: #005f8a;
+  // }
 
   .logout-button {
     position: absolute;
@@ -205,22 +322,23 @@ class Dashboard extends ViewBase {
     margin-top: 20px;
   }
     /* Client Card Animation */
-  .client-card {
-    background: rgb(215, 180, 120);
-    border-radius: 8px;
-    max-width: 420px;
-    margin: 20px auto;
-    padding: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transform: translateY(-50px);
-    opacity: 0;
-    transition: all 0.6s ease;
-  }
+    .client-card {
+      background: rgb(200, 200, 200); /* unify with grey */
+      border-radius: 8px;
+      max-width: 420px;
+      margin: 20px auto;
+      padding: 8px;
+      border: 2px solid rgb(215, 180, 120); /* gold border */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transform: translateY(-50px);
+      opacity: 0;
+      transition: all 0.6s ease;
+    }
 
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 420px;
+    height: 440px;
     text-align: center;
   }
 
@@ -247,6 +365,7 @@ class Dashboard extends ViewBase {
   color: black;
   background-color: rgb(200, 200, 200);
   border-radius: 0 0 8px 8px;
+  text-align: left; /* <-- align text left */
 }
 
 .client-card-content p {
@@ -260,9 +379,13 @@ class Dashboard extends ViewBase {
 .client-card-actions {
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
   padding: 15px;
-  background-color: rgb(140, 120, 80);
+  background-color: rgb(200, 200, 200); /* same as content */
+  border-top: 1px solid #ccc;
   border-radius: 0 0 8px 8px;
+  gap: 10px;
+  margin-top: 15px;
 }
 
 .client-card-actions button {
@@ -415,15 +538,7 @@ class Dashboard extends ViewBase {
   list-style-type: none; /* Removes bullets */
 }
   .fund-facts-btn {
-    // position: absolute;
-    // top: 10px;
-    // right: 100px;
-    color: white;
-    padding: 8px 15px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s ease;
+  margin-top: 25px;
   }
   .toast {
     position: fixed;
@@ -1051,15 +1166,6 @@ class Dashboard extends ViewBase {
 
   acceptExcel() {
     this.showExcel = false;
-
-    // TODO
-    // add logic to read from Excel
-
-    // check if logic already exists
-    // I think it does. this should just save the value
-
-    // const oneYear = this.getFromExcel(`oneYear`);
-    // const threeYears = this.getFromExcel(`threeYears`);
   }
 
   async renderExcel(sheetData) {
@@ -1157,20 +1263,34 @@ class Dashboard extends ViewBase {
         ? this.clientInfo.detailModels.map((portfolio, index) => html`
             <div class="portfolio-card">
               <h3>${portfolio.instrumentName}</h3>
-              <button @click="${() => this.navigateToTransactions(portfolio)}">Transaction History</button>
-              <button @click="${() => this.navigateToRootTransactions(portfolio)}">Interaction History</button>
-              <button @click="${() => this.generateReport(portfolio)}">Generate Report</button>
-              <button @click="${() => this.navigateToStats(portfolio)}">View Stats</button>
-              <button @click=${() => this.toggleExpand(index)}>
-                ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
-              </button>
-              ${this.expandedCards[index] ? html`
-                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
-              ` : ''}
-              <!-- ${this.expandedCards[index] &&
-            portfolio.portfolioEntryTreeModels?.some(e => this.changedIsins?.has?.(e.isinNumber)) ? html`
-                <button @click=${() => this._handleUpdateRatings(portfolio)}>Update</button>
-              ` : ''} -->
+              <div class="portfolio-actions">
+                <button @click="${() => this.navigateToTransactions(portfolio)}">
+                  <img class="icon" src="${transactionHistory}" />
+                  Transaction History
+                </button>
+                <button @click="${() => this.navigateToRootTransactions(portfolio)}">
+                  <img class="icon" src="${interactionHistory}" />
+                  Interaction History
+                </button>
+                <button @click="${() => this.generateReport(portfolio)}">
+                  <img class="icon" src="${generateReport}" />
+                  Generate Report
+                </button>
+                <button @click="${() => this.navigateToStats(portfolio)}">
+                  <img class="icon" src="${stats}" />
+                  View Stats
+                </button>
+                <button @click=${() => this.toggleExpand(index)}>
+                  <img class="icon" src="${moreInfo}" />
+                  ${this.expandedCards[index] ? 'Hide Info' : 'More Information'}
+                </button>
+                ${this.expandedCards[index] ? html`
+                    <button @click=${() => this._handleUpdateRatings(portfolio)} class="update-button">
+                      <img src="${updateIcon}" class="icon" />
+                      Update
+                    </button>
+                  ` : ''}
+              </div>
 
               ${this.expandedCards[index] ? html`
                 <div class="portfolio-info">
@@ -1264,20 +1384,31 @@ class Dashboard extends ViewBase {
     return html`
     ${this.showPopup ? this.renderPopup() : ''}
     ${this.showDialog ? this.renderDialog() : ''}
-          <!-- Logout Button (Only Visible When Logged In) -->
-          ${this.clientInfo ? html`
-            <button class="logout-button" @click="${() => this.logout()}">Logout</button>
-          ` : ''}
-      <!-- Search Bar -->
-      <div class="search-container ${this.searchCompleted ? 'moved' : ''}">
-        <input
-          type="text"
-          placeholder="Enter Clients ID"
-          .value="${this.clientID}"
-          @input="${(e) => (this.clientID = e.target.value)}"
-        />
-        <button @click="${this.searchClient}">Search</button>
-      </div>
+      ${this.searchCompleted ? html`
+        <div class="top-banner visible">
+          <img src="${logo}" alt="Logo" />
+          <div class="search-container moved">
+            <input
+              type="text"
+              placeholder="Enter Clients ID"
+              .value="${this.clientID}"
+              @input="${(e) => (this.clientID = e.target.value)}"
+            />
+            <button @click="${this.searchClient}">Search</button>
+          </div>
+          <button class="logout-button" @click="${() => this.logout()}">Logout</button>
+        </div>
+      ` : html`
+        <div class="search-container">
+          <input
+            type="text"
+            placeholder="Enter Clients ID"
+            .value="${this.clientID}"
+            @input="${(e) => (this.clientID = e.target.value)}"
+          />
+          <button @click="${this.searchClient}">Search</button>
+        </div>
+      `}
   
       <!-- Loading Indicator -->
       ${this.isLoading ? html`<div class="loading">Loading...</div>` : ''}
