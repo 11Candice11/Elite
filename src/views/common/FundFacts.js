@@ -277,62 +277,32 @@ class FundFacts extends ViewBase {
         }
     }
 
-    // updateTextFieldsWithExtractedData(ratingsMap) {
-    //     const clientInfo = store.get("clientInfo");
-    //     if (!clientInfo?.detailModels) return;
+    // Called when "View Fund Fact Sheet" button is clicked
+    // async _viewFundFactSheet() {
+    //     this.isLoading = true;
+    //     const pdfUrl = "https://gllt.morningstar.com/awpurzgf31/snapshotpdf/default.aspx?SecurityToken=F00001GPT3]2]1]FOZAF$$ONS_2428&ClientFund=1&LanguageId=en-GB&CurrencyId=ZAR";
+    //     try {
+    //         const pdfBlob = await this.pdfProxyService.fetchPdf(pdfUrl);
+    //         const arrayBuffer = await pdfBlob.arrayBuffer();
+    //         const pdfBytes = new Uint8Array(arrayBuffer);
 
-    //     for (const detail of clientInfo.detailModels) {
-    //         for (const entry of detail.portfolioEntryTreeModels || []) {
-    //             const isin = entry.isinNumber;
-    //             const rating = ratingsMap[isin];
-
-    //             if (rating) {
-    //                 if (rating["1"]) {
-    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-    //                     this.portfolioRatings[isin][1] = rating["1"];
-    //                 }
-    //                 if (rating["3"]) {
-    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-    //                     this.portfolioRatings[isin][3] = rating["3"];
-    //                 }
-    //                 if (rating["6m"]) {
-    //                     this.portfolioRatings[isin] = this.portfolioRatings[isin] || {};
-    //                     this.portfolioRatings[isin][0.5] = rating["6m"];
-    //                 }
-    //             }
-    //         }
+    //         store.set('pdfSrc', ({ data: pdfBytes }));
+    //         router.navigate('/pdf');
+    //     } catch (error) {
+    //         console.error("Failed to fetch PDF:", error);
+    //     } finally {
+    //         this.isLoading = false;
     //     }
-
-    //     store.set('portfolioRatings', this.portfolioRatings);
-    //     this.requestUpdate();
     // }
 
-    // Called when "View Fund Fact Sheet" button is clicked
-    async _viewFundFactSheet() {
-        this.isLoading = true;
-        const pdfUrl = "https://gllt.morningstar.com/awpurzgf31/snapshotpdf/default.aspx?SecurityToken=F00001GPT3]2]1]FOZAF$$ONS_2428&ClientFund=1&LanguageId=en-GB&CurrencyId=ZAR";
-        try {
-            const pdfBlob = await this.pdfProxyService.fetchPdf(pdfUrl);
-            const arrayBuffer = await pdfBlob.arrayBuffer();
-            const pdfBytes = new Uint8Array(arrayBuffer);
-
-            store.set('pdfSrc', ({ data: pdfBytes }));
-            router.navigate('/pdf');
-        } catch (error) {
-            console.error("Failed to fetch PDF:", error);
-        } finally {
-            this.isLoading = false;
-        }
-    }
-
     // Called when "Add to Report" button is clicked
-    _addToReport() {
-        console.log("Add to Report clicked");
-    }
+    // _addToReport() {
+    //     console.log("Add to Report clicked");
+    // }
 
-    _apply() {
-        console.log("Apply Report clicked");
-    }
+    // _apply() {
+    //     console.log("Apply Report clicked");
+    // }
 
     render() {
         return html`

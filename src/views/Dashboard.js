@@ -53,7 +53,8 @@ class Dashboard extends ViewBase {
   }
   
   .top-banner img {
-    height: 40px;
+    height: 60px;
+    width: 60px;
     border-radius: 50%; /* Makes the logo circular */
   }
   
@@ -675,7 +676,7 @@ class Dashboard extends ViewBase {
         this.updateTextfields();
         store.set('forceRatingsRefresh', false);
       }
-      
+
       try {
         let savedRatings = store.get('portfolioRatings');
         
@@ -1310,10 +1311,10 @@ class Dashboard extends ViewBase {
                   <img class="icon" src="${transactionHistory}" />
                   Transaction History
                 </button>
-                <button @click="${() => this.navigateToRootTransactions(portfolio)}">
+                <!-- <button @click="${() => this.navigateToRootTransactions(portfolio)}">
                   <img class="icon" src="${interactionHistory}" />
                   Interaction History
-                </button>
+                </button> -->
                 <button @click="${() => this.generateReport(portfolio)}">
                   <img class="icon" src="${generateReport}" />
                   Generate Report
@@ -1434,6 +1435,7 @@ class Dashboard extends ViewBase {
             <input type="file" id="excelUpload" accept=".xls,.xlsx" @change="${this.handleFileUpload}" hidden />
             <button @click="${() => this.shadowRoot.getElementById('excelUpload').click()}">Upload Excel</button>
             <button @click="${() => this.fundFacts()}">Upload Fund Facts</button>
+            <button @click="${() => super.navigateToPDFViewer()}">Fill PDF</button>
           </div>
           <div class="search-container moved">
             <input

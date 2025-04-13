@@ -510,52 +510,6 @@ export class Documents extends ViewBase {
 
   render() {
     return html`
-      <div class="client-profile-container">
-        <!-- Header and Back Button -->
-        <div class="header">
-          <button class="back-button" @click="${(e) => this.goBack(e)}">←</button>
-          <h2>Client Profile</h2>
-        </div>
-
-        <!-- Profile Section -->
-        <div class="profile-section">
-          <div class="profile-picture">
-            <div class="placeholder"></div>
-          </div>
-          <div class="profile-details">
-            <h3>${this.clientInfo.firstName} ${this.clientInfo.surname}</h3>
-            <div class="detail-item">
-              <strong>ID Number:</strong>
-              <span>${this.clientInfo.passportOrId}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Entity ID:</strong>
-              <span>${this.clientInfo.entityId}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Client Code:</strong>
-              <span>${this.clientInfo.clientCode}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Company:</strong>
-              <span>${this.clientInfo.company}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Date of Birth:</strong>
-              <span>${this.clientInfo.dateOfBirth}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Language:</strong>
-              <span>${this.clientInfo.homeLanguage}</span>
-            </div>
-            <div class="detail-item">
-              <strong>Last interaction date:</strong>
-              <span>${this.clientInfo.lastInteractionDate}</span>
-            </div>
-            </div>
-            <button class="my-button" @click="${(e) => this.goToMore(e)}">View More</button>
-        </div>
-
         <!-- Documents Section -->
         <div class="documents-section">
           <div class="documents-header">
