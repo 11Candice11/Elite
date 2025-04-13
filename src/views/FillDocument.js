@@ -250,6 +250,7 @@ export class FillDocument extends ViewBase {
         this.currentPDF = null;
         this.originalPDF = null;
         this.clientInfo = {};
+        this.customPDF = null;
 
         this.pdfs = [
             this.base64ToArrayBuffer(TAX_FREE),
@@ -307,6 +308,25 @@ export class FillDocument extends ViewBase {
         }
     }
 
+    async handlePDFUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+    
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const arrayBuffer = e.target.result;
+        this.customPDF = arrayBuffer;
+    
+        this.pdfs.unshift(arrayBuffer);  // Insert at the beginning of the templates
+        this.pdfIndex = 0;
+        this.originalPDF = arrayBuffer;
+        this.currentPDF = arrayBuffer;
+        this.currentPageIndex = 1;
+        this.showPopup = true;
+        this.renderPDF(this.currentPDF, this.currentPageIndex);
+      };
+      reader.readAsArrayBuffer(file);
+    }
 
     async extractTextPositions(pdfData, keyWord, pageIndex) {
         const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(0) }); // Pass a fresh copy
@@ -479,13 +499,8 @@ export class FillDocument extends ViewBase {
     <div class="client-profile-container">
         <!-- Header and Back Button -->
         <div class="header">
-          <button class="" @click="${(e) => this.navigateHome()}">← Back</button>
-          <h2>Client Profile</h2>
+          <button class="" @click="${(e) => this.navigateBack()}">← Back</button>
         </div>
-
-        <!-- Profile Section -->
-         ${this.renderClientCard()}
-
 
         <!-- Documents Section -->
         <div class="documents-section">
@@ -507,11 +522,11 @@ export class FillDocument extends ViewBase {
         </div>
 
         <div class="upload-section">
-    <input type="file" id="pdfUpload" accept="application/pdf" @change="${this.handlePDFUpload}" hidden />
-    <button class="upload-button" @click="${() => this.shadowRoot.getElementById('pdfUpload').click()}">
-        Upload PDF
-    </button>
-</div>
+          <input type="file" id="pdfUpload" accept="application/pdf" @change="${this.handlePDFUpload}" hidden />
+          <button class="upload-button" @click="${() => this.shadowRoot.getElementById('pdfUpload').click()}">
+            Upload PDF
+          </button>
+        </div>
 
         <!-- Popup Overlay -->
         <div class="popup-overlay ${this.showPopup ? 'show' : ''}">
