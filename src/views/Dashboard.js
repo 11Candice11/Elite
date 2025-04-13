@@ -338,7 +338,7 @@ class Dashboard extends ViewBase {
   .client-card.visible {
     transform: translateY(0);
     opacity: 1;
-    height: 440px;
+    height: 380px;
     text-align: center;
   }
 
@@ -554,13 +554,49 @@ class Dashboard extends ViewBase {
     z-index: 9999;
     animation: fadeInOut 3s ease-in-out;
   }
-  @keyframes fadeInOut {
-    0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
-    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
-    90% { opacity: 1; }
-    100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+     @keyframes fadeInOut {
+       0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+       10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+       90% { opacity: 1; }
+       100% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+     }
+  .top-banner .tab-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
   }
-    `];
+  
+  .top-banner .tab-buttons button {
+    background: transparent;
+    color: white;
+    border: none;
+    padding: 18px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s ease;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  
+  .top-banner .tab-buttons button::after {
+    content: "";
+    position: absolute;
+    bottom: -6px; /* move the stripe below the tab */
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+  }
+  
+  .top-banner .tab-buttons button:hover::after {
+    background-color: rgb(215, 180, 120);
+    width: 100%;
+  }
+         `];
 
   static properties = {
     clientID: { type: String },
@@ -634,6 +670,12 @@ class Dashboard extends ViewBase {
       this.clientID = store.get('searchID') ?? this.clientID ?? ``;
       this.selectedDates = await this._getDates();
       this.clientInfo = storedClientInfo;
+
+      if (store.get('forceRatingsRefresh')) {
+        this.updateTextfields();
+        store.set('forceRatingsRefresh', false);
+      }
+      
       try {
         let savedRatings = store.get('portfolioRatings');
         
@@ -1351,14 +1393,14 @@ class Dashboard extends ViewBase {
         <p><strong>Email:</strong> ${this.clientInfo.email}</p>
         <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
       </div>
-      <div class="upload-section">
+      <!-- <div class="upload-section">
         <button class="report-btn" @click="${() => this.generateReport()}">Generate Report</button>
         <input type="file" id="excelUpload" accept=".xls,.xlsx" @change="${this.handleFileUpload}" hidden />
         <button class="upload-button" @click="${() => this.shadowRoot.getElementById('excelUpload').click()}">
           Upload Excel
         </button>
         <button class="fund-facts-btn" @click="${() => this.fundFacts()}">Upload Fund Facts</button>
-      </div>
+      </div> -->
     </div>
     `;
   }
@@ -1387,6 +1429,12 @@ class Dashboard extends ViewBase {
       ${this.searchCompleted ? html`
         <div class="top-banner visible">
           <img src="${logo}" alt="Logo" />
+          <div class="tab-buttons">
+            <button @click="${() => this.generateReport()}">Generate Report</button>
+            <input type="file" id="excelUpload" accept=".xls,.xlsx" @change="${this.handleFileUpload}" hidden />
+            <button @click="${() => this.shadowRoot.getElementById('excelUpload').click()}">Upload Excel</button>
+            <button @click="${() => this.fundFacts()}">Upload Fund Facts</button>
+          </div>
           <div class="search-container moved">
             <input
               type="text"

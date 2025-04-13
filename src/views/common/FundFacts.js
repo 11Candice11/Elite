@@ -113,6 +113,7 @@ class FundFacts extends ViewBase {
             return;
 
         store.set('pdfSrc', (null));
+        store.set('forceRatingsRefresh', true);
         router.navigate('/dashboard');
     }
 
