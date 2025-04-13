@@ -1,11 +1,11 @@
 import { LitElement, html, css } from 'lit';
+import { router } from '/src/shell/Routing.js';
 import { ClientProfileService } from '/src/services/ClientProfileService.js';
 import { store } from '/src/store/EliteStore.js';
 import { ViewBase } from './common/ViewBase.js';
-import user from '/src/images/user.png';
-// import { sharedStyles } from '../../styles/shared-styles.js';
+import '@lottiefiles/lottie-player';
+import uploadingImage from '/src/images/upload.svg';
 import * as pdfjsLib from 'pdfjs-dist';
-// import 'pdfjs-dist/build/pdf.worker.entry';
 import { PDFDocument, rgb } from 'pdf-lib';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -450,6 +450,10 @@ export class FillDocument extends ViewBase {
     //     // await this.modifyAndRenderPDF(currentPDF);
     // }
 
+    _goBack() {
+      router.navigate('/dashboard');
+    }
+
     renderPDF(pdfData, pageIndex) {
         const loadingTask = pdfjsLib.getDocument({ data: pdfData.slice(0) }); // Clone to avoid issues
         loadingTask.promise.then(pdf => {
@@ -475,59 +479,21 @@ export class FillDocument extends ViewBase {
         });
     }
 
-    renderClientCard() {
-        return html`
-        <div class="client-card visible">
-          <div class="client-card-header">
-            <img src="${user}" alt="User Icon" class="client-card-icon" />
-            <h3>${this.clientInfo.firstNames} ${this.clientInfo.surname}</h3>
-          </div>
-          <div class="client-card-content">
-            <p><strong>Title:</strong> ${this.clientInfo.title}</p>
-            <p><strong>Registered Name:</strong> ${this.clientInfo.registeredName}</p>
-            <p><strong>Nickname:</strong> ${this.clientInfo.nickname}</p>
-            <p><strong>Advisor Name:</strong> ${this.clientInfo.advisorName}</p>
-            <p><strong>Email:</strong> ${this.clientInfo.email}</p>
-            <p><strong>Cell Phone Number:</strong> ${this.clientInfo.cellPhoneNumber}</p>
-          </div>
-        </div>
-        `;
-    }
-
     render() {
         return html`
-    <div class="client-profile-container">
-        <!-- Header and Back Button -->
-        <div class="header">
-          <button class="" @click="${(e) => this.navigateBack()}">← Back</button>
-        </div>
+      <div class="header">
+        <button ?diabled="${this.isLoadingUpload}" class="back-button ${this.isLoadingUpload ? `disabled` : ``}" @click="${this._goBack}">Back</button>
+      </div>
 
-        <!-- Documents Section -->
-        <div class="documents-section">
-          <div class="documents-header">
-            <h3>Documents</h3>
-          </div>
-
-          <div class="document-list">
-            <div class="document-item" id="pdfButton" @click="${this.togglePopup}">
-              <div class="document-icon">
-                <div class="icon-placeholder"></div>
-              </div>
-              <div class="document-info">
-                <h4>Get PDF</h4>
-                <p>Populate your PDF template with this client's information</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="upload-section">
-          <input type="file" id="pdfUpload" accept="application/pdf" @change="${this.handlePDFUpload}" hidden />
-          <button class="upload-button" @click="${() => this.shadowRoot.getElementById('pdfUpload').click()}">
-            Upload PDF
-          </button>
-        </div>
-
+      <!-- Main content with three action buttons -->
+      <div class="content">
+        ${this.isLoadingUpload ? this._renderLoading() : this._renderLottie()}
+        <input type="file" id="pdfUpload" accept="application/pdf" @change="${this.handlePDFUpload}" hidden />
+        <button class="button" @click="${() => this.shadowRoot.getElementById('pdfUpload').click()}">
+          <img class="icon" src="${uploadingImage}" alt="Upload Icon" />
+          ${this.isLoadingUpload ? 'Uploading...' : 'Upload PDF'}
+        </button>
+      </div>
         <!-- Popup Overlay -->
         <div class="popup-overlay ${this.showPopup ? 'show' : ''}">
             <button class="arrow-left" @click="${() => this.changePage(-1)}">←</button>
@@ -545,9 +511,35 @@ export class FillDocument extends ViewBase {
             </div>
             <button class="arrow-right" @click="${() => this.changePage(1)}">→</button>
         </div>
-    </div>
     `;
     }
+
+    _renderLoading() {
+      return html`
+      <lottie-player
+          src="https://assets4.lottiefiles.com/packages/lf20_myejiggj.json"
+          background="transparent"
+          speed="1"
+          style="width: 300px; height: 300px;"
+          loop
+          autoplay
+      ></lottie-player>
+      `;
+  }
+
+  _renderLottie() {
+      return html`
+      <lottie-player
+          src="https://assets4.lottiefiles.com/packages/lf20_pwohahvd.json"
+          background="transparent"
+          speed="1"
+          style="width: 300px; height: 300px;"
+          loop
+          autoplay
+      ></lottie-player>
+      `;
+  }
+
 }
 
 customElements.define('documents-view', FillDocument);
