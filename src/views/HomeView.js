@@ -580,7 +580,7 @@ li {
         </div>
         <div class="client-card-actions">
           <button @click="${() => this.navigateBack()}">View Portfolios</button>
-          <button @click="${() => super.navigateToPDFViewer()}">Fill PDF</button>
+          <!-- <button @click="${() => super.navigateToPDFViewer()}">Fill PDF</button> -->
           <!-- <button @click="${() => (this.showDialog = true)}">Generate Report</button> -->
           <!-- <button @click="${() => this.handleTabNavigation('products')}">View Portfolios</button> -->
         </div>
