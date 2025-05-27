@@ -41,12 +41,6 @@ export const PdfMixin = {
       return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     };
 
-    const tableOptions = {
-      styles: { fontSize: 9, cellPadding: 2 }, // Smaller text for fitting more on the page
-      headStyles: { fillColor: [150, 150, 150], textColor: [255, 255, 255], fontStyle: "bold", halign: "center" },
-      bodyStyles: { halign: "center", fillColor: [255, 255, 255] }
-    };
-
     // Extract DOB from ID Number
     const century = parseInt(clientId.substring(0, 2)) < 22 ? "20" : "19";
     const dob = clientId ? `${century}${clientId.substring(0, 2)}/${clientId.substring(2, 4)}/${clientId.substring(4, 6)}` : "Unknown DOB";
@@ -56,12 +50,9 @@ export const PdfMixin = {
     doc.text("Morebo Wealth Client Feedback Report", 10, 20);
     doc.setFontSize(12);
     doc.text(`${selectedDetails.title} ${selectedDetails.firstNames} ${selectedDetails.surname}`, 10, 30);
-    // doc.text(`Policy Number: ${selectedDetails.policyNumber || "N/A"}`, 10, 38);
     doc.text(`ID Number: ${clientId}`, 10, 38);
     doc.text(`DOB: ${dob}`, 10, 46);
     doc.text(`Advisor: ${selectedDetails.advisorName || "N/A"}`, 10, 54);
-    // doc.text(`Email: ${selectedDetails.email || "N/A"}`, 10, 70);
-    // doc.text(`Cellphone: ${selectedDetails.cellPhoneNumber || "N/A"}`, 10, 78);
     doc.text(`IRR (%): ${this.reportOptions.irr ?? 'N/A'}`, 10, 62);
 
     if (this.reportOptions.regularContributions) {
@@ -85,13 +76,12 @@ export const PdfMixin = {
       }
     }
 
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.text(new Date().toISOString().split("T")[0].replace(/-/g, "/"), 260, 20, { align: "right" });
     doc.setFontSize(12);
 
     doc.addPage(); // Start portfolios on a new page
 
-    // Generate Portfolios with Contributions, Withdrawals, and Interaction History
     selectedDetails.detailModels.forEach((portfolio, index) => {
       // Check if the portfolio has data before rendering
       const hasContributions = this.reportOptions.contributions && portfolio.transactionModels.some(t => t.transactionType.toLowerCase().includes("contribution"));
@@ -104,15 +94,27 @@ export const PdfMixin = {
       }
 
       if (index !== 0) doc.addPage(); // New page for each portfolio
+      // --- Insert consistent header at top of every portfolio report ---
+      const inceptionDate = portfolio.inceptionDate || 'N/A';
       doc.setFontSize(12);
-      doc.text(`${portfolio.instrumentName} ${portfolio.referenceNumber}`, 10, 20);
-      let startY = 30;
+      doc.text(`${selectedDetails.title} ${selectedDetails.firstNames} ${selectedDetails.surname}`, 10, 10);
+      doc.text(`Policy Number: ${portfolio.referenceNumber || 'N/A'}`, 10, 16);
+      doc.text(`ID Number: ${clientId}`, 10, 22);
+      doc.text(`DOB: ${dob}`, 10, 28);
+
+      doc.text(`${portfolio.instrumentName}`, 150, 10);
+      const formattedInceptionDate = typeof inceptionDate === 'string' && inceptionDate.includes('T')
+        ? inceptionDate.split('T')[0].replace(/-/g, '/')
+        : (inceptionDate || 'N/A').replace(/-/g, '/');
+      doc.text(`Inception Date: ${formattedInceptionDate}`, 150, 16);
+      // --- End consistent header ---
+      let startY = 38;
 
       if (this.reportOptions.contributions) {
         // ====== Contributions Section ======
         const contributionsMap = {};
         portfolio.transactionModels
-          .filter(t => t.transactionType.toLowerCase().includes("contribution"))
+          .filter(t => t.transactionType.toLowerCase().includes("contribution") && !t.transactionType.toLowerCase().includes("regular"))
           .forEach(t => {
             const date = t.transactionDate.split("T")[0];
             if (!contributionsMap[date]) {
@@ -140,6 +142,9 @@ export const PdfMixin = {
             ];
           });
 
+        // Determine if all exchange rates are 1.00
+        const allExchangeRateOne = contributions.length > 0 && contributions.every(row => row[4] === "1.00");
+
         // Sum using the raw numerical value stored in the last element of each row
         const totalContributions = contributions.reduce((sum, t) => sum + t[5], 0);
         const totalContributionsRand = contributions.reduce((sum, t) => sum + parseFloat(t[3].replace(/[^0-9.-]+/g, "")), 0);
@@ -151,22 +156,28 @@ export const PdfMixin = {
             ? formatAmount(totalContributionsRand, "ZAR")
             : formatAmount(totalContributions, this.reportOptions.currency);
           const contributionsBody = [
-            [{ content: "CONTRIBUTIONS", colSpan: 5, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
-            ["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
-            ...contributions.map(row => row.slice(0, 5)),
-            ["TOTAL", "", totalLabelAmount, formatAmount(totalContributionsRand, "ZAR"), ""]
+            [{ content: "CONTRIBUTIONS", colSpan: allExchangeRateOne ? 3 : 5, styles: { fillColor: [230,230,230], textColor: [0,0,0], halign: "center", fontStyle: "bold" } }],
+            allExchangeRateOne
+              ? ["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT"]
+              : ["EFFECTIVE DATE", "TRANSACTION TYPE", "AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
+            ...contributions.map(row => allExchangeRateOne ? row.slice(0, 3) : row.slice(0, 5)),
+            allExchangeRateOne
+              ? ["TOTAL", "", totalLabelAmount]
+              : ["TOTAL", "", totalLabelAmount, formatAmount(totalContributionsRand, "ZAR"), ""]
           ];
           
           doc.autoTable({
             body: contributionsBody,
-            startY: startY,
+            startY: startY + 4,
             theme: 'plain',
             styles: {
               fontSize: 9,
               halign: 'center',
               cellPadding: { top: 1.5, bottom: 1.5 },
-              lineWidth: 0
+              lineWidth: 0,
             },
+            tableLineWidth: 0.25,
+            tableLineColor: [0, 0, 0],
             didParseCell: function (data) {
               const isHeaderRow = data.row.index === 1;
               const cellText = data.row.raw?.[0];
@@ -239,32 +250,40 @@ export const PdfMixin = {
             startY = 30;
           }
           startY += 6;
-          doc.setFontSize(11);
+          doc.setFontSize(12);
           // Withdrawals section
           const allWithdrawalsInZAR = withdrawals.every(row => row[2].startsWith("R"));
           const totalWithdrawalsLabelAmount = allWithdrawalsInZAR
             ? formatAmount(totalWithdrawals, "ZAR")
             : formatAmount(totalWithdrawals, this.reportOptions.currency);
+          // Apply same conditional column logic as Contributions
+          const allWithdrawalsRateOne = withdrawals.length > 0 && withdrawals.every(row => row[4] === "1.00");
           const withdrawalsBody = [
-            [{ content: "WITHDRAWALS", colSpan: 5, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
-            ["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
-            ...withdrawals.map(row => row.slice(0, 5)),
-            ["TOTAL", "", totalWithdrawalsLabelAmount, "", ""]
+            [{ content: "WITHDRAWALS", colSpan: allWithdrawalsRateOne ? 3 : 5, styles: { fillColor: [230,230,230], textColor: [0,0,0], halign: "center", fontStyle: "bold" } }],
+            allWithdrawalsRateOne
+              ? ["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]
+              : ["EFFECTIVE DATE", "TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "RAND VALUE", "EXCHANGE RATE"],
+            ...withdrawals.map(row => allWithdrawalsRateOne ? row.slice(0, 3) : row.slice(0, 5)),
+            allWithdrawalsRateOne
+              ? ["TOTAL", "", totalWithdrawalsLabelAmount]
+              : ["TOTAL", "", totalWithdrawalsLabelAmount, "", ""]
           ];
 
           doc.autoTable({
             body: withdrawalsBody,
-            startY,
+            startY: startY + 4,
             theme: 'plain',
             styles: {
               fontSize: 9,
               halign: 'center',
               cellPadding: { top: 1.5, bottom: 1.5 },
-              lineWidth: 0
+              lineWidth: 0,
             },
+            tableLineWidth: 0.25,
+            tableLineColor: [0, 0, 0],
             didParseCell: function (data) {
               const cellText = data.row.raw?.[0];
-              const isHeaderRow = data.row.index === 1;
+              const isHeaderRow = data.row.raw?.includes("TRANSACTION TYPE");
               const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
               if (isHeaderRow || isTotalRow) {
                 data.cell.styles.fillColor = [230, 230, 230];
@@ -295,7 +314,7 @@ export const PdfMixin = {
             startY = 30;
           }
           startY += 6;
-          doc.setFontSize(11);
+          doc.setFontSize(12);
           if (regularWithdrawalsBody.length > 0) {
             const totalAmount = (totalWithdrawals || 0) + (portfolio.regularWithdrawalAmount || 0);
             const allRegularInZAR = true; // Currently assumed to always be ZAR-based
@@ -304,26 +323,32 @@ export const PdfMixin = {
               ? formatAmount(totalRegularWithdrawals, "ZAR")
               : formatAmount(totalRegularWithdrawals, this.reportOptions.currency);
             regularWithdrawalsBody.push(["Total:", totalRegularLabelAmount, "", "TOTAL_ROW"]);
-            
+
+            // If regularWithdrawalAmount exists and percentage is 0, reduce to just 2 columns
+            const hideRandAndPerc = portfolio.regularWithdrawalAmount > 0 && portfolio.regularWithdrawalPercentage === 0;
             const regularWithdrawalsBodyWithHeader = [
-              [{ content: "REGULAR WITHDRAWALS", colSpan: 4, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }],
-              ["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"],
-              ...regularWithdrawalsBody
+              [{ content: "REGULAR WITHDRAWALS", colSpan: hideRandAndPerc ? 2 : 4, styles: { fillColor: [230,230,230], textColor: [0,0,0], halign: "center", fontStyle: "bold" } }],
+              hideRandAndPerc
+                ? ["TRANSACTION TYPE", "WITHDRAWAL AMOUNT"]
+                : ["TRANSACTION TYPE", "WITHDRAWAL AMOUNT", "WITHDRAWAL PERCENTAGE", "WITHDRAWAL SINCE INCEPTION"],
+              ...regularWithdrawalsBody.map(row => hideRandAndPerc ? row.slice(0, 2) : row)
             ];
 
             doc.autoTable({
               body: regularWithdrawalsBodyWithHeader,
-              startY,
+              startY: startY + 4,
               theme: 'plain',
               styles: {
                 fontSize: 9,
                 halign: 'center',
                 cellPadding: { top: 1.5, bottom: 1.5 },
-                lineWidth: 0
+                lineWidth: 0,
               },
+              tableLineWidth: 0.25,
+              tableLineColor: [0, 0, 0],
               didParseCell: function (data) {
                 const cellText = data.row.raw?.[0];
-                const isHeaderRow = data.row.index === 1;
+                const isHeaderRow = data.row.raw?.includes("TRANSACTION TYPE");
                 const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
                 if (isHeaderRow || isTotalRow || data.cell.raw === "TOTAL_ROW") {
                   data.cell.styles.fillColor = [230, 230, 230];
@@ -336,6 +361,68 @@ export const PdfMixin = {
         }
       }
 
+      // ====== Regular Contributions Section ======
+      if (this.reportOptions.regularContributions) {
+        const regularContributions = portfolio.transactionModels
+          .filter(t => t.transactionType.toLowerCase().includes("regular") && t.transactionType.toLowerCase().includes("contribution"))
+          .map(t => [
+            t.transactionType,
+            formatAmount(t.convertedAmount, "ZAR"),
+            "PLACEHOLDER" // We'll calculate total below
+          ]);
+
+        const totalRegularSinceInception = portfolio.transactionModels
+          .filter(t => t.transactionType.toLowerCase().includes("contribution"))
+          .reduce((sum, t) => sum + t.convertedAmount, 0);
+
+        if (regularContributions.length > 0) {
+          const requiredHeight = 30 + (regularContributions.length + 1) * 10;
+          if (startY + requiredHeight > doc.internal.pageSize.height - 20) {
+            doc.addPage();
+            startY = 30;
+          }
+          startY += 6;
+          doc.setFontSize(12);
+
+          const formattedRegular = regularContributions.map(row => {
+            row[2] = formatAmount(totalRegularSinceInception, "ZAR");
+            return row;
+          });
+
+          formattedRegular.push(["Total:", formatAmount(totalRegularSinceInception, "ZAR"), "TOTAL_ROW"]);
+
+          const regularContributionsBodyWithHeader = [
+            [{ content: "REGULAR CONTRIBUTIONS", colSpan: 3, styles: { fillColor: [230,230,230], textColor: [0,0,0], halign: "center", fontStyle: "bold" } }],
+            ["TRANSACTION TYPE", "CONTRIBUTION AMOUNT", "CONTRIBUTION SINCE INCEPTION"],
+            ...formattedRegular
+          ];
+
+          doc.autoTable({
+            body: regularContributionsBodyWithHeader,
+            startY: startY + 4,
+            theme: 'plain',
+            styles: {
+              fontSize: 9,
+              halign: 'center',
+              cellPadding: { top: 1.5, bottom: 1.5 },
+              lineWidth: 0,
+            },
+            tableLineWidth: 0.25,
+            tableLineColor: [0, 0, 0],
+            didParseCell: function (data) {
+              const cellText = data.row.raw?.[0];
+              const isHeaderRow = data.row.raw?.includes("TRANSACTION TYPE");
+              const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
+              if (isHeaderRow || isTotalRow || data.cell.raw === "TOTAL_ROW") {
+                data.cell.styles.fillColor = [230, 230, 230];
+                data.cell.styles.fontStyle = "bold";
+              }
+            }
+          });
+          startY = doc.lastAutoTable.finalY;
+        }
+      }
+
       if (this.reportOptions.interactionHistory) {
         // Avoid empty space if no previous sections rendered anything
         if (startY === 30) {
@@ -344,7 +431,7 @@ export const PdfMixin = {
         // ====== Interaction History Section ======
         const interactionHistory = portfolio.rootValueDateModels.filter(interaction => interaction.valueModels.length > 0);
         if (interactionHistory.length > 0) {
-          doc.setFontSize(12);
+          doc.setFontSize(14);
           startY += 10; // SPACE BETWEEN HEADER AND TABLE
           const renderedDates = new Set();
           interactionHistory.forEach((interaction) => {
@@ -369,10 +456,30 @@ export const PdfMixin = {
                 doc.addPage();
                 startY = 30;
               }
-              const formattedDateRow = [{ content: formatDate(interactionDate), colSpan: 4, styles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: "center", fontStyle: "bold" } }];
+              // --- 1. Left-align the date row, header row, only style header row as grey ---
+              // Determine if all exchange rates are 1 for this interaction
+              const allRatesOne = interaction.valueModels.every(e => e.exchangeRate === 1);
+              const formattedDateRow = [{
+                content: formatDate(interactionDate),
+                colSpan: allRatesOne ? 3 : 4,
+                styles: {
+                  halign: "left",
+                  fontStyle: "bold"
+                  // No fillColor here; only header row will be grey
+                }
+              }];
+              const headerRow = allRatesOne
+                ? ["INVESTMENT FUNDS", "AMOUNT", "% SHARE PER PORTFOLIO"]
+                : ["INVESTMENT FUNDS", "AMOUNT", "RAND VALUE", "% SHARE PER PORTFOLIO"];
+              interactionData.unshift(headerRow);
               interactionData.unshift(formattedDateRow);
-              const headerRow = ["Investment Funds", "Amount", "Rand Value", "% Share per Portfolio"];
-              interactionData.splice(1, 0, headerRow);
+
+              // If allRatesOne, remove RAND VALUE column (index 2) from each row after header
+              if (allRatesOne) {
+                for (let i = 2; i < interactionData.length; i++) {
+                  interactionData[i].splice(2, 1); // Remove RAND VALUE
+                }
+              }
 
               // Calculate totals
               const totalRandValue = interaction.valueModels
@@ -380,49 +487,58 @@ export const PdfMixin = {
                 .reduce((sum, entry) => sum + entry.convertedAmount, 0);
               const totalValue = interaction.valueModels
                 .filter(entry => !isNaN(entry.convertedAmount)) // Ensure valid numbers
-                .reduce((sum, entry) => sum + (entry.convertedAmount / entry.exchangeRate), 0);
+                .reduce((sum, entry) => sum + (entry.exchangeRate !== 0 ? (entry.convertedAmount / entry.exchangeRate) : 0), 0);
+              // If allRatesOne, the totals row should only have 3 columns, else 4
               const totalPortfolioShare = interactionData
-                .filter(row => !isNaN(parseFloat(row[3]))) // Ensure valid numbers
-                .reduce((sum, row) => sum + parseFloat(row[3] || 0), 0);
+                .filter(row => !isNaN(parseFloat(row[allRatesOne ? 2 : 3])))
+                .reduce((sum, row) => sum + parseFloat(row[allRatesOne ? 2 : 3] || 0), 0);
               const allInteractionInZAR = interactionData
                 .filter(row => Array.isArray(row) && row.length > 1 && row[1] !== "Amount")
                 .every(row => typeof row[1] === "string" && row[1].startsWith("R"));
-              const totalInteractionLabelAmount = allInteractionInZAR
-                ? formatAmount(totalRandValue || 0, "ZAR")
-                : formatAmount(totalValue || 0, this.reportOptions.currency);
 
               // Add totals row
-              interactionData.push([
-                "Total",
-                allInteractionInZAR
-                  ? formatAmount(totalRandValue || 0, "ZAR")
-                  : formatAmount(totalValue || 0, this.reportOptions.currency),
-                formatAmount(totalRandValue || 0, "ZAR"),
-                totalPortfolioShare.toFixed(2)
-              ]);
+              if (allRatesOne) {
+                interactionData.push([
+                  "Total",
+                  allInteractionInZAR
+                    ? formatAmount(totalRandValue || 0, "ZAR")
+                    : formatAmount(totalValue || 0, this.reportOptions.currency),
+                    "100%"
+                  // totalPortfolioShare.toFixed(2)
+                ]);
+              } else {
+                interactionData.push([
+                  "Total",
+                  allInteractionInZAR
+                    ? formatAmount(totalRandValue || 0, "ZAR")
+                    : formatAmount(totalValue || 0, this.reportOptions.currency),
+                  formatAmount(totalRandValue || 0, "ZAR"),
+                  "100%"
+                  // totalPortfolioShare.toFixed(2)
+                ]);
+              }
+
+              doc.setFontSize(12);
 
               doc.autoTable({
                 body: interactionData,
-                startY,
+                startY: startY + 4,
                 theme: 'plain',
                 styles: {
                   fontSize: 9,
                   halign: 'center',
                   cellPadding: { top: 1.5, bottom: 1.5 },
-                  lineWidth: 0
+                  lineWidth: 0,
                 },
+                tableLineWidth: 0.25,
+                tableLineColor: [0, 0, 0],
                 didParseCell: function (data) {
+                  // 2. Grey background only for header (row index 1) and totals
                   const cellText = data.row.raw?.[0];
-                  const isDateRow = data.row.index === 0 && data.row.raw?.length === 1;
                   const isHeaderRow = data.row.index === 1;
                   const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");
-                  if (isDateRow) {
-                    data.cell.styles.fillColor = [230, 230, 230];
-                    data.cell.styles.fontStyle = "bold";
-                    data.cell.styles.textColor = [0, 0, 0];
-                  }
                   if (isHeaderRow || isTotalRow) {
-                    data.cell.styles.fillColor = [200, 200, 200];
+                    data.cell.styles.fillColor = [230, 230, 230];
                     data.cell.styles.fontStyle = "bold";
                   }
                 }
@@ -474,21 +590,23 @@ export const PdfMixin = {
             startY = 30;
           }
           startY += 6;
-          doc.setFontSize(11);
-          const performanceHeader = [{ content: "PORTFOLIO PERFORMANCES", colSpan: 4, styles: { fillColor: [150,150,150], textColor: [255,255,255], halign: "center", fontStyle: "bold" } }];
+          doc.setFontSize(12);
+          const performanceHeader = [{ content: "PORTFOLIO PERFORMANCES", colSpan: 4, styles: { fillColor: [230,230,230], textColor: [0,0,0], halign: "center", fontStyle: "bold" } }];
           fundRows.unshift(performanceHeader);
-          fundRows.splice(1, 0, ["Investment Fund", "6 Months", "One Year", "Three Years"]);
+          fundRows.splice(1, 0, ["INVESTMENT FUND", "6 MONTHS", "ONE YEAR", "THREE YEARS"]);
 
           doc.autoTable({
             body: fundRows,
-            startY,
+            startY: startY + 4,
             theme: 'plain',
             styles: {
               fontSize: 9,
               halign: 'center',
               cellPadding: { top: 1.5, bottom: 1.5 },
-              lineWidth: 0
+              lineWidth: 0,
             },
+            tableLineWidth: 0.25,
+            tableLineColor: [0, 0, 0],
             didParseCell: function (data) {
               const cellText = data.row.raw?.[0];
               const isTotalRow = typeof cellText === "string" && cellText.toLowerCase().includes("total");

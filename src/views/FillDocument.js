@@ -51,7 +51,7 @@ export class FillDocument extends ViewBase {
       .client-card.visible {
         transform: translateY(0);
         opacity: 1;
-        height: 400px;
+        height: 300px;
         text-align: center;
       }
     
